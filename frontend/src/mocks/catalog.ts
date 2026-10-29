@@ -1,0 +1,225 @@
+import type { Category, Product } from '../types/catalog';
+
+// Local academic snapshot, explicitly approved after auditing the export.
+// Only the 138 approved records are included: no raw spreadsheet, inactive
+// records, pending records, purchase prices, stock or remote image URLs.
+export const categories: readonly Category[] = [
+  { id: 'porcoes', name: 'Porções', description: 'Porções e opções individuais do cadastro Rústika.', displayOrder: 1 },
+  { id: 'cervejas', name: 'Cervejas', description: 'Garrafas, latas e long necks, cada apresentação com seu próprio código.', displayOrder: 2 },
+  { id: 'drinks', name: 'Drinks', description: 'Drinks do Rústika. Receitas exibidas somente quando confirmadas na referência.', displayOrder: 3 },
+  { id: 'sem-alcool', name: 'Sem álcool', description: 'Águas, refrigerantes, sucos e drinks identificados como sem álcool.', displayOrder: 4 },
+  { id: 'energeticos', name: 'Energéticos', description: 'Sabores e versões do cadastro, apresentados separadamente.', displayOrder: 5 },
+  { id: 'drinks-prontos', name: 'Drinks prontos', description: 'Bebidas prontas nas apresentações registradas.', displayOrder: 6 },
+  { id: 'doses', name: 'Doses', description: 'Valores por dose, conforme a identificação do cadastro.', displayOrder: 7 },
+  { id: 'garrafas', name: 'Garrafas', description: 'Destilados identificados como garrafa no cadastro.', displayOrder: 8 },
+  { id: 'combos', name: 'Combos', description: 'Confira a composição no nome: cada combinação é um item distinto.', displayOrder: 9 },
+  { id: 'gelo-de-coco', name: 'Gelo de coco', description: 'As três versões de gelo de coco registradas para venda.', displayOrder: 10 },
+];
+
+type ApprovedRecord = readonly [code: string, name: string, group: string, priceInCents: number];
+
+// Prices were converted from the original XML decimal using exact Decimal * 100.
+// Keep origin names/groups intact, including spelling and whitespace.
+const approvedRecords: readonly ApprovedRecord[] = [
+  ['1', 'ÁGUA COM GÁS', 'ÁGUA', 700],
+  ['100', 'NEGRONI', 'DRINKS', 3000],
+  ['101', 'RÚSTIKA BLOND', 'DRINKS', 3400],
+  ['102', 'RÚSTIKA GINGER', 'DRINKS', 3400],
+  ['103', 'SAQUERITA', 'DRINKS', 2200],
+  ['104', 'SUMMER GIN', 'DRINKS', 3400],
+  ['105', 'TAÇA VINHO TINTO SUAVE', 'DRINKS', 1600],
+  ['106', 'TROPICAL GIN', 'DRINKS', 3400],
+  ['107', 'RED BULL AMORA E FRUTAS VERMELHAS SUGAR FREE', 'ENERGÉTICO', 1600],
+  ['108', 'RED BULL CEREJA E FRUTAS SILVESTRES', 'ENERGÉTICO', 1600],
+  ['109', 'RED BULL  ENERGY DRINK', 'ENERGÉTICO', 1600],
+  ['110', 'RED BULL MAÇÃ SUGAR FREE', 'ENERGÉTICO', 1600],
+  ['111', 'RED BULL MELÂNCIA.', 'ENERGÉTICO', 1600],
+  ['112', 'RED BULL MELÃO E MARACUJÁ', 'ENERGÉTICO', 1600],
+  ['113', 'RED BULL MORANGO E PESSEGO', 'ENERGÉTICO', 1600],
+  ['114', 'RED BULL NECTARINA SUGAR FREE', 'ENERGÉTICO', 1600],
+  ['115', 'RED BULL PERA E CANELA', 'ENERGÉTICO', 1600],
+  ['117', 'RED BULL POMELO SUGAR FREE', 'ENERGÉTICO', 1600],
+  ['118', 'RED BULL TROPICAL', 'ENERGÉTICO', 1600],
+  ['119', 'RED BULL ZERO', 'ENERGÉTICO', 1600],
+  ['12', 'CORONA 600ml', 'CERVEJA', 2300],
+  ['120', 'BLACK LABEL GARRAFA', 'DESTILADO', 39900],
+  ['121', 'CHIVAS GARRAFA', 'DESTILADO', 36900],
+  ['122', 'GIN GORDONS GARRAFA', 'DESTILADO', 19900],
+  ['123', 'BATATA C/ QUEIJO E BACON', 'PORÇÕES', 4600],
+  ['124', 'BATATA FRITA', 'PORÇÕES', 3900],
+  ['125', 'BATATA FRITA INDIVIDUAL', 'PORÇÕES', 2400],
+  ['126', 'CALABRESA', 'PORÇÕES', 3900],
+  ['129', 'COXINHA - 8 UN', 'PORÇÕES', 4200],
+  ['13', 'CORONA LONG NECK', 'CERVEJA', 1600],
+  ['130', 'FRANGO A PASSARINHO', 'PORÇÕES', 6900],
+  ['131', 'FRIOS', 'PORÇÕES', 5999],
+  ['133', 'ISCA DE PEIXE', 'PORÇÕES', 7900],
+  ['135', 'MANDIOCA FRITA', 'PORÇÕES', 2990],
+  ['136', 'PANCETA DE ROLO', 'PORÇÕES', 6500],
+  ['137', 'PASTEL MISTO - 12 UN', 'PORÇÕES', 4200],
+  ['14', 'CORONA ZERO LONG NECK', 'CERVEJA', 1600],
+  ['140', 'QUIBE INDIVIDUAL - 5 UNID.', 'PORÇÕES', 2800],
+  ['141', 'QUIBE - 10 UN', 'PORÇÕES', 4200],
+  ['143', 'ÁGUA TÔNICA', 'REFRIGERANTE', 800],
+  ['144', 'ÁGUA TÔNICA ZERO', 'REFRIGERANTE', 800],
+  ['145', 'CITRUS SCWEPPES', 'REFRIGERANTE', 800],
+  ['146', 'COCA-COLA', 'REFRIGERANTE', 800],
+  ['147', 'COCA-COLA ZERO', 'REFRIGERANTE', 800],
+  ['149', 'GUARANÁ', 'REFRIGERANTE', 800],
+  ['150', 'GUARANÁ ZERO', 'REFRIGERANTE', 800],
+  ['152', 'H2O LIMÃO', 'REFRIGERANTE', 900],
+  ['153', 'H2O LIMONETO', 'REFRIGERANTE', 900],
+  ['154', 'CAIPIROSKA S/ ÁLCOOL', 'DRINKS', 2200],
+  ['155', 'SODA ITALIANA', 'DRINKS', 1500],
+  ['156', 'SUMMER S/ ÁLCOOL', 'DRINKS', 2800],
+  ['157', 'SUCO LATA - MARACUJÁ', 'SUCO', 700],
+  ['158', 'SUCO LATA - PESSEGO', 'SUCO', 700],
+  ['159', 'SUCO LATA - UVA', 'SUCO', 700],
+  ['16', 'STELLA GOLD 600ML SEM GLUTEN', 'CERVEJA', 2400],
+  ['160', 'SUCO NATURAL ABACAXI', 'SUCO', 1600],
+  ['161', 'SUCO NATURAL KIWI', 'SUCO', 1600],
+  ['163', 'SUCO NATURAL LIMÃO', 'SUCO', 1600],
+  ['164', 'SUCO NATURAL MARACUJÁ', 'SUCO', 1600],
+  ['165', 'SUCO NATURAL MORANGO', 'SUCO', 1600],
+  ['167', 'SODA LIMONADA', 'REFRIGERANTE', 800],
+  ['168', 'OLD PARR GARRAFA', 'DESTILADO', 36900],
+  ['169', 'JACK DANIELS GARRAFA', 'DESTILADO', 36900],
+  ['170', 'BULDOG GIN GARRAFA', 'DESTILADO', 29900],
+  ['173', 'BUD 600ML', 'CERVEJA', 1600],
+  ['18', 'ORIGINAL - 600ML', 'CERVEJA', 2000],
+  ['19', 'SPATEN 600ML', 'CERVEJA', 2000],
+  ['2', 'ÁGUA SEM GÁS', 'ÁGUA', 700],
+  ['21', 'STELLA 600ML', 'CERVEJA', 2200],
+  ['23', 'STELLA S/ GLUTTEN LONG NECK', 'CERVEJA', 1600],
+  ['24', 'COMBO ABSOLUT C/ 4REDBULL + 4GELO CÔCO.', 'DESTILADO', 27000],
+  ['25', 'COMBO ABSOLUT C/ 5 CITRUS', 'DESTILADO', 29900],
+  ['26', 'COMBO BEEFEATER C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 34900],
+  ['27', 'COMBO BLACK LABEL C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 48900],
+  ['28', 'COMBO CHIVAS C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 43900],
+  ['3', 'BOA 600ML', 'CERVEJA', 1499],
+  ['30', 'COMBO GIN BULDOG C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 35900],
+  ['31', 'COMBO JACK DANIELS C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 42900],
+  ['32', 'COMBO KETEL ONE + 5 H2O', 'DESTILADO', 29900],
+  ['33', 'COMBO OLD PARR C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 43900],
+  ['34', 'COMBO RED LABEL C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 34900],
+  ['35', 'COMBO SKYY C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 22900],
+  ['36', 'COMBO SKYY C/ 5 CITRUS', 'DESTILADO', 18900],
+  ['37', 'COMBO SMIRNOFF C/ 4REDBULL + 4GELO DE CÔCO', 'DESTILADO', 22900],
+  ['38', 'COMBO SMIRNOFF C/ 5 CITRUS', 'DESTILADO', 18900],
+  ['39', 'COMBO TANQUERAY C/ 4REDBULL + 4GELO CÔCO', 'DESTILADO', 42900],
+  ['40', 'CAMPARI GARRAFA', 'DESTILADO', 19900],
+  ['42', 'RED LABEL GARRAFA', 'DESTILADO', 25000],
+  ['43', 'TANQUERAY GARRAFA', 'DESTILADO', 36900],
+  ['48', 'GELO DE CÔCO TRADICIONAL', 'GELO CÔCO', 800],
+  ['49', 'GELO DE CÔCO MARACUJÁ', 'GELO CÔCO', 800],
+  ['50', 'GELO DE CÔCO - MORANGO', 'GELO CÔCO', 800],
+  ['55', 'DOSE ABSOLUT VODKA', 'DESTILADO', 1700],
+  ['56', 'DOSE BLACK LABEL', 'DESTILADO', 3300],
+  ['57', 'DOSE CACHAÇA', 'DESTILADO', 600],
+  ['58', 'DOSE CAMPARI', 'DESTILADO', 1500],
+  ['59', 'DOSE CHIVAS', 'DESTILADO', 3000],
+  ['6', 'BUD ZERO ALCOOL LONG NECK', 'CERVEJA', 1500],
+  ['60', 'DOSE CUERVO TEQUILA', 'DESTILADO', 2300],
+  ['62', 'DOSE JACK DANIELS', 'DESTILADO', 3000],
+  ['63', 'DOSE LICOR 43', 'DESTILADO', 3200],
+  ['64', 'DOSE OLD PARR', 'DESTILADO', 3000],
+  ['65', 'DOSE RED LABEL', 'DESTILADO', 2500],
+  ['66', 'DOSE SAGATIBA CACHAÇA PRATA', 'DESTILADO', 1000],
+  ['67', 'DOSE SAGATIBA MAIARA E MARAISA', 'DESTILADO', 1500],
+  ['68', 'DOSE SMIRNOFF VODKA', 'DESTILADO', 1000],
+  ['69', 'DOSE TANQUERAY GIN', 'DESTILADO', 2600],
+  ['7', 'BUDWEISER LATA', 'CERVEJA', 800],
+  ['70', 'CATUABA 300ML', 'DRINK PRONTO', 1200],
+  ['71', 'ICE 51 LIMÃO LONG NECK', 'DRINK PRONTO', 1500],
+  ['72', 'ICE 51 MORANGO E LARANJA LOG NECK', 'DRINK PRONTO', 1500],
+  ['73', 'SKOL BEATS GREEN MIX - LN', 'DRINK PRONTO', 1600],
+  ['7312040017034', 'ABSOLUT GARRAFA', 'DESTILADO', 19999],
+  ['74', 'SKOL BEATS GT - LN', 'DRINK PRONTO', 1600],
+  ['75', 'SKOL BEATS RED MIX - LN', 'DRINK PRONTO', 1600],
+  ['76', 'SKOL BEATS SENSES - LONG NECK', 'DRINK PRONTO', 1600],
+  ['77', 'SKOL BEATS TROPICAL - LONG NECK', 'DRINK PRONTO', 1600],
+  ['7891149010400', 'BRAHMA 600ML', 'CERVEJA', 1499],
+  ['7893218000473', 'SMIRNOFF GARRAFA', 'DESTILADO', 16900],
+  ['7896002111034', '51 ICE BALADA LN', 'DRINK PRONTO', 1500],
+  ['7896010004007', 'SKYY VODKA GARRAFA', 'DESTILADO', 16999],
+  ['79', 'APEROL SPRITZ', 'DRINKS', 3300],
+  ['80', 'BATIDA VINHO', 'DRINKS', 2000],
+  ['81', 'CAIPIRINHA SAGATIBA', 'DRINKS', 2400],
+  ['82', 'CAIPIROSKA', 'DRINKS', 2300],
+  ['83', 'CAIPIROSKA ABSOLUT', 'DRINKS', 3000],
+  ['84', 'CAMPARI TONIC', 'DRINKS', 3000],
+  ['85', 'COPÃO WHISKY', 'DRINKS', 4000],
+  ['87', 'DRINK 51 ICE RÚSTIKA - LIMÃO', 'DRINKS', 2600],
+  ['88', 'DRINK 51 ICE RÚSTIKAMORANGO', 'DRINKS', 2600],
+  ['9', 'COLORADO LAGER', 'CERVEJA', 2600],
+  ['93', 'DRINK BEATS RÚSTIKA - TROPICAL', 'DRINKS', 2800],
+  ['94', 'GIN TONICA', 'DRINKS', 3200],
+  ['95', 'JACK & COKE', 'DRINKS', 3500],
+  ['96', 'JACK LEMONADE', 'DRINKS', 3500],
+  ['97', 'MELANCITÁ GIN', 'DRINKS', 3400],
+  ['98', 'MOJITO', 'DRINKS', 2300],
+  ['99', 'MOSCOW MULE', 'DRINKS', 2800],
+];
+
+// Only unequivocal name/unit matches with the printed menu. Recipes for other
+// products (including other brands, sizes or combo compositions) stay absent.
+const descriptions: Readonly<Record<string, { text: string; page: number }>> = {
+  '100': { text: 'Campari / gin / vermute / laranja.', page: 3 },
+  '101': { text: 'Red Label Blond / citrus / laranja.', page: 3 },
+  '102': { text: 'Tônica gengibre / gin / gengibre / monin / especiarias.', page: 3 },
+  '103': { text: 'Saquê / açúcar / fruta.', page: 3 },
+  '104': { text: 'Red Bull Editions morango e pêssego / gin / morango / monin / especiarias.', page: 3 },
+  '106': { text: 'Red Bull Editions tropical / gin / maracujá / monin / especiarias.', page: 3 },
+  '129': { text: '8 unidades de coxinha de frango recheada com Catupiry.', page: 5 },
+  '137': { text: '12 unidades de pastel misto (carne e queijo).', page: 5 },
+  '140': { text: '5 unidades de quibe recheado com Catupiry.', page: 5 },
+  '154': { text: 'Leite condensado / morango / água com gás.', page: 4 },
+  '155': { text: 'Monin sabores / água com gás / fruta para decorar.', page: 4 },
+  '156': { text: 'Red Bull morango e pêssego / morango / monin / hortelã / especiarias.', page: 4 },
+  '79': { text: 'Aperol / prosecco / água com gás / laranja.', page: 3 },
+  '82': { text: 'Vodka / açúcar / fruta.', page: 3 },
+  '84': { text: 'Campari / água tônica / limão.', page: 3 },
+  '94': { text: 'Tônica / gin / limão siciliano / alecrim / especiarias.', page: 3 },
+  '95': { text: 'Jack Tennessee / Coca-Cola / limão.', page: 3 },
+  '96': { text: 'Jack Honey / citrus / limão siciliano.', page: 3 },
+  '97': { text: 'Red Bull Editions melancia / gin / hortelã / limão / especiarias.', page: 3 },
+  '98': { text: 'Rum / vodka / água com gás / limão / hortelã.', page: 3 },
+};
+
+function categoryFor(code: string, name: string, group: string): Category['id'] {
+  if (['154', '155', '156'].includes(code)) return 'sem-alcool';
+  if (group === 'DESTILADO') {
+    if (name.startsWith('COMBO ')) return 'combos';
+    if (name.startsWith('DOSE ')) return 'doses';
+    return 'garrafas';
+  }
+
+  const categoryByGroup: Readonly<Record<string, string>> = {
+    'PORÇÕES': 'porcoes', CERVEJA: 'cervejas', DRINKS: 'drinks',
+    'ÁGUA': 'sem-alcool', REFRIGERANTE: 'sem-alcool', SUCO: 'sem-alcool',
+    'ENERGÉTICO': 'energeticos', 'DRINK PRONTO': 'drinks-prontos', 'GELO CÔCO': 'gelo-de-coco',
+  };
+  const categoryId = categoryByGroup[group];
+  if (!categoryId) throw new Error(`Grupo não revisado no catálogo local: ${group}`);
+  return categoryId;
+}
+
+export const products: readonly Product[] = approvedRecords.map(([sourceCode, sourceName, sourceGroup, priceInCents]) => {
+  const description = descriptions[sourceCode];
+  return {
+    id: `rustika-${sourceCode}`,
+    sourceCode,
+    sourceName,
+    sourceGroup,
+    categoryId: categoryFor(sourceCode, sourceName, sourceGroup),
+    name: sourceName.trim().replace(/\s+/g, ' '),
+    priceInCents,
+    ...(description ? {
+      description: description.text,
+      descriptionSource: `Cardápio impresso Rústika, página ${description.page}`,
+    } : {}),
+  };
+}).sort((a, b) => {
+  const order = (id: string) => categories.find((category) => category.id === id)?.displayOrder ?? 0;
+  return order(a.categoryId) - order(b.categoryId) || a.name.localeCompare(b.name, 'pt-BR');
+});
