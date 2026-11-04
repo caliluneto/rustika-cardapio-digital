@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { useCart } from '../contexts/CartContext';
+import { comandaSessionUsable } from '../services/orderSubmission';
 import { selectItemSubtotal } from '../contexts/cart';
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -9,12 +10,15 @@ interface OrderReviewProps {
   trigger: HTMLButtonElement | null;
   onBack: () => void;
   onContinue: () => void;
+  /** Avança para o envio; o botão só aparece com sessão de comanda validada pelo backend. */
+  onCheckout?: () => void;
 }
 
-export default function OrderReview({ trigger, onBack, onContinue }: OrderReviewProps) {
+export default function OrderReview({ trigger, onBack, onContinue, onCheckout }: OrderReviewProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const backdropPressed = useRef(false);
-  const { state, comanda, totalInCents, itemCount } = useCart();
+  const { state, comanda, comandaSession, totalInCents, itemCount } = useCart();
+  const canCheckout = Boolean(onCheckout && comandaSessionUsable(comandaSession) && comandaSession?.number === comanda);
 
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
@@ -40,7 +44,9 @@ export default function OrderReview({ trigger, onBack, onContinue }: OrderReview
       <p className="product-modal-category">Rústika Estúdio Bar</p>
       <h2 id="order-review-title">Revisar pedido</h2>
       <p className="order-review-comanda">Comanda nº {comanda}</p>
-      <p className="cart-reference-note">Demonstração acadêmica: comanda, preços e estoque não são validados. Nenhum pedido será enviado.</p>
+      <p className="cart-reference-note">{canCheckout
+        ? 'Comanda validada pelo estabelecimento. Preços e disponibilidade são confirmados pelo servidor no envio.'
+        : 'Demonstração acadêmica: comanda, preços e estoque não são validados. Nenhum pedido será enviado.'}</p>
       <ul className="order-review-items">
         {state.items.map((item) => <li key={item.product.id}>
           <h3>{item.product.name}</h3>
@@ -51,6 +57,7 @@ export default function OrderReview({ trigger, onBack, onContinue }: OrderReview
       <div className="cart-total"><span>Total · {itemCount} {itemCount === 1 ? 'unidade' : 'unidades'}</span><strong>{formatPrice(totalInCents)}</strong></div>
       <div className="order-review-actions">
         <button className="cart-primary-button" type="button" autoFocus onClick={onBack}>Voltar ao carrinho</button>
+        {canCheckout && <button className="cart-primary-button" type="button" onClick={onCheckout}>Prosseguir para envio</button>}
         <button className="cart-secondary-button" type="button" onClick={onContinue}>Continuar explorando</button>
       </div>
     </div>

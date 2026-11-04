@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration:db": "vitest run --config vitest.integration.config.mts",
+    "test:integration:db:cleanup": "tsx tests/integration-db/cleanup-stale.ts",
     "db:validate": "tsx scripts/prisma-run.ts migrate-dev validate",
     "db:generate": "tsx scripts/prisma-run.ts migrate-dev generate",
     "db:validate:app": "tsx scripts/prisma-run.ts app-dev validate",

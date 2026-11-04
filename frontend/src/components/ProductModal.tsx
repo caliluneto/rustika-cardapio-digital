@@ -25,8 +25,8 @@ export default function ProductModal({ product, categoryName, trigger, onClose, 
   const addedItem = addResult?.accepted && submittedAction ? state.items.find((item) => item.product.id === submittedAction.product.id) : undefined;
   const addedQuantity = submittedAction?.quantity ?? 1;
   const imageUrl = product.imageUrl?.trim();
-  const imageAlt = product.imageAlt?.trim();
-  const showImage = Boolean(imageUrl && imageAlt && imageUrl !== failedImageUrl);
+  const imageAlt = product.imageAlt?.trim() || product.name;
+  const showImage = Boolean(imageUrl && imageUrl !== failedImageUrl);
 
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
@@ -62,7 +62,9 @@ export default function ProductModal({ product, categoryName, trigger, onClose, 
         <h2 id="product-modal-title">{product.name}</h2>
         <p className="product-modal-code"><span className="sr-only">Código de origem: </span><span aria-hidden="true">Cód. </span>{product.sourceCode}</p>
         {product.description && <p className="product-modal-description">{product.description}</p>}
+        {product.ingredients && <div className="product-modal-ingredients"><h3>Ingredientes</h3><p>{product.ingredients}</p></div>}
         <div className="product-modal-price"><span>Preço</span><strong>{priceFormatter.format(product.priceInCents / 100)}</strong></div>
+        {product.isAvailable === null && <p className="cart-reference-note">Disponibilidade não confirmada. Estoque e preço não são confirmados em tempo real.</p>}
         {product.isAvailable === undefined && <p className="cart-reference-note">Estoque e preço não são confirmados em tempo real.</p>}
         {product.isAvailable === false ? <p className="cart-reference-note">Produto indisponível para adicionar.</p> : (
           <form className="product-add-form" noValidate onSubmit={(event) => {

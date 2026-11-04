@@ -11,11 +11,11 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, categoryName, onSelect }: ProductCardProps) {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
-  // The catalog must supply a verified photo of this product and its alt text.
+  // The catalog supplies a verified photo; the product name is the fallback alt.
   // Missing or failed photos use the same compact, text-only presentation.
   const imageUrl = product.imageUrl?.trim();
-  const imageAlt = product.imageAlt?.trim();
-  const showImage = Boolean(imageUrl && imageAlt && imageUrl !== failedImageUrl);
+  const imageAlt = product.imageAlt?.trim() || product.name;
+  const showImage = Boolean(imageUrl && imageUrl !== failedImageUrl);
 
   return (
     <article className={`product-card ${showImage ? 'product-card--with-image' : 'product-card--text'}`} aria-labelledby={`product-${product.id}`}>
@@ -46,6 +46,7 @@ export default function ProductCard({ product, categoryName, onSelect }: Product
           <span className="product-price-label" aria-hidden="true">Preço</span>
           <span className="product-price"><span className="sr-only">Preço: </span>{priceFormatter.format(product.priceInCents / 100)}</span>
           {product.isAvailable === false && <span className="product-unavailable">Indisponível</span>}
+          {product.isAvailable === null && <span className="product-unavailable">Disponibilidade não confirmada</span>}
         </div>
       </div>
     </article>

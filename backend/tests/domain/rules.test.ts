@@ -42,6 +42,16 @@ describe('regras puras RF004', () => {
       .toThrowError(expect.objectContaining({ code: 'PRICE_CHANGED' }));
   });
 
+  it('aceita chaves públicas alfanuméricas do catálogo, como PA062240', () => {
+    expect(priceOrderItems([{
+      productKey: 'rustika-PA062240', quantity: 1,
+      currentUnitPriceInCents: 5000, expectedUnitPriceInCents: 5000,
+    }])).toEqual({
+      items: [{ productKey: 'rustika-PA062240', quantity: 1, unitPriceInCentsSnapshot: 5000, subtotalInCents: 5000 }],
+      totalInCents: 5000,
+    });
+  });
+
   it('bloqueia itens duplicados, preço fracionário e quantidades inválidas', () => {
     expect(() => priceOrderItems([first, first])).toThrowError(expect.objectContaining({ code: 'INVALID_ITEMS' }));
     expect(() => priceOrderItems([{ ...first, currentUnitPriceInCents: 1.1 }]))

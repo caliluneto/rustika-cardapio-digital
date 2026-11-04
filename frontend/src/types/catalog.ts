@@ -7,6 +7,11 @@ export interface Category {
   displayOrder: number;
 }
 
+export interface CatalogData {
+  readonly categories: readonly Category[];
+  readonly products: readonly Product[];
+}
+
 export interface Product {
   id: string;
   sourceCode: string;
@@ -16,10 +21,11 @@ export interface Product {
   name: string;
   description?: string;
   descriptionSource?: string;
+  ingredients?: string;
   // Integer cents represent the database's decimal price without float math.
   priceInCents: number;
   imageUrl?: string;
   imageAlt?: string;
-  // Undefined means unconfirmed. An active source record is not stock evidence.
-  isAvailable?: boolean;
+  // Undefined or null means unconfirmed. An active source record is not stock evidence.
+  isAvailable?: boolean | null;
 }

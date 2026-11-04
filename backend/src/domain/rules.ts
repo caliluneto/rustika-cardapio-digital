@@ -73,7 +73,7 @@ export function priceOrderItems(items: readonly PriceInput[]): {
   let totalInCents = 0;
 
   for (const item of items) {
-    if (!/^rustika-[0-9]+$/.test(item.productKey) || seen.has(item.productKey) ||
+    if (!/^rustika-[0-9A-Z]{1,64}$/.test(item.productKey) || seen.has(item.productKey) ||
         !Number.isSafeInteger(item.quantity) || item.quantity < 1) {
       throw new OrderRuleError('INVALID_ITEMS');
     }

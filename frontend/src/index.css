@@ -126,6 +126,7 @@ button, a, section { scroll-margin-top: 9rem; }
 .product-unavailable { color: var(--card-muted); font-size: .75rem; }
 .catalog-source-note { max-width: 52rem; margin: 1.75rem auto 0; color: var(--muted); font-size: .72rem; text-align: center; }
 .catalog-empty { padding: 2rem 1rem; border: 1px dashed #bcbfae; border-radius: .75rem; color: var(--muted); text-align: center; }
+.catalog-state { margin-top: 1.25rem; padding: 1.5rem; border: 1px solid var(--line); background: #fffefa; }
 
 .product-modal { width: min(100% - 2rem, 34rem); max-width: none; max-height: calc(100% - 2rem); padding: 0; border: 2px solid var(--ink); border-radius: .2rem .5rem .25rem .2rem; background: var(--paper); color: var(--ink); box-shadow: 0 18px 50px #0005; overflow-y: auto; overscroll-behavior: contain; }
 .product-modal::backdrop { background: #161616b8; }
@@ -211,6 +212,7 @@ button, a, section { scroll-margin-top: 9rem; }
 .order-review-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 
 @media (max-width: 559px) {
+  .academic-banner { padding-right: 4.5rem; text-align: left; }
   .product-modal { width: 100%; max-height: calc(100% - 1rem); margin: auto 0 0; border-bottom: 0; border-radius: .5rem .5rem 0 0; }
   .product-modal-content { padding: 1.25rem; }
   .order-review { width: 100%; max-height: calc(100% - 1rem); margin: auto 0 0; border-bottom: 0; border-radius: .5rem .5rem 0 0; }
@@ -233,6 +235,22 @@ button, a, section { scroll-margin-top: 9rem; }
 .connection-retry { flex-shrink: 0; min-height: 2.75rem; padding: .5rem .8rem; border: 1px solid #c7cbbb; border-radius: .5rem; background: transparent; color: #42543a; font-size: .75rem; font-weight: 600; }
 .connection-retry:hover:not(:disabled) { background: #f0f1e7; border-color: #829275; }
 .connection-retry:disabled { color: #74766c; cursor: wait; }
+
+/* Telas administrativas e resgate acrescentados após o catálogo inicial. */
+.admin-login-container, .admin-dashboard { padding: clamp(1rem, 4vw, 2rem); border: 1px solid var(--line); background: #fffefa; }
+.admin-login-container h2, .admin-dashboard h2 { margin: 0 0 1.25rem; font-family: var(--display-font); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; text-transform: uppercase; }
+.admin-login-form, .admin-form { display: grid; gap: 1rem; max-width: 32rem; }
+.form-group { display: grid; gap: .35rem; min-width: 0; }
+.form-group label { font-size: .85rem; font-weight: 650; }
+.form-group input, .form-group textarea { width: 100%; min-width: 0; padding: .65rem; border: 1px solid var(--line); border-radius: .15rem; background: #fff; color: var(--ink); font: inherit; }
+.admin-login-form > button, .admin-form > button { justify-self: start; }
+.admin-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.admin-info { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.admin-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.admin-section h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+.admin-error { padding: .75rem; border: 1px solid #aa482e; color: #8b321e; background: #fff1ec; overflow-wrap: anywhere; }
+.comanda-redeem-container form { flex-wrap: wrap; }
+.comanda-redeem-container input { min-width: 0; }
 
 .site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-top: 2.75rem; padding-block: 1.5rem; border-top: 1px solid var(--line); }
 .site-footer p { margin: 0; color: var(--muted); font-size: .7rem; }

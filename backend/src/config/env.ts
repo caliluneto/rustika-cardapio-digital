@@ -16,10 +16,7 @@ function readPort(value: string | undefined, fallback: number): number {
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 
 export function assertRuntimeDatabaseProfile(profile: string, runtimeEnv: string): void {
-  if (!profile) {
-    throw new Error('DB_PROFILE não pode ser vazio.');
-  }
-
+  if (!profile) throw new Error('DB_PROFILE não pode ser vazio.');
   if (runtimeEnv === 'test' && profile !== 'app-test') {
     throw new Error('NODE_ENV=test exige exclusivamente DB_PROFILE=app-test.');
   }
@@ -27,9 +24,7 @@ export function assertRuntimeDatabaseProfile(profile: string, runtimeEnv: string
 
 export function resolveDatabaseProfile(runtimeEnv: string, configuredProfile?: string): string {
   const profile = configuredProfile === undefined
-    ? (runtimeEnv === 'test' ? 'app-test' : 'app-dev')
-    : configuredProfile.trim();
-
+    ? (runtimeEnv === 'test' ? 'app-test' : 'app-dev') : configuredProfile.trim();
   assertRuntimeDatabaseProfile(profile, runtimeEnv);
   return profile;
 }

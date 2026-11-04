@@ -46,7 +46,7 @@ export default function Catalog({ categories, products, productDialogOpen, onOpe
       <CategoryNav categories={orderedCategories} selectedCategoryId={selectedCategoryId} onSelect={setSelectedCategoryId} />
 
       <div className="catalog-results-heading">
-        <p className="category-description">{selectedCategory?.description ?? 'Todos os itens da seleção aprovada, com valores de venda da planilha de referência.'}</p>
+        <p className="category-description">{selectedCategory?.description ?? 'Todos os itens do catálogo público, com valores de venda do cadastro Rústika.'}</p>
         <p className="product-count" role="status" aria-live="polite" aria-atomic="true">
           <span className="sr-only">{selectedCategory?.name ?? 'Todas as categorias'}: </span>
           {visibleProducts.length} {visibleProducts.length === 1 ? 'opção' : 'opções'}

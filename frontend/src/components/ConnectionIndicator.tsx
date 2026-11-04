@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getHealth, type HealthData } from '../services/api';
 
 type ConnectionState =
+  | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'online'; health: HealthData }
   | { status: 'offline'; message: string };
 
-export default function ConnectionIndicator() {
-  const [connection, setConnection] = useState<ConnectionState>({ status: 'loading' });
+export default function ConnectionIndicator({ autoCheck = true }: { autoCheck?: boolean }) {
+  const [connection, setConnection] = useState<ConnectionState>(autoCheck ? { status: 'loading' } : { status: 'idle' });
   const activeController = useRef<AbortController | null>(null);
 
   const checkConnection = useCallback(async () => {
@@ -42,15 +43,17 @@ export default function ConnectionIndicator() {
   }, []);
 
   useEffect(() => {
+    if (!autoCheck) return;
     void checkConnection();
     return () => activeController.current?.abort();
-  }, [checkConnection]);
+  }, [autoCheck, checkConnection]);
 
   return (
-    <section className={`connection connection--${connection.status}`} aria-label="Conectividade da API">
+    <section className={`connection connection--${connection.status}`} aria-label="Verificação de conexão">
       <div className="connection-message" role="status" aria-live="polite" aria-atomic="true">
         <span className={connection.status === 'loading' ? 'connection-spinner' : 'connection-dot'} aria-hidden="true" />
         <div>
+          {connection.status === 'idle' && <><strong>Verificação de conexão</strong><p>Consulte manualmente a disponibilidade da API.</p></>}
           {connection.status === 'loading' && <><strong>Verificando conexão…</strong><p>Consultando GET /api/health.</p></>}
           {connection.status === 'online' && <>
             <strong>API disponível</strong>
@@ -63,7 +66,7 @@ export default function ConnectionIndicator() {
         </div>
       </div>
       <button className="connection-retry" type="button" disabled={connection.status === 'loading'} onClick={() => void checkConnection()}>
-        {connection.status === 'loading' ? 'Verificando…' : 'Verificar novamente'}
+        {connection.status === 'loading' ? 'Verificando…' : connection.status === 'idle' ? 'Verificar conexão' : 'Verificar novamente'}
       </button>
     </section>
   );

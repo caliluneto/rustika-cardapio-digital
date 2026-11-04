@@ -11,14 +11,31 @@ export class AppError extends Error {
   }
 }
 
-export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
-  const isKnownError = error instanceof AppError;
-  const statusCode = isKnownError ? error.statusCode : 500;
-  const code = isKnownError ? error.code : 'INTERNAL_ERROR';
-  const message = isKnownError ? error.message : 'Erro interno no servidor.';
+function requestError(error: unknown): AppError | undefined {
+  if (error instanceof URIError) {
+    return new AppError(400, 'INVALID_INPUT', 'Requisição inválida.');
+  }
+  if (error && typeof error === 'object') {
+    const type = (error as { type?: unknown }).type;
+    if (type === 'entity.parse.failed') {
+      return new AppError(400, 'INVALID_INPUT', 'JSON inválido.');
+    }
+    if (type === 'entity.too.large') {
+      return new AppError(413, 'BODY_TOO_LARGE', 'Corpo da requisição excede o limite.');
+    }
+  }
+  return undefined;
+}
 
-  if (!isKnownError) {
-    console.error('[api] Erro inesperado:', error);
+export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
+  const knownError = error instanceof AppError ? error : requestError(error);
+  const statusCode = knownError?.statusCode ?? 500;
+  const code = knownError?.code ?? 'INTERNAL_ERROR';
+  const message = knownError?.message ?? 'Erro interno no servidor.';
+
+  if (!knownError) {
+    const name = error instanceof Error ? error.name : 'unknown';
+    console.error(`[api] Erro inesperado (${name}); detalhes omitidos.`);
   }
 
   response.status(statusCode).json({

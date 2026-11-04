@@ -2,9 +2,12 @@ import request from 'supertest';
 import type { PrismaClient } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
+import { env } from '../src/config/env';
 
 const app = createApp();
 
+// 3D.3.12: recuperado de health.test-Calil-Notebook.ts (cópia de conflito do OneDrive com a
+// versão do início da 3D.3.9). O arquivo ativo tinha regredido para uma versão de 22/10.
 describe('inicialização isolada do app', () => {
   it('aceita cliente injetado sem criar conexão durante o health', async () => {
     const prisma = { $connect: vi.fn() } as unknown as PrismaClient;
@@ -40,6 +43,31 @@ describe('GET /api/health', () => {
   });
 });
 
+describe('Tratamento de erros', () => {
+  // Contrato atual (errorHandler): JSON malformado é 400 INVALID_INPUT. A versão do commit
+  // baseline esperava 500 em POST /api/health; essa expectativa antiga NÃO foi restaurada.
+  it('retorna erro padronizado quando o JSON da requisição é inválido', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const response = await request(app)
+        .post('/api/admin/auth/login')
+        .set('Origin', env.corsOrigin)
+        .set('X-Rustika-Request', '1')
+        .set('Content-Type', 'application/json')
+        .send('{invalid');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'JSON inválido.' },
+      });
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  });
+});
+
 describe('Rotas inexistentes', () => {
   it('retorna HTTP 404 com resposta de erro padronizada', async () => {
     const response = await request(app).get('/api/rota-inexistente');
@@ -52,25 +80,5 @@ describe('Rotas inexistentes', () => {
         message: expect.any(String),
       },
     });
-  });
-});
-
-describe('Tratamento de erros', () => {
-  it('retorna erro padronizado quando o JSON da requisição é inválido', async () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    try {
-      const response = await request(app)
-        .post('/api/health')
-        .set('Content-Type', 'application/json')
-        .send('{invalid');
-
-      expect(response.status).toBe(500);
-      expect(response.body).toEqual({
-        success: false,
-        error: { code: 'INTERNAL_ERROR', message: 'Erro interno no servidor.' },
-      });
-    } finally {
-      log.mockRestore();
-    }
   });
 });

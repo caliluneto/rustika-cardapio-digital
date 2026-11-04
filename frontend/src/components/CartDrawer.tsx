@@ -3,6 +3,7 @@ import { useCart } from '../contexts/CartContext';
 import { selectItemSubtotal } from '../contexts/cart';
 import type { CartAction } from '../contexts/cart';
 import { canReviewOrder } from '../contexts/orderReview';
+import ComandaRedeem from './ComandaRedeem';
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatPrice = (cents: number) => priceFormatter.format(cents / 100);
@@ -69,6 +70,7 @@ export default function CartDrawer({ trigger, onClose, onReview, focusReview = f
           <button ref={closeRef} className="product-modal-close" type="button" autoFocus onClick={onClose}>Fechar <span aria-hidden="true">×</span></button>
         </div>
         <p className="cart-reference-note">Valores de referência. Preço e estoque não são confirmados; esta demonstração não envia pedidos.</p>
+        <ComandaRedeem />
         <section className="cart-comanda" aria-labelledby="cart-comanda-title">
           {editingComanda ? <>
           <h3 id="cart-comanda-title">Número da comanda</h3>
