@@ -1,0 +1,231 @@
+# RÚSTIKA — CI (3D.3.25-A). PREPARADO, NÃO EXECUTADO. Revisar antes do primeiro push.
+#
+# - Jobs `backend` e `frontend`: sem banco, sem segredos; rodam em pull_request e sob demanda.
+# - Job `e2e`: Playwright contra um PostgreSQL 18 EFÊMERO criado no runner. Só roda manualmente
+#   (workflow_dispatch com run_e2e=true). Nunca em push nem em pull_request.
+# - Nenhum secret do repositório é usado. As senhas são geradas na execução, mascaradas e descartadas.
+# - Actions fixadas por SHA de COMMIT (verificado com git ls-remote em github.com/actions/*, 05/11/2026).
+#   Atualizar com cuidado: ver a seção de manutenção em backend/docs/github-actions-e2e.md.
+# - O E2E recusa rodar em repositório público (github.event.repository.private).
+# - Documentação: backend/docs/github-actions-e2e.md
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_backend:
+        description: 'Executar o job backend (typecheck, build, Vitest)'
+        type: boolean
+        default: true
+      run_frontend:
+        description: 'Executar o job frontend (typecheck, build, testes)'
+        type: boolean
+        default: true
+      run_e2e:
+        description: 'Executar o Playwright E2E contra o PostgreSQL efêmero (escreve SOMENTE no banco do runner)'
+        type: boolean
+        default: false
+      upload_diagnostics:
+        description: 'Em falha do E2E, anexar test-results (pode conter snapshots de página com dados sintéticos)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    if: github.event_name == 'pull_request' || inputs.run_backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Gerar o cliente Prisma (sem banco)
+        run: npx prisma generate
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Testes unitários (Vitest; sem banco; sem a planilha privada, que não está no Git)
+        run: |
+          set -o pipefail
+          npm run test:ci 2>&1 | tee "$RUNNER_TEMP/backend-test.log"
+      - name: Resumo da falha (cauda do log, sem segredos)
+        if: failure()
+        run: |
+          { echo '### Falha nos testes do backend'; echo '```'; tail -n 60 "$RUNNER_TEMP/backend-test.log" 2>/dev/null || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  frontend:
+    if: github.event_name == 'pull_request' || inputs.run_frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Testes unitários (node:test)
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$RUNNER_TEMP/frontend-test.log"
+      - name: Resumo da falha (cauda do log, sem segredos)
+        if: failure()
+        run: |
+          { echo '### Falha nos testes do frontend'; echo '```'; tail -n 60 "$RUNNER_TEMP/frontend-test.log" 2>/dev/null || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  e2e:
+    # Somente manual. Nunca por push/pull_request.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_e2e == true && github.event.repository.private == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Gates do projeto, exatamente como no uso local (nenhum gate foi alterado ou afrouxado).
+      NODE_ENV: test
+      DB_PROFILE: app-test
+      RUSTIKA_DB_INTEGRATION: '1'
+      RUSTIKA_DB_INTEGRATION_CONFIRM: WRITE_CARDAPIO_DIGITAL_TEST
+      RUSTIKA_E2E_CONFIRM: RUN_E2E_ON_CARDAPIO_DIGITAL_TEST
+      # Pasta de segredos SINTÉTICA, fora do workspace (exigência de resolveSecretsDir).
+      CARDAPIO_SECRETS_DIR: ${{ runner.temp }}/cardapio-secrets
+      PG_CONTAINER: pg-e2e
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Pré-condições do runner (portas livres, nenhuma URL de banco no ambiente)
+        run: |
+          for port in 5432 4100 5174; do
+            if ss -ltn "( sport = :$port )" | grep -q LISTEN; then echo "Porta $port ocupada"; exit 1; fi
+          done
+          for var in DATABASE_URL SHADOW_DATABASE_URL CARDAPIO_MIGRATE_DEPLOY_CONFIRMATION RUSTIKA_E2E_LEGACY_CLEANUP; do
+            if [ -n "${!var:-}" ]; then echo "$var não pode estar definida"; exit 1; fi
+          done
+
+      - name: Instalar dependências
+        run: |
+          (cd backend && npm ci && npx prisma generate)
+          (cd frontend && npm ci && npx playwright install --with-deps chromium)
+
+      - name: Gerar senhas sintéticas e a pasta de segredos (fora do workspace)
+        run: |
+          set -euo pipefail
+          gen() { openssl rand -hex 24; }
+          SU=$(gen); MIG=$(gen); APP=$(gen); FIX=$(gen)
+          for v in "$SU" "$MIG" "$APP" "$FIX"; do echo "::add-mask::$v"; done
+          {
+            echo "PG_SUPERUSER_PW=$SU"; echo "PG_MIG_PW=$MIG"; echo "PG_APP_PW=$APP"; echo "PG_FIX_PW=$FIX"
+          } >> "$GITHUB_ENV"
+          umask 077
+          mkdir -p "$CARDAPIO_SECRETS_DIR"
+          base="127.0.0.1:5432"
+          printf 'DATABASE_URL="postgresql://cardapio_test_app:%s@%s/cardapio_digital_test?schema=public"\n' "$APP" "$base" > "$CARDAPIO_SECRETS_DIR/app-test.env"
+          printf 'DATABASE_URL="postgresql://cardapio_migrator:%s@%s/cardapio_digital_test?schema=public"\nSHADOW_DATABASE_URL="postgresql://cardapio_migrator:%s@%s/cardapio_digital_shadow?schema=public"\n' "$MIG" "$base" "$MIG" "$base" > "$CARDAPIO_SECRETS_DIR/migrate-test.env"
+          printf 'DATABASE_URL="postgresql://cardapio_test_fixtures:%s@%s/cardapio_digital_test?schema=public"\n' "$FIX" "$base" > "$CARDAPIO_SECRETS_DIR/fixtures-test.env"
+
+      - name: Subir PostgreSQL 18 efêmero (rede do host, o servidor enxerga 127.0.0.1)
+        # `docker run --network host` em vez de service container: os scripts de provisão do projeto
+        # recusam servidor cujo inet_server_addr() não seja loopback, e a ponte do Docker mudaria isso.
+        run: |
+          set -euo pipefail
+          chmod 644 .github/ci/pg_hba.ci.conf
+          docker run -d --name "$PG_CONTAINER" --network host \
+            -e POSTGRES_PASSWORD="$PG_SUPERUSER_PW" \
+            -v "$PWD/.github/ci/pg_hba.ci.conf:/ci/pg_hba.conf:ro" \
+            postgres:18 -c hba_file=/ci/pg_hba.conf -c listen_addresses=127.0.0.1 -c max_connections=30
+          for i in $(seq 1 40); do
+            if docker exec "$PG_CONTAINER" pg_isready -U postgres -h /var/run/postgresql >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec "$PG_CONTAINER" psql -U postgres -tAc "select version()" | head -1
+
+      - name: Criar roles e bancos com os nomes exatos exigidos pelos gates
+        run: |
+          docker exec -i "$PG_CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 \
+            -v mig_pw="$PG_MIG_PW" -v app_pw="$PG_APP_PW" < .github/ci/bootstrap.sql
+
+      - name: Migrations no banco efêmero (script oficial do projeto, perfil migrate-test)
+        working-directory: backend
+        env:
+          CARDAPIO_MIGRATE_DEPLOY_CONFIRMATION: APPLY_CARDAPIO_DIGITAL_TEST
+        run: npm run db:migrate:deploy:test
+
+      - name: Provisionar a role de fixtures (scripts SQL oficiais, sem alteração)
+        run: |
+          set -euo pipefail
+          run_sql() { docker exec -i "$PG_CONTAINER" psql -U postgres -d cardapio_digital_test -v ON_ERROR_STOP=1 "$@"; }
+          run_sql < backend/docs/sql/provision-test-fixtures.sql
+          # Via stdin: o psql só interpola :'variavel' de forma garantida em entrada padrão, não em -c.
+          printf "ALTER ROLE cardapio_test_fixtures PASSWORD :'fix_pw';\n" | run_sql -v fix_pw="$PG_FIX_PW"
+          run_sql < backend/docs/sql/enable-test-fixtures-login.sql
+          run_sql < backend/docs/sql/verify-test-fixtures.sql
+
+      - name: Estado inicial (somente leitura)
+        working-directory: backend
+        run: npm run e2e:inspect
+
+      - name: Playwright E2E (Chromium headless, 1 worker, sem retentativas)
+        working-directory: frontend
+        run: npx playwright test --workers=1 --project=chromium --reporter=line
+
+      - name: Estado final (somente leitura) e prova de resíduo zero
+        if: always()
+        working-directory: backend
+        run: |
+          npm run e2e:inspect | tee "$RUNNER_TEMP/final-state.json"
+          node -e "
+            const s = JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/final-state.json', 'utf8'));
+            const rows = Object.fromEntries(s.rows.map(r => [r.tabela, r.linhas]));
+            const bad = ['orders','order_items','order_status_history','comandas','comanda_invitations','comanda_sessions','admins','categories','products'].filter(t => rows[t] !== 0);
+            if (bad.length) { console.error('Resíduo após o E2E em: ' + bad.join(', ')); process.exit(1); }
+            console.log('Resíduo zero em todas as tabelas de dados.');"
+
+      - name: Anexar diagnósticos (opt-in, somente em falha)
+        if: failure() && inputs.upload_diagnostics
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: playwright-diagnostics
+          path: frontend/test-results/
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Logs do PostgreSQL (cauda, somente em falha)
+        if: failure()
+        run: docker logs --tail 40 "$PG_CONTAINER" 2>&1 | sed -E 's#(://[^:@/ ]+:)[^@ ]+@#\1***@#g' || true
+
+      - name: Descartar o banco efêmero e os segredos sintéticos
+        if: always()
+        run: |
+          docker rm -f "$PG_CONTAINER" >/dev/null 2>&1 || true
+          rm -rf "$CARDAPIO_SECRETS_DIR" "$RUNNER_TEMP/final-state.json" "${TMPDIR:-/tmp}/rustika-e2e" || true
