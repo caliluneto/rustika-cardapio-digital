@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeSeedReal } from '../../scripts/executor-seed-real';
 import type { PrismaClient } from '@prisma/client';
+import { syntheticCatalogPath } from '../helpers/catalog-sources';
+
+// 3D.3.25-D: o executor le a fixture SINTETICA (quantitativos identicos aos da planilha real).
+const catalogPath = syntheticCatalogPath;
 
 describe('executeSeedReal: Executor offline', () => {
   let mockPrisma: any;
@@ -19,7 +23,7 @@ describe('executeSeedReal: Executor offline', () => {
       mockPrisma.$queryRaw.mockResolvedValue([
         { db: 'cardapio_digital_dev', usr: 'cardapio_migrator' },
       ]);
-      const result = await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true });
+      const result = await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath });
       expect(result.errors).toHaveLength(0);
     });
 
@@ -27,7 +31,7 @@ describe('executeSeedReal: Executor offline', () => {
       mockPrisma.$queryRaw.mockResolvedValue([
         { db: 'cardapio_digital_dev', usr: 'cardapio_dev_app' },
       ]);
-      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true }))
+      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath }))
         .rejects.toThrow('Role incorreto');
     });
 
@@ -35,7 +39,7 @@ describe('executeSeedReal: Executor offline', () => {
       mockPrisma.$queryRaw.mockResolvedValue([
         { db: 'wrong_db', usr: 'cardapio_migrator' },
       ]);
-      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true }))
+      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath }))
         .rejects.toThrow('Banco incorreto');
     });
 
@@ -43,21 +47,21 @@ describe('executeSeedReal: Executor offline', () => {
       mockPrisma.$queryRaw.mockResolvedValue([
         { db: 'cardapio_digital_dev', usr: 'postgres' },
       ]);
-      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true }))
+      await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath }))
         .rejects.toThrow('Role incorreto');
     });
   });
 
   describe('Modo dry-run', () => {
     it('dry-run nao executa consulta de banco', async () => {
-      const result = await executeSeedReal(mockPrisma, { dryRun: true });
+      const result = await executeSeedReal(mockPrisma, { dryRun: true, catalogPath });
       expect(mockPrisma.$queryRaw).not.toHaveBeenCalled();
       expect(result.dryRun).toBe(true);
       expect(result.created).toBe(0);
     });
 
     it('dry-run retorna plano correto', async () => {
-      const result = await executeSeedReal(mockPrisma, { dryRun: true });
+      const result = await executeSeedReal(mockPrisma, { dryRun: true, catalogPath });
       expect(result.plan.publicos).toBe(144);
       expect(result.plan.internos).toBe(24);
       expect(result.plan.incertos).toBe(6);
@@ -66,7 +70,7 @@ describe('executeSeedReal: Executor offline', () => {
     });
 
     it('dry-run nao executa transacao', async () => {
-      await executeSeedReal(mockPrisma, { dryRun: true });
+      await executeSeedReal(mockPrisma, { dryRun: true, catalogPath });
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
@@ -76,14 +80,14 @@ describe('executeSeedReal: Executor offline', () => {
       mockPrisma.$queryRaw.mockResolvedValue([
         { db: 'cardapio_digital_dev', usr: 'cardapio_migrator' },
       ]);
-      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true });
+      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath });
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
   describe('Quantitativos', () => {
     it('plano contem quantitativos corretos', async () => {
-      const result = await executeSeedReal(mockPrisma, { dryRun: true });
+      const result = await executeSeedReal(mockPrisma, { dryRun: true, catalogPath });
       expect(result.plan).toEqual({
         publicos: 144,
         internos: 24,
@@ -101,7 +105,7 @@ describe('executeSeedReal: Executor offline', () => {
       ]);
       mockPrisma.$transaction.mockImplementation((callback: (tx: any) => Promise<number>) => callback(mockPrisma));
 
-      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: false });
+      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: false, catalogPath });
       const call = mockPrisma.product.upsert.mock.calls[0];
       if (call) {
         expect(call[0].create.publicKey).toMatch(/^rustika-/);
@@ -114,7 +118,7 @@ describe('executeSeedReal: Executor offline', () => {
       ]);
       mockPrisma.$transaction.mockImplementation((callback: (tx: any) => Promise<number>) => callback(mockPrisma));
 
-      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: false });
+      await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: false, catalogPath });
       const calls = mockPrisma.product.create.mock.calls;
       if (calls.length > 0) {
         expect(calls[0][0].data.publicKey).toBeUndefined();

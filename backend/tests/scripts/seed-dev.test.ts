@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeSeedReal } from '../../scripts/executor-seed-real';
 import type { PrismaClient } from '@prisma/client';
+import { syntheticCatalogPath } from '../helpers/catalog-sources';
+
+// 3D.3.25-D: fixture SINTETICA no lugar da planilha real.
+const catalogPath = syntheticCatalogPath;
 
 describe('Seed atual: executor offline', () => {
   let mockPrisma: any;
@@ -19,7 +23,7 @@ describe('Seed atual: executor offline', () => {
       { db: 'cardapio_digital_dev', usr: 'cardapio_migrator' },
     ]);
 
-    const result = await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true });
+    const result = await executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath });
 
     expect(result.errors).toHaveLength(0);
   });
@@ -29,7 +33,7 @@ describe('Seed atual: executor offline', () => {
       { db: 'cardapio_digital_dev', usr: 'cardapio_dev_app' },
     ]);
 
-    await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true }))
+    await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath }))
       .rejects.toThrow('Role incorreto');
   });
 
@@ -38,12 +42,12 @@ describe('Seed atual: executor offline', () => {
       { db: 'cardapio_digital_test', usr: 'cardapio_migrator' },
     ]);
 
-    await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true }))
+    await expect(executeSeedReal(mockPrisma, { dryRun: false, requireConfirm: true, catalogPath }))
       .rejects.toThrow('Banco incorreto');
   });
 
   it('dry-run nao acessa o banco', async () => {
-    const result = await executeSeedReal(mockPrisma, { dryRun: true });
+    const result = await executeSeedReal(mockPrisma, { dryRun: true, catalogPath });
 
     expect(mockPrisma.$queryRaw).not.toHaveBeenCalled();
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();

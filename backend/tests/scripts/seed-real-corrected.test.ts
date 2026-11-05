@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { classifyProduct, generateClassificationReport, validateAllPrices } from '../../scripts/seed-real';
+import { classifyProduct, generateClassificationReport as generateReport, validateAllPrices as validateAll } from '../../scripts/seed-real';
+import { syntheticCatalogPath } from '../helpers/catalog-sources';
+
+// 3D.3.25-D: fixture sintetica com os mesmos quantitativos da planilha real (174 = 144 + 24 + 6).
+const generateClassificationReport = () => generateReport(syntheticCatalogPath);
+const validateAllPrices = () => validateAll(syntheticCatalogPath);
 
 describe('seed-real: Classificação corrigida', () => {
   describe('Filtro de grupos corrigido', () => {

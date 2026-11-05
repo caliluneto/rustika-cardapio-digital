@@ -1,7 +1,8 @@
 ﻿import type { Prisma, PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import * as path from 'path';
-import { classifyProduct, parsePrice } from './seed-real';
+import { readFileSync } from 'fs';
+import { classifyProduct, parsePrice, defaultCatalogPath } from './seed-real';
 import { loadDatabaseProfile, type DatabaseSecrets } from '../src/config/secrets';
 
 // Importar este módulo não lê segredos, não cria cliente e não conecta ao banco.
@@ -80,8 +81,9 @@ export function catalogFromRows(rows: Record<string, unknown>[]): Catalog {
     inativosExcluidos: registros.length - ativos.length, candidatos: candidatos.length,
   } };
 }
-export function readExcelExpectations(): Catalog {
-  const workbook = xlsx.readFile(path.join(__dirname, '../data/Exportacao-produtos.xlsx'));
+// `filePath` existe so para testes usarem a fixture sintetica; a inspecao real usa sempre a planilha real.
+export function readExcelExpectations(filePath: string = defaultCatalogPath): Catalog {
+  const workbook = xlsx.read(readFileSync(filePath), { type: 'buffer' });
   const sheet = workbook.SheetNames[0];
   const ws = sheet ? workbook.Sheets[sheet] : undefined;
   if (!ws) throw new InspectionError('CATALOGO');

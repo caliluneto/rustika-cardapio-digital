@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import * as path from 'path';
+import { readFileSync } from 'fs';
 
 /** Parser monetario deterministico para centavos */
 export function parsePrice(raw: any): Prisma.Decimal {
@@ -62,9 +63,15 @@ export interface ClassificationRecord {
   classificacao: 'COMERCIALIZADO' | 'INSUMO' | 'INCERTO';
 }
 
-export async function generateClassificationReport(): Promise<ClassificationRecord[]> {
-  const filePath = path.join(__dirname, '../data/Exportacao-produtos.xlsx');
-  const workbook = xlsx.readFile(filePath);
+/**
+ * Planilha real do catalogo (dado comercial privado, fora do Git). Operacoes reais usam SEMPRE este
+ * caminho: os parametros `filePath` abaixo existem so para os testes apontarem para a fixture sintetica
+ * e nunca sao preenchidos pelas linhas de comando.
+ */
+export const defaultCatalogPath = path.join(__dirname, '../data/Exportacao-produtos.xlsx');
+
+export async function generateClassificationReport(filePath: string = defaultCatalogPath): Promise<ClassificationRecord[]> {
+  const workbook = xlsx.read(readFileSync(filePath), { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('Arquivo Excel sem abas.');
   const ws = workbook.Sheets[sheetName];
@@ -84,9 +91,8 @@ export async function generateClassificationReport(): Promise<ClassificationReco
   });
 }
 
-export async function validateAllPrices(): Promise<void> {
-  const filePath = path.join(__dirname, '../data/Exportacao-produtos.xlsx');
-  const workbook = xlsx.readFile(filePath);
+export async function validateAllPrices(filePath: string = defaultCatalogPath): Promise<void> {
+  const workbook = xlsx.read(readFileSync(filePath), { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('Arquivo Excel sem abas.');
   const ws = workbook.Sheets[sheetName];

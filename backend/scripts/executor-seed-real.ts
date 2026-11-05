@@ -1,8 +1,43 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import * as path from 'path';
-import { parsePrice, classifyProduct, validateAllPrices } from './seed-real';
+import { readFileSync } from 'fs';
+import { parsePrice, classifyProduct, validateAllPrices, defaultCatalogPath } from './seed-real';
 import { createPrismaRuntime } from '../src/lib/prisma';
+
+/**
+ * Cabecalhos da planilha de catalogo (3D.3.25-E). Antes, o executor lia as colunas "Codigo" e "Preco venda" com
+ * o caractere de substituicao U+FFFD no nome (texto corrompido), entao o codigo saia sempre vazio e o preco
+ * sempre 0 sem nenhum erro. Os nomes abaixo sao os cabecalhos reais da planilha.
+ */
+export const CATALOG_COLUMNS = {
+  codigo: 'Código',
+  nome: 'Nome curto',
+  estado: 'Estado',
+  grupo: 'Grupo',
+  preco: 'Preço venda',
+} as const;
+
+/** Falha explicita se algum cabecalho obrigatorio nao existe (nunca vira codigo vazio ou preco zero). */
+export function assertCatalogColumns(data: Record<string, unknown>[]): void {
+  const present = new Set(data.flatMap(row => Object.keys(row)));
+  const missing = Object.values(CATALOG_COLUMNS).filter(column => !present.has(column));
+  if (missing.length > 0) {
+    throw new Error('Cabecalhos ausentes ou invalidos na planilha: ' + missing.join(', ') + '. Importacao abortada.');
+  }
+}
+
+/** Converte uma linha ATIVA do catalogo; codigo vazio ou preco ilegivel interrompem em vez de virar '' ou 0. */
+export function toCatalogRecord(row: Record<string, unknown>): { codigo: string; nome: string; grupo: string; preco: number; classificacao: ReturnType<typeof classifyProduct> } {
+  const codigo = String(row[CATALOG_COLUMNS.codigo] ?? '').trim();
+  const nome = String(row[CATALOG_COLUMNS.nome] ?? '').trim();
+  const grupo = String(row[CATALOG_COLUMNS.grupo] ?? '').trim();
+  if (codigo === '') throw new Error('Codigo vazio em produto ativo: ' + JSON.stringify(nome));
+  const rawPrice = row[CATALOG_COLUMNS.preco];
+  const preco = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice ?? ''));
+  if (!Number.isFinite(preco)) throw new Error('Preco ilegivel em produto ativo: codigo ' + codigo);
+  return { codigo, nome, grupo, preco, classificacao: classifyProduct(codigo, nome, grupo, preco) };
+}
 
 export interface ExecutionPlan {
   publicos: number;
@@ -86,7 +121,8 @@ async function reconcileWithExisting(prisma: PrismaClient, expected: Array<{ cod
   return reconciliation;
 }
 
-export async function executeSeedReal(prisma: PrismaClient, options: { dryRun?: boolean; requireConfirm?: boolean } = {}): Promise<ExecutionResult> {
+// `catalogPath` existe so para testes usarem a fixture sintetica; a linha de comando nunca o preenche.
+export async function executeSeedReal(prisma: PrismaClient, options: { dryRun?: boolean; requireConfirm?: boolean; catalogPath?: string } = {}): Promise<ExecutionResult> {
   const dryRun = options.dryRun !== false;
   const requireConfirm = options.requireConfirm !== false;
 
@@ -108,28 +144,23 @@ export async function executeSeedReal(prisma: PrismaClient, options: { dryRun?: 
       if (usr !== "cardapio_migrator") throw new Error("Role incorreto: " + usr + ". Esperado: cardapio_migrator");
     }
 
-    await validateAllPrices();
+    const filePath = options.catalogPath ?? defaultCatalogPath;
 
-    const filePath = path.join(__dirname, "../data/Exportacao-produtos.xlsx");
-    const workbook = xlsx.readFile(filePath);
+    const workbook = xlsx.read(readFileSync(filePath), { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) throw new Error("Arquivo sem abas.");
     const ws = workbook.Sheets[sheetName];
     if (!ws) throw new Error("Aba nao encontrada.");
     const data = xlsx.utils.sheet_to_json(ws) as Record<string, unknown>[];
+    assertCatalogColumns(data);
+    await validateAllPrices(filePath);
 
     const ativos = data.filter(r => r["Estado"] === "Ativo");
     const inativos = data.filter(r => r["Estado"] !== "Ativo");
     result.plan.inativos = inativos.length;
     result.plan.total = data.length;
 
-    const allAtivos = ativos.map(r => ({
-      codigo: String(r["C�digo"] ?? ""),
-      nome: String(r["Nome curto"] ?? "").trim(),
-      grupo: String(r["Grupo"] ?? "").trim(),
-      preco: typeof r["Pre�o venda"] === "number" ? r["Pre�o venda"] : parseFloat(String(r["Pre�o venda"] ?? "0")),
-      classificacao: classifyProduct(String(r["C�digo"] ?? ""), String(r["Nome curto"] ?? "").trim(), String(r["Grupo"] ?? "").trim(), typeof r["Pre�o venda"] === "number" ? r["Pre�o venda"] : parseFloat(String(r["Pre�o venda"] ?? "0"))),
-    }));
+    const allAtivos = ativos.map(toCatalogRecord);
 
     result.plan.publicos = allAtivos.filter(c => c.classificacao === "COMERCIALIZADO").length;
     result.plan.internos = allAtivos.filter(c => c.classificacao === "INSUMO").length;

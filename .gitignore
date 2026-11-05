@@ -54,3 +54,57 @@ pgpass.conf
 # Diretorios privados
 secrets/
 private-keys/
+
+# ---------------------------------------------------------------------------
+# 3D.3.25-A: preparação para GitHub (regras ADICIONAIS; nenhuma regra anterior foi removida)
+# ---------------------------------------------------------------------------
+
+# Playwright / relatórios de teste (podem conter snapshots de página com dados da execução)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Cópias de conflito do OneDrive (nunca publicar; resolver localmente, com autorização)
+*-Calil-Notebook*
+
+# Backups, dumps e segredos locais (a pasta real de segredos fica fora do repositório)
+*.dump.sha256
+*.sql.gz
+*.tmp
+*.tmp_restore
+RustikaBackups/
+RustikaQuarantine/
+CardapioDigital/
+
+# Dados reais do catálogo (planilha de exportação do cliente)
+backend/data/
+
+# Scripts avulsos locais com credenciais embutidas (herdados do E2E antigo). Permanecem só no
+# computador local; ignorar NÃO os apaga. Ver RELATORIO-ENTREGA-3D.3.25-A.md.
+backend/apply_mig.js
+backend/c.js
+backend/c2.js
+backend/c3.js
+backend/c4.js
+backend/check.sql
+backend/check_*.js
+backend/check_out.txt
+backend/cleanup.js
+backend/db-check.js
+backend/db-dumper.js
+backend/prov.txt
+backend/run_all.js
+backend/run_test.js
+backend/seed_e2e.js
+backend/seed_pg.js
+backend/seed_raw.js
+backend/update-hba.js
+backend/gen_hash.ts
+
+# Script legado da rotação de senhas cancelada (3D.3.22-C); quebra o tsc e não participa do fluxo
+backend/tests/scripts/verify-fixtures-rotation.ts
+
+# 3D.3.25-B: diagnósticos locais soltos na raiz (inventários e saídas de verificação)
+/check_out.txt
+/inventory_*.txt

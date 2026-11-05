@@ -10,9 +10,14 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:ci": "vitest run --config vitest.unit.config.mts",
     "test:watch": "vitest",
     "test:integration:db": "vitest run --config vitest.integration.config.mts",
     "test:integration:db:cleanup": "tsx tests/integration-db/cleanup-stale.ts",
+    "e2e:teardown": "tsx tests/integration-db/e2e/run-teardown.ts",
+    "e2e:cleanup-legacy": "tsx tests/integration-db/e2e/cleanup-legacy.ts",
+    "e2e:inspect": "tsx scripts/inspect-e2e-state.ts",
+    "secrets:audit": "tsx scripts/audit-secrets.ts",
     "db:validate": "tsx scripts/prisma-run.ts migrate-dev validate",
     "db:generate": "tsx scripts/prisma-run.ts migrate-dev generate",
     "db:validate:app": "tsx scripts/prisma-run.ts app-dev validate",
@@ -27,7 +32,9 @@
     "@prisma/client": "6.19.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "pg": "^8.23.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

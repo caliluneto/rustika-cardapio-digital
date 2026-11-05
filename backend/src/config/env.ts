@@ -13,7 +13,9 @@ function readPort(value: string | undefined, fallback: number): number {
   return port;
 }
 
-const nodeEnv = process.env.NODE_ENV ?? 'development';
+// 3D.3.21-A: trimmed. A Windows `set NODE_ENV=test && cmd` leaves "test " (trailing space), which
+// silently disabled the NODE_ENV=test => DB_PROFILE=app-test guard below.
+const nodeEnv = (process.env.NODE_ENV ?? 'development').trim();
 
 export function assertRuntimeDatabaseProfile(profile: string, runtimeEnv: string): void {
   if (!profile) throw new Error('DB_PROFILE não pode ser vazio.');

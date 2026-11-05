@@ -15,6 +15,8 @@ import { assertCatalogTotals, assertDevTarget, assertSessionIdentity, catalogFro
   InspectionError, priceInCents, readExcelExpectations, reconcileWithBank, runInspection, safeDiagnostic,
   type Catalog, type ExistingCategory, type ExistingProduct, type InspectionDependencies,
 } from '../../scripts/inspect-reconciliation';
+import { syntheticCatalogPath } from '../helpers/catalog-sources';
+import { SYNTHETIC_EXPECTED } from '../fixtures/catalog/synthetic-catalog';
 
 const originalConnect = Socket.prototype.connect;
 let networkAttempts = 0;
@@ -73,7 +75,7 @@ function doubles(session: unknown = [identity]) {
     $disconnect: vi.fn(async () => { events.push('disconnect'); }) };
   const deps: InspectionDependencies = {
     environment: {}, loadProfile: vi.fn(() => fakeDatabase),
-    createClient: vi.fn(async () => client as unknown as PrismaClient), readCatalog: vi.fn(readExcelExpectations),
+    createClient: vi.fn(async () => client as unknown as PrismaClient), readCatalog: vi.fn(() => readExcelExpectations(syntheticCatalogPath)),
   };
   return { deps, tx, client, events };
 }
@@ -265,8 +267,8 @@ describe('preços e expectativas offline', () => {
   it.each([NaN, Infinity, null, '', 'segredo-ficticio', -1, '1.2.3', 100000000])('rejeita preço inválido %#', raw => {
     expect(() => priceInCents(raw)).toThrow(InspectionError);
   });
-  it('contabiliza o Excel real local; nenhum dado PostgreSQL', () => {
-    const catalog = readExcelExpectations();
+  it('contabiliza o catálogo SINTÉTICO (mesmos totais da planilha real); nenhum dado PostgreSQL', () => {
+    const catalog = readExcelExpectations(syntheticCatalogPath);
     expect(catalog.totais).toEqual({ total: 204, ativos: 174, publicos: 144, internos: 24,
       incertosSuspensos: 6, inativosExcluidos: 30, candidatos: 168 });
     expect(() => assertCatalogTotals(catalog)).not.toThrow();
@@ -282,8 +284,8 @@ describe('preços e expectativas offline', () => {
     expect(catalog.candidatos[0]!.classificacao).toBe('COMERCIALIZADO');
   });
   it('expõe incompatibilidade do código público alfanumérico sem alterar a identidade', () => {
-    const result = reconcileWithBank(readExcelExpectations(), [], []);
-    expect(result.incompatibilidadesCatalogo.map(p => p.codigo)).toEqual(['PA062240']);
+    const result = reconcileWithBank(readExcelExpectations(syntheticCatalogPath), [], []);
+    expect(result.incompatibilidadesCatalogo.map(p => p.codigo)).toEqual([SYNTHETIC_EXPECTED.alphaCode]);
     expect(result.reconciliacao.AUSENTE).toBe(168);
     expect(result.propostasAutomaticas).toBe(false);
   });

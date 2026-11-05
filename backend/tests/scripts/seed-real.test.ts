@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrice, classifyProduct, validateAllPrices, generateClassificationReport } from '../../scripts/seed-real';
+import { parsePrice, classifyProduct, validateAllPrices, generateClassificationReport as generateReport } from '../../scripts/seed-real';
+import { syntheticCatalogPath } from '../helpers/catalog-sources';
+import { SYNTHETIC_EXPECTED } from '../fixtures/catalog/synthetic-catalog';
+
+// 3D.3.25-D: usa a fixture SINTETICA (mesma forma da planilha real). As asserções equivalentes sobre a planilha
+// real ficam em private-catalog.test.ts e só rodam onde ela existe.
+const generateClassificationReport = () => generateReport(syntheticCatalogPath);
 
 describe('parsePrice', () => {
   it('numero inteiro', () => expect(parsePrice(10).toFixed(2)).toBe('10.00'));
@@ -61,14 +67,14 @@ describe('generateClassificationReport', () => {
     const r=await generateClassificationReport();
     r.forEach((x:any)=>expect(()=>parsePrice(x.preco)).not.toThrow());
   });
-  it('BALY 2L comercializado',async()=>{
+  it('BALY 2L (sintetico) comercializado',async()=>{
     const r=await generateClassificationReport();
-    const b=r.find((x:any)=>x.nome==='BALY 2L');
+    const b=r.find((x:any)=>x.nome===SYNTHETIC_EXPECTED.balyName);
     expect(b).toBeDefined();expect(b?.classificacao).toBe('COMERCIALIZADO');
   });
-  it('PANCETA comercializado',async()=>{
+  it('PANCETA (sintetico) comercializado',async()=>{
     const r=await generateClassificationReport();
-    const p=r.find((x:any)=>x.nome.includes('PANCETA'));
+    const p=r.find((x:any)=>x.nome===SYNTHETIC_EXPECTED.pancetaName);
     expect(p).toBeDefined();expect(p?.classificacao).toBe('COMERCIALIZADO');
   });
   it('incertos presentes',async()=>{
@@ -84,6 +90,6 @@ describe('generateClassificationReport', () => {
 
 describe('validateAllPrices', () => {
   it('sem erros nos precos ativos',async()=>{
-    await expect(validateAllPrices()).resolves.not.toThrow();
+    await expect(validateAllPrices(syntheticCatalogPath)).resolves.not.toThrow();
   });
 });

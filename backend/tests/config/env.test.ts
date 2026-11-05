@@ -1,5 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { assertRuntimeDatabaseProfile, resolveDatabaseProfile } from '../../src/config/env';
+
+/** 3D.3.21-A: `set NODE_ENV=test && cmd` no cmd.exe grava "test " (espaço no fim). Sem normalizar,
+ * a guarda NODE_ENV=test => DB_PROFILE=app-test deixava passar app-dev. */
+describe('NODE_ENV com espaço no fim (lançamento via cmd.exe)', () => {
+  async function loadEnv(nodeEnv: string, profile: string) {
+    const previous = { NODE_ENV: process.env.NODE_ENV, DB_PROFILE: process.env.DB_PROFILE };
+    vi.resetModules();
+    process.env.NODE_ENV = nodeEnv; process.env.DB_PROFILE = profile;
+    try { return await import('../../src/config/env'); } finally {
+      for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+      vi.resetModules();
+    }
+  }
+
+  it("recusa DB_PROFILE='app-dev ' quando NODE_ENV='test '", async () => {
+    await expect(loadEnv('test ', 'app-dev ')).rejects.toThrow(/app-test/);
+  });
+
+  it("normaliza NODE_ENV='test ' e aceita apenas app-test", async () => {
+    const { env } = await loadEnv('test ', 'app-test ');
+    expect(env.nodeEnv).toBe('test');
+    expect(env.databaseProfile).toBe('app-test');
+  });
+});
 
 describe('perfil de banco do backend', () => {
   it('bloqueia app-dev e perfil de migração em ambiente de testes', () => {

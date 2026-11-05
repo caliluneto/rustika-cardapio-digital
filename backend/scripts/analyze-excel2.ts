@@ -1,9 +1,10 @@
 import xlsx from 'xlsx';
 import path from 'path';
+import { readFileSync } from 'fs';
 
 function analyzeExcel() {
   const filePath = path.join(__dirname, '../data/Exportacao-produtos.xlsx');
-  const workbook = xlsx.readFile(filePath);
+  const workbook = xlsx.read(readFileSync(filePath), { type: 'buffer' });
   
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('Arquivo sem abas.');
