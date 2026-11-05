@@ -17,6 +17,7 @@
     "e2e:teardown": "tsx tests/integration-db/e2e/run-teardown.ts",
     "e2e:cleanup-legacy": "tsx tests/integration-db/e2e/cleanup-legacy.ts",
     "e2e:inspect": "tsx scripts/inspect-e2e-state.ts",
+    "e2e:validate-state": "tsx scripts/validate-e2e-state.ts",
     "secrets:audit": "tsx scripts/audit-secrets.ts",
     "db:validate": "tsx scripts/prisma-run.ts migrate-dev validate",
     "db:generate": "tsx scripts/prisma-run.ts migrate-dev generate",

@@ -3,8 +3,15 @@
  * check_*.js scripts that embedded credentials. Uses the existing `migrate-test` profile from the
  * secrets directory, inside a READ ONLY transaction, and prints no secret.
  *
- *   npm run e2e:inspect
+ *   npm run e2e:inspect                              (JSON em stdout; uso interativo)
+ *   npm run --silent e2e:inspect -- --out <abs.json> (JSON gravado direto no arquivo; uso no CI)
+ *
+ * 3D.3.29-FIX02: com `--out` o JSON nunca passa pelo stdout (que carrega o banner do npm); o contrato do
+ * arquivo é validado por `scripts/e2e-state-contract.ts`. Qualquer erro de conexão/consulta termina com código 2
+ * e NÃO cria o arquivo.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { loadDatabaseProfile, redactSecrets } from '../src/config/secrets';
 
@@ -18,24 +25,60 @@ const QUERIES: Record<string, string> = {
   locks: `SELECT (SELECT count(*) FROM pg_locks WHERE locktype = 'advisory')::int AS advisory_locks, (SELECT count(*) FROM pg_prepared_xacts WHERE database = current_database())::int AS prepared`,
 };
 
+/** `--out <arquivo>`: grava o JSON diretamente (criação exclusiva, modo 0600); stdout só leva uma linha de status. */
+export function parseOutPath(argv: string[]): string | undefined {
+  const index = argv.indexOf('--out');
+  if (index === -1) return undefined;
+  const target = argv[index + 1];
+  if (!target || target.startsWith('--') || argv.length !== index + 2) throw new Error('Uso: e2e:inspect [-- --out <arquivo-absoluto>]');
+  if (!path.isAbsolute(target)) throw new Error('--out exige caminho absoluto.');
+  return target;
+}
+
+export interface InspectTx {
+  $executeRawUnsafe(sql: string): Promise<unknown>;
+  $queryRawUnsafe(sql: string): Promise<unknown>;
+}
+export interface InspectClient {
+  $transaction<T>(fn: (tx: InspectTx) => Promise<T>): Promise<T>;
+}
+
+/** Consulta o estado em transação somente leitura. Erro de conexão/consulta propaga: nada é fabricado. */
+export async function collectState(client: InspectClient): Promise<Record<string, unknown>> {
+  return client.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+    const out: Record<string, unknown> = {};
+    for (const [name, sql] of Object.entries(QUERIES)) out[name] = await tx.$queryRawUnsafe(sql);
+    return out;
+  });
+}
+
+/** Grava (com --out) ou imprime o estado. Só é chamado depois de a consulta ter terminado com sucesso. */
+export function emitState(result: Record<string, unknown>, outPath?: string): void {
+  const json = JSON.stringify(result, (_key, value) => (typeof value === 'bigint' ? Number(value) : value), 2);
+  if (outPath) {
+    fs.writeFileSync(outPath, `${json}\n`, { flag: 'wx', mode: 0o600 });
+    console.log('Estado gravado no arquivo informado em --out.');
+  } else {
+    console.log(json);
+  }
+}
+
 async function main() {
+  const outPath = parseOutPath(process.argv.slice(2));
   const profile = loadDatabaseProfile('migrate-test', { purpose: 'migration' });
   if (profile.database !== 'cardapio_digital_test') throw new Error('Perfil não aponta para cardapio_digital_test. Abortado.');
   const client = new PrismaClient({ datasources: { db: { url: profile.databaseUrl } } });
   try {
-    const result = await client.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
-      const out: Record<string, unknown> = {};
-      for (const [name, sql] of Object.entries(QUERIES)) out[name] = await tx.$queryRawUnsafe(sql);
-      return out;
-    });
-    console.log(JSON.stringify(result, (_key, value) => (typeof value === 'bigint' ? Number(value) : value), 2));
+    emitState(await collectState(client as unknown as InspectClient), outPath);
   } finally {
     await client.$disconnect();
   }
 }
 
-main().catch((error: unknown) => {
-  console.error(redactSecrets(error instanceof Error ? error.message : String(error)));
-  process.exit(2);
-});
+if (require.main === module) {
+  main().catch((error: unknown) => {
+    console.error(redactSecrets(error instanceof Error ? error.message : String(error)));
+    process.exit(2);
+  });
+}

@@ -89,6 +89,35 @@ describe('workflow ci.yml', () => {
     expect(e2e).toMatch(/if: always\(\)[\s\S]*docker rm -f[\s\S]*rm -rf "\$CARDAPIO_SECRETS_DIR"/);
   });
 
+  it('estado final (FIX02): JSON gravado pelo script, exit code verificado, sem pipe e descarte sempre executado', () => {
+    const e2e = jobBlock('e2e');
+    const stepBlock = (name: string) => {
+      const start = e2e.indexOf(`- name: ${name}`);
+      expect(start, name).toBeGreaterThan(-1);
+      const next = e2e.indexOf('\n      - ', start + 1);
+      return e2e.slice(start, next === -1 ? undefined : next);
+    };
+    const capture = stepBlock('Estado final (somente leitura) - captura estruturada');
+    const prove = stepBlock('Prova de resíduo zero (valida contrato, tabelas e contagens)');
+    const discard = stepBlock('Descartar o banco efêmero e os segredos sintéticos');
+    // captura: --out direto, sem pipe/tee, falha explícita (set -e/pipefail) e só se o PostgreSQL efêmero subiu
+    expect(capture).toContain('if: always() && steps.pg.outcome == \'success\'');
+    expect(capture).toMatch(/set -euo pipefail/);
+    expect(capture).toContain('npm run --silent e2e:inspect -- --out "$RUNNER_TEMP/final-state.json"');
+    expect(capture).not.toMatch(/\btee\b|\|\||continue-on-error|2>&1|JSON\.parse|node -e/);
+    expect(e2e).toMatch(/- name: Subir PostgreSQL 18 efêmero[^\n]*\n\s+id: pg\n/);
+    expect(capture).toMatch(/id: final_state/);
+    // validação: usa o contrato versionado, só roda se a captura funcionou e não mascara falhas
+    expect(prove).toContain('if: always() && steps.final_state.outcome == \'success\'');
+    expect(prove).toContain('npm run --silent e2e:validate-state -- "$RUNNER_TEMP/final-state.json"');
+    expect(prove).not.toMatch(/\|\||continue-on-error|JSON\.parse|node -e/);
+    // o descarte vem depois e roda sempre
+    expect(discard).toContain('if: always()');
+    expect(e2e.indexOf('- name: Descartar o banco')).toBeGreaterThan(e2e.indexOf('- name: Prova de resíduo zero'));
+    expect(discard).toContain('docker rm -f "$PG_CONTAINER"');
+    expect(discard).toContain('final-state.json');
+  });
+
   it('artefatos: opt-in, só em falha, só test-results, retenção curta', () => {
     const block = code.slice(code.indexOf('- name: Anexar diagnósticos'), code.indexOf('- name: Logs do PostgreSQL'));
     expect(block).toMatch(/if: failure\(\) && inputs\.upload_diagnostics/);

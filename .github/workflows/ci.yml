@@ -157,6 +157,7 @@ jobs:
           printf 'DATABASE_URL="postgresql://cardapio_test_fixtures:%s@%s/cardapio_digital_test?schema=public"\n' "$FIX" "$base" > "$CARDAPIO_SECRETS_DIR/fixtures-test.env"
 
       - name: Subir PostgreSQL 18 efêmero (rede do host, o servidor enxerga 127.0.0.1)
+        id: pg
         # `docker run --network host` em vez de service container: os scripts de provisão do projeto
         # recusam servidor cujo inet_server_addr() não seja loopback, e a ponte do Docker mudaria isso.
         run: |
@@ -201,17 +202,22 @@ jobs:
         working-directory: frontend
         run: npx playwright test --workers=1 --project=chromium --reporter=line
 
-      - name: Estado final (somente leitura) e prova de resíduo zero
-        if: always()
+      # Só roda se o PostgreSQL efêmero chegou a subir (evita erro secundário quando a falha foi anterior).
+      # O JSON é gravado diretamente pelo script (--out), sem passar pelo banner do npm; o código de saída de
+      # cada comando é verificado e erro de consulta NUNCA vira "resíduo zero".
+      - name: Estado final (somente leitura) - captura estruturada
+        id: final_state
+        if: always() && steps.pg.outcome == 'success'
         working-directory: backend
         run: |
-          npm run e2e:inspect | tee "$RUNNER_TEMP/final-state.json"
-          node -e "
-            const s = JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/final-state.json', 'utf8'));
-            const rows = Object.fromEntries(s.rows.map(r => [r.tabela, r.linhas]));
-            const bad = ['orders','order_items','order_status_history','comandas','comanda_invitations','comanda_sessions','admins','categories','products'].filter(t => rows[t] !== 0);
-            if (bad.length) { console.error('Resíduo após o E2E em: ' + bad.join(', ')); process.exit(1); }
-            console.log('Resíduo zero em todas as tabelas de dados.');"
+          set -euo pipefail
+          rm -f "$RUNNER_TEMP/final-state.json"
+          npm run --silent e2e:inspect -- --out "$RUNNER_TEMP/final-state.json"
+
+      - name: Prova de resíduo zero (valida contrato, tabelas e contagens)
+        if: always() && steps.final_state.outcome == 'success'
+        working-directory: backend
+        run: npm run --silent e2e:validate-state -- "$RUNNER_TEMP/final-state.json"
 
       - name: Anexar diagnósticos (opt-in, somente em falha)
         if: failure() && inputs.upload_diagnostics
