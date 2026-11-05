@@ -15,7 +15,7 @@ export default function Header({ itemCount, onOpenCart }: HeaderProps) {
             <span className="brand-name">RÚSTIKA<small>ESTÚDIO BAR</small></span>
           </a>
           <a className="header-menu-link" href="#catalog">Explorar cardápio <span aria-hidden="true">↗</span></a>
-          <button className="header-cart-button" type="button" aria-haspopup="dialog" onClick={(event) => onOpenCart(event.currentTarget)}>Carrinho <span aria-label={`${itemCount} ${itemCount === 1 ? 'unidade' : 'unidades'}`}>{itemCount}</span></button>
+          <button className="header-cart-button" type="button" aria-haspopup="dialog" onClick={(event) => onOpenCart(event.currentTarget)} aria-label="Abrir carrinho">Carrinho <span aria-label={`${itemCount} ${itemCount === 1 ? 'unidade' : 'unidades'}`}>{itemCount}</span></button>
         </div>
       </header>
 

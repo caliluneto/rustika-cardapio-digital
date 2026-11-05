@@ -17,7 +17,7 @@ host    replication     all             127.0.0.1/32            scram-sha-256
 host    replication     all             ::1/128                 scram-sha-256`;
 
 /** Bancos que aceitam conexão no cluster (pg_database.datallowconn), lidos em 04/11/2026. */
-const DATABASES = ['cardapio_digital_dev', 'cardapio_digital_shadow', 'cardapio_digital_test', 'cardapio_restore_precheck',
+const DATABASES = ['cardapio_digital_dev', 'cardapio_digital_shadow', 'cardapio_digital_test', 'cardapio_restore_3d316', 'cardapio_restore_precheck',
   'plataforma_sites_ia', 'plataforma_sites_ia_test', 'postgres', 'rf004_lab_neg_20261027_01', 'rf004_lab_pos_20261027_01', 'template1'];
 /** Caminhos habilitados: listen_addresses = 'localhost' (127.0.0.1 e ::1) e, por segurança, socket local. */
 const PATHS = [{ type: 'local' as const }, { type: 'host' as const, address: '127.0.0.1' }, { type: 'host' as const, address: '::1' }];
@@ -35,7 +35,9 @@ function parse(text: string): Rule[] {
 }
 
 function addressMatches(cidr: string, address: string): boolean {
-  if (cidr === 'all' || cidr === '0.0.0.0/0' && address.includes('.') || cidr === '::/0' && address.includes(':')) return true;
+  if (cidr === 'all') return true;
+  if (cidr === '0.0.0.0/0') return address.includes('.');
+  if (cidr === '::0/0') return address.includes(':');
   const [ip, bits] = cidr.split('/');
   if ((ip!.includes(':') ? '128' : '32') !== bits) throw new Error(`máscara não modelada: ${cidr}`);
   return ip === address;
@@ -56,6 +58,13 @@ function decide(rules: Rule[], database: string, user: string, conn: { type: 'lo
 const example = fs.readFileSync(path.join(process.cwd(), 'docs', 'sql', 'pg_hba-test-fixtures.conf.example'), 'utf8');
 const exampleRules = parse(example);
 const cluster = parse(CLUSTER_RULES);
+
+/** Plano 3D.3.22-A: só os perfis de migration em 127.0.0.1; recusa demais caminhos. */
+const migratorRules = parse(`
+host  cardapio_digital_dev,cardapio_digital_test,cardapio_digital_shadow  cardapio_migrator  127.0.0.1/32  scram-sha-256
+local all  cardapio_migrator  reject
+host  all  cardapio_migrator  0.0.0.0/0  reject
+host  all  cardapio_migrator  ::0/0  reject`);
 
 describe('isolamento da role de fixtures pelo pg_hba (modelo, 3D.3.12)', () => {
   it('hoje, sem as linhas, a role alcançaria TODOS os bancos conectáveis (inclusive PLATAFORMA_SITES_IA)', () => {
@@ -102,5 +111,44 @@ describe('isolamento da role de fixtures pelo pg_hba (modelo, 3D.3.12)', () => {
     expect(enable).toContain("address IN ('::1', 'all')");              // falta ::1
     expect(enable).toContain("type = 'local'");                        // falta local
     expect(enable).toContain('pg_conf_load_time()');                    // arquivo editado sem reload
+  });
+});
+
+describe('plano de isolamento do migrator (modelo, 3D.3.22-A; não aplicado)', () => {
+  const existing = [...exampleRules, ...cluster];
+  const proposed = [...migratorRules, ...existing];
+  const allowed = new Set(['cardapio_digital_dev', 'cardapio_digital_test', 'cardapio_digital_shadow']);
+
+  it('permite somente os três bancos dos perfis de migration em 127.0.0.1', () => {
+    for (const db of DATABASES) for (const conn of PATHS) {
+      const expected = allowed.has(db) && conn.type === 'host' && conn.address === '127.0.0.1'
+        ? 'scram-sha-256' : 'reject';
+      expect(decide(proposed, db, 'cardapio_migrator', conn), `${db} ${conn.type} ${conn.address ?? ''}`).toBe(expected);
+    }
+  });
+
+  it('recusa também endereços IPv4 e IPv6 fora do loopback', () => {
+    for (const db of DATABASES) for (const address of ['10.0.0.5', '2001:db8::5']) {
+      expect(decide(proposed, db, 'cardapio_migrator', { type: 'host', address })).toBe('reject');
+    }
+  });
+
+  it('não muda a decisão para outras roles, inclusive a de outro projeto', () => {
+    for (const user of ['cardapio_dev_app', 'cardapio_test_app', 'cardapio_test_fixtures', 'plataforma_sites_ia', 'postgres']) {
+      for (const db of DATABASES) for (const conn of PATHS) {
+        expect(decide(proposed, db, user, conn)).toBe(decide(existing, db, user, conn));
+      }
+    }
+  });
+
+  it('regras após o genérico não isolam o migrator', () => {
+    expect(decide([...existing, ...migratorRules], 'plataforma_sites_ia', 'cardapio_migrator', PATHS[1]!)).toBe('scram-sha-256');
+  });
+
+  it('sem cada recusa de caminho alternativo, o genérico volta a permitir acesso externo', () => {
+    const noLocal = [...migratorRules.filter((r) => r.type !== 'local'), ...existing];
+    const noIpv6 = [...migratorRules.filter((r) => r.address !== '::0/0'), ...existing];
+    expect(decide(noLocal, 'plataforma_sites_ia', 'cardapio_migrator', PATHS[0]!)).toBe('scram-sha-256');
+    expect(decide(noIpv6, 'plataforma_sites_ia', 'cardapio_migrator', PATHS[2]!)).toBe('scram-sha-256');
   });
 });

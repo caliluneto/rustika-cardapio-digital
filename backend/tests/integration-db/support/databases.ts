@@ -120,7 +120,7 @@ export async function reachableDatabases(candidates: string[], probe: DatabaseDe
  * issued before the decision are SELECTs and pg_try_advisory_lock (no data is written).
  * The advisory lock is held by the fixtures connection until `close()`.
  */
-export async function openIntegrationDatabases(env: Record<string, string | undefined> = process.env, deps = dependencies, allowLeftovers = false): Promise<IntegrationDatabases> {
+export async function openIntegrationDatabases(env: Record<string, string | undefined> = process.env, deps = dependencies, allowLeftovers = false, allowCollisions = false): Promise<IntegrationDatabases> {
   assertIntegrationGate(env);
   const clients: PrismaClient[] = [];
   const close = async () => { await Promise.allSettled(clients.map((c) => c.$disconnect())); };
@@ -142,7 +142,8 @@ export async function openIntegrationDatabases(env: Record<string, string | unde
       }),
       diskChecksums: deps.checksums(),
       leftovers: allowLeftovers ? {} : await countLeftovers(fixtures),
-      collisions: await countCollisions(fixtures),
+      // 3D.3.21-B: only the legacy-E2E cleanup utility opens with allowCollisions (the legacy residue IS a collision).
+      collisions: allowCollisions ? {} : await countCollisions(fixtures),
       lockAcquired,
       permissionViolations: await migrator.$transaction(async (tx) => {
         await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');

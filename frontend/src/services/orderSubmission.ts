@@ -9,13 +9,20 @@ export interface CustomerDetails {
   notes?: string;
 }
 
+export interface SubmissionEnv { VITE_ORDER_SUBMISSION?: string }
+
 /**
  * Real order submission stays disabled unless the build sets VITE_ORDER_SUBMISSION=enabled.
  * Delivery 3D.3.8 prepares the flow; persisted orders only after the authorized Test integration.
+ *
+ * 3D.3.21-A: the default parameter MUST be the literal `import.meta.env`. Vite only injects the
+ * variables into modules whose code contains that exact text; reading the env through a local
+ * alias of the meta object leaves `env` undefined, so the flag could never be turned on.
+ * There is no runtime override (no window flag): the switch is the build/dev-server environment only.
+ * Outside Vite (node:test) `import.meta.env` is undefined and submission stays disabled.
  */
-export function orderSubmissionEnabled(): boolean {
-  const meta = import.meta as ImportMeta & { env?: { VITE_ORDER_SUBMISSION?: string } };
-  return meta.env?.VITE_ORDER_SUBMISSION?.trim() === 'enabled';
+export function orderSubmissionEnabled(env: SubmissionEnv | undefined = import.meta.env): boolean {
+  return env?.VITE_ORDER_SUBMISSION?.trim() === 'enabled';
 }
 
 const optional = (value: string | undefined) => {

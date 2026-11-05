@@ -7,10 +7,8 @@ import type { Harness } from './support/harness';
 assertIntegrationGate(process.env);
 
 let h: Harness;
-let adminCookie: string;
 beforeAll(async () => {
   h = await startHarness();
-  adminCookie = (await adminLogin(h.app(), h.run.identity.adminEmail, h.fx.adminPassword)).cookie!;
 });
 afterAll(async () => {
   const run = h?.run;
@@ -42,7 +40,8 @@ describe('comandas, convites e sessões com PostgreSQL real', () => {
 
   it('convite utilizado duas vezes: o segundo resgate falha e não cria outra sessão', async () => {
     const app = h.app(); const number = h.run.identity.comandas.spare[0]!;
-    const invite = await issueInvite(app, adminCookie, number);
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const invite = await issueInvite(app, adminCookie!, number);
     expect((await redeem(app, invite.body.data.inviteToken)).response.status).toBe(201);
     const second = await redeem(app, invite.body.data.inviteToken);
     expect(second.response.status).toBe(401);
@@ -53,7 +52,8 @@ describe('comandas, convites e sessões com PostgreSQL real', () => {
 
   it('resgates simultâneos do mesmo convite: exatamente um 201', async () => {
     const app = h.app(); const number = h.run.identity.comandas.spare[1]!;
-    const invite = await issueInvite(app, adminCookie, number);
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const invite = await issueInvite(app, adminCookie!, number);
     const results = await Promise.all(Array.from({ length: 5 }, () => redeem(app, invite.body.data.inviteToken)));
     expect(results.filter((r) => r.response.status === 201)).toHaveLength(1);
     expect((await h.run.invitationsFor(number)).filter((row) => row.session !== null)).toHaveLength(1);
@@ -74,13 +74,16 @@ describe('comandas, convites e sessões com PostgreSQL real', () => {
 
   it('convite expira pela validade pedida na emissão (relógio da aplicação)', async () => {
     const app = h.app();
-    const invite = await issueInvite(app, adminCookie, h.run.identity.comandas.spare[3]!, 1);
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const invite = await issueInvite(app, adminCookie!, h.run.identity.comandas.spare[3]!, 1);
     h.clock.advance(2 * 60_000);
     try { expect((await redeem(app, invite.body.data.inviteToken)).response.status).toBe(401); } finally { h.clock.reset(); }
   });
 
   it('comanda fechada: emissão recusada com 409 COMANDA_CLOSED', async () => {
-    const response = await issueInvite(h.app(), adminCookie, h.run.identity.comandas.closed);
+    const app = h.app();
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const response = await issueInvite(app, adminCookie!, h.run.identity.comandas.closed);
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('COMANDA_CLOSED');
   });
@@ -100,7 +103,8 @@ describe('comandas, convites e sessões com PostgreSQL real', () => {
 
   it('comanda fechada depois do resgate derruba a sessão existente', async () => {
     const number = h.run.identity.comandas.spare[5]!; const app = h.app();
-    const invite = await issueInvite(app, adminCookie, number);
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const invite = await issueInvite(app, adminCookie!, number);
     const { cookie } = await redeem(app, invite.body.data.inviteToken);
     await h.run.closeComanda(number);
     expect((await request(app).get('/api/comanda-sessions/current').set('Cookie', `rustika_session=${cookie}`)).status).toBe(401);
@@ -110,8 +114,9 @@ describe('comandas, convites e sessões com PostgreSQL real', () => {
 
   it('acesso a outra comanda: cada sessão só enxerga a própria e não recupera pedido alheio pela chave', async () => {
     const app = h.app();
-    const a = await redeem(app, (await issueInvite(app, adminCookie, h.run.identity.comandas.open)).body.data.inviteToken);
-    const b = await redeem(app, (await issueInvite(app, adminCookie, h.run.identity.comandas.other)).body.data.inviteToken);
+    const { cookie: adminCookie } = await adminLogin(app, h.run.identity.adminEmail, h.fx.adminPassword);
+    const a = await redeem(app, (await issueInvite(app, adminCookie!, h.run.identity.comandas.open)).body.data.inviteToken);
+    const b = await redeem(app, (await issueInvite(app, adminCookie!, h.run.identity.comandas.other)).body.data.inviteToken);
     const items = [{ productId: h.fx.products.numeric.publicKey!, quantity: 1, expectedUnitPriceInCents: 5999 }];
     const key = '22222222-2222-4222-8222-222222222222';
     const first = await placeOrder(app, a.cookie!, items, key);

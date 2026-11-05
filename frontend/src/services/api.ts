@@ -9,9 +9,9 @@ import {
 
 const DEFAULT_API_URL = 'http://localhost:4000/api';
 
-function configuredApiUrl(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_API_URL?: string } };
-  const configured = meta.env?.VITE_API_URL?.trim();
+/** Literal `import.meta.env` is required for Vite to inject VITE_* (see orderSubmission.ts, 3D.3.21-A). */
+export function configuredApiUrl(env: { VITE_API_URL?: string } | undefined = import.meta.env): string {
+  const configured = env?.VITE_API_URL?.trim();
   return configured || DEFAULT_API_URL;
 }
 
