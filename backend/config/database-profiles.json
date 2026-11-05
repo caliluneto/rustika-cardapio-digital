@@ -1,0 +1,28 @@
+{
+  "app-dev": {
+    "purpose": "runtime",
+    "database": "cardapio_digital_dev",
+    "user": "cardapio_dev_app",
+    "requiresShadow": false
+  },
+  "app-test": {
+    "purpose": "runtime",
+    "database": "cardapio_digital_test",
+    "user": "cardapio_test_app",
+    "requiresShadow": false
+  },
+  "migrate-dev": {
+    "purpose": "migration",
+    "database": "cardapio_digital_dev",
+    "user": "cardapio_migrator",
+    "requiresShadow": true,
+    "shadowDatabase": "cardapio_digital_shadow"
+  },
+  "migrate-test": {
+    "purpose": "migration",
+    "database": "cardapio_digital_test",
+    "user": "cardapio_migrator",
+    "requiresShadow": true,
+    "shadowDatabase": "cardapio_digital_shadow"
+  }
+}

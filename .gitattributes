@@ -1,0 +1,2 @@
+backend/prisma/migrations/** -text
+backend/docs/sql/** -text

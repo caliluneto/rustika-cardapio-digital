@@ -1,0 +1,27 @@
+# 3D.3.11 — EXEMPLO, NÃO APLICADO. Isolamento de conexão da role cardapio_test_fixtures.
+#
+# Por que pg_hba e não REVOKE: neste cluster PUBLIC tem CONNECT em postgres, template1,
+# rf004_lab_*, cardapio_restore_precheck e nos bancos de outro projeto (plataforma_sites_ia*).
+# Privilégios de PUBLIC valem para toda role e não podem ser retirados de uma role só;
+# revogá-los de PUBLIC afetaria outras aplicações. O pg_hba.conf decide pela PRIMEIRA linha que
+# casar (tipo, banco, usuário, endereço), então as linhas abaixo, colocadas ANTES de qualquer
+# linha com usuário "all", deixam esta role entrar somente em cardapio_digital_test, via
+# loopback, com SCRAM, e recusam todo o resto. Nenhuma outra role é afetada.
+#
+# Procedimento (operador administrativo, com autorização):
+#   1. Copiar o pg_hba.conf atual para fora do OneDrive (backup do arquivo).
+#   2. Inserir as 5 linhas abaixo NO TOPO das regras (antes da primeira linha "all").
+#   3. SELECT pg_reload_conf();   -- como superuser
+#   4. Rodar enable-test-fixtures-login.sql, que confere estas regras em pg_hba_file_rules e
+#      exige que o reload seja posterior à última alteração do arquivo.
+#   5. Pós-verificação: conectar como cardapio_test_fixtures em cardapio_digital_dev e em
+#      postgres deve FALHAR com "pg_hba.conf rejects connection"; o preflight da suíte repete
+#      essa prova automaticamente antes de qualquer escrita.
+# Rollback: remover as 5 linhas e SELECT pg_reload_conf(); depois rollback-test-fixtures.sql.
+
+# TYPE  DATABASE               USER                     ADDRESS        METHOD
+host    cardapio_digital_test  cardapio_test_fixtures   127.0.0.1/32   scram-sha-256
+host    cardapio_digital_test  cardapio_test_fixtures   ::1/128        scram-sha-256
+local   all                    cardapio_test_fixtures                  reject
+host    all                    cardapio_test_fixtures   127.0.0.1/32   reject
+host    all                    cardapio_test_fixtures   ::1/128        reject
