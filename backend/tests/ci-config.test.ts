@@ -27,6 +27,18 @@ describe('workflow ci.yml', () => {
     expect(code).not.toMatch(/\bid-token:|\bpackages: write|\bcontents: write/);
   });
 
+  it('contextos de expressão: job.env não usa runner/steps/job (contextos indisponíveis ali)', () => {
+    for (const name of ['backend', 'frontend', 'e2e']) {
+      const block = jobBlock(name);
+      const envStart = block.search(/\n    env:\n/);
+      if (envStart === -1) continue;
+      const afterEnv = block.slice(envStart + 1);
+      const envEnd = afterEnv.slice(1).search(/\n    [a-z-]+:/);
+      const envBlock = envEnd === -1 ? afterEnv : afterEnv.slice(0, envEnd + 1);
+      expect(envBlock, `jobs.${name}.env`).not.toMatch(/\$\{\{[^}]*\b(runner|steps|job)\./);
+    }
+  });
+
   it('todas as Actions usam SHA completo de commit (40 hex)', () => {
     const uses = [...code.matchAll(/uses:\s*(\S+)/g)].map((m) => m[1]!);
     expect(uses.length).toBeGreaterThanOrEqual(3);
@@ -68,7 +80,12 @@ describe('workflow ci.yml', () => {
     const e2e = jobBlock('e2e');
     expect(e2e).toContain('::add-mask::');
     expect(e2e).toContain('openssl rand -hex');
-    expect(e2e).toContain('CARDAPIO_SECRETS_DIR: ${{ runner.temp }}/cardapio-secrets');
+    // 3D.3.29-FIX01: `runner` não existe em `jobs.<id>.env`; o caminho vem de RUNNER_TEMP via GITHUB_ENV, no 1º passo.
+    expect(e2e).not.toMatch(/CARDAPIO_SECRETS_DIR: /);
+    expect(e2e).toContain('echo "CARDAPIO_SECRETS_DIR=$RUNNER_TEMP/cardapio-secrets" >> "$GITHUB_ENV"');
+    const firstStep = e2e.indexOf('steps:');
+    expect(e2e.indexOf('CARDAPIO_SECRETS_DIR=$RUNNER_TEMP')).toBeGreaterThan(firstStep);
+    expect(e2e.indexOf('CARDAPIO_SECRETS_DIR=$RUNNER_TEMP')).toBeLessThan(e2e.indexOf('actions/checkout'));
     expect(e2e).toMatch(/if: always\(\)[\s\S]*docker rm -f[\s\S]*rm -rf "\$CARDAPIO_SECRETS_DIR"/);
   });
 

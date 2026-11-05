@@ -109,10 +109,12 @@ jobs:
       RUSTIKA_DB_INTEGRATION: '1'
       RUSTIKA_DB_INTEGRATION_CONFIRM: WRITE_CARDAPIO_DIGITAL_TEST
       RUSTIKA_E2E_CONFIRM: RUN_E2E_ON_CARDAPIO_DIGITAL_TEST
-      # Pasta de segredos SINTÉTICA, fora do workspace (exigência de resolveSecretsDir).
-      CARDAPIO_SECRETS_DIR: ${{ runner.temp }}/cardapio-secrets
       PG_CONTAINER: pg-e2e
     steps:
+      # Pasta de segredos SINTÉTICA, fora do workspace (exigência de resolveSecretsDir).
+      # O contexto `runner` não existe em `jobs.<id>.env`; o caminho é resolvido em tempo de execução.
+      - name: Definir pasta de segredos sintética (fora do workspace)
+        run: echo "CARDAPIO_SECRETS_DIR=$RUNNER_TEMP/cardapio-secrets" >> "$GITHUB_ENV"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
