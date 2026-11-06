@@ -36,7 +36,7 @@ import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations'
 import { lintFutureMigration } from '../../scripts/bootstrap/futureMigrationPolicy';
 import { verifyAppliedMigrations, verifyMigrationDirectory } from '../../scripts/bootstrap/migrationIntegrity';
 import { createPrismaBootstrapDb } from '../../scripts/bootstrap/prismaBootstrapDb';
-import { classifyRenames, diffSnapshots, fingerprint, readPhysicalIdentity, readSchemaSnapshot } from '../../scripts/homolog/schemaSnapshot';
+import { classifyRenames, diffSnapshots, fingerprint, readPhysicalIdentity, readSchemaSnapshot, snapshotCompletenessProblems } from '../../scripts/homolog/schemaSnapshot';
 import type { PhysicalIdentity, SchemaSnapshot } from '../../scripts/homolog/schemaSnapshot';
 
 const e = process.env;
@@ -313,12 +313,8 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
       const differences = diffSnapshots(snapshotA, snapshotB);
       expect(differences, JSON.stringify(differences, null, 1)).toEqual([]);
       expect(fingerprint(snapshotB)).toBe(fingerprint(snapshotA));
-      for (const section of ['schemas', 'tables', 'columns', 'constraints', 'indexes', 'enums', 'sequences', 'owners', 'tableAcls', 'columnAcls', 'schemaAcls', 'databaseAcls', 'defaultAcls', 'roles', 'databaseProps'] as const) {
-        expect(snapshotB[section].length, `seção ${section} não pode estar vazia`).toBeGreaterThan(0);
-      }
-      for (const section of ['tableAcls', 'columnAcls', 'defaultAcls', 'owners', 'roles', 'memberships', 'settings', 'schemas', 'policies'] as const) {
-        expect(snapshotB[section].some((entry) => entry.includes('?')), `${section}: nenhuma role desconhecida`).toBe(false);
-      }
+      // FIX03: seções obrigatórias não vazias (defaultAcls pode legitimamente ser vazia) e nenhuma role desconhecida em nenhuma seção.
+      expect(snapshotCompletenessProblems(snapshotB), 'completude do snapshot').toEqual([]);
       expect(await migrationRows(prisma), '_prisma_migrations idêntica (checksums, datas e passos)').toEqual(rowsBefore);
     });
     const pairs: Array<[string, string]> = [[LEGACY.app, FINAL.app], [LEGACY.migrator, FINAL.migrator], [LEGACY.placeholder, FINAL.placeholder], ['cardapio_homolog_bootstrap', 'cardapio_homolog_bootstrap']];

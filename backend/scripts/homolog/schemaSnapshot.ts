@@ -23,6 +23,28 @@ export const DEFAULT_ROLE_ALIASES: Readonly<Record<string, string>> = {
 export const aliasRole = (role: string, aliases: Readonly<Record<string, string>> = DEFAULT_ROLE_ALIASES): string =>
   role === 'PUBLIC' ? 'PUBLIC' : (aliases[role] ?? `?${role}`);
 
+/**
+ * FIX03 - seções que o schema histórico OBRIGATORIAMENTE popula (ausência = coleta quebrada ou schema incompleto).
+ * `defaultAcls` NÃO está aqui: as migrations apenas fazem `ALTER DEFAULT PRIVILEGES … REVOKE` sobre os defaults embutidos, e o
+ * PostgreSQL remove de `pg_default_acl` a linha cujo ACL volta ao padrão; zero linhas é o estado esperado. As seções
+ * opcionais continuam sendo coletadas, comparadas e entram no fingerprint; apenas "vazia" deixa de ser erro.
+ */
+export const REQUIRED_NON_EMPTY_SECTIONS: readonly Section[] = [
+  'schemas', 'tables', 'columns', 'constraints', 'indexes', 'enums', 'sequences', 'owners', 'tableAcls', 'columnAcls', 'schemaAcls',
+  'databaseAcls', 'roles', 'databaseProps',
+];
+export const OPTIONAL_SECTIONS: readonly Section[] = SECTIONS.filter((section) => !REQUIRED_NON_EMPTY_SECTIONS.includes(section) && section !== 'migrations');
+/** Seções cujas entradas citam roles; um `?` indica role física sem alias (desconhecida). */
+export const ROLE_BEARING_SECTIONS: readonly Section[] = ['tableAcls', 'columnAcls', 'defaultAcls', 'owners', 'roles', 'memberships', 'settings', 'schemas', 'policies'];
+
+/** Problemas de completude: seção obrigatória vazia ou role desconhecida em qualquer seção (inclusive as opcionais). */
+export function snapshotCompletenessProblems(snapshot: SchemaSnapshot): string[] {
+  const problems: string[] = [];
+  for (const section of REQUIRED_NON_EMPTY_SECTIONS) if (snapshot[section].length === 0) problems.push(`seção obrigatória vazia: ${section}`);
+  for (const section of ROLE_BEARING_SECTIONS) if (snapshot[section].some((entry) => entry.includes('?'))) problems.push(`role desconhecida em ${section}`);
+  return problems;
+}
+
 export function fingerprint(snapshot: SchemaSnapshot): string {
   const normalized = Object.fromEntries(SECTIONS.map((section) => [section, [...snapshot[section]].sort()]));
   return createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
