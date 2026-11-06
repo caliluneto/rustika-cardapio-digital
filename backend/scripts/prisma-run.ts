@@ -12,13 +12,17 @@ import {
   checkDeployConfirmation,
   parsePrismaInvocation,
 } from './prisma-run-policy';
+import { verifyMigrationDirectory } from './bootstrap/migrationIntegrity';
+import { PrismaClient } from '@prisma/client';
+import { evaluateServerIdentity, readServerFacts } from '../src/config/serverIdentity';
+import { isHomologMigrationProfile } from './prisma-run-policy';
 
 function fail(message: string): number {
   console.error(`[prisma-run] ${redactSecrets(message)}`);
   return 1;
 }
 
-function main(): number {
+async function main(): Promise<number> {
   const parsed = parsePrismaInvocation(process.argv.slice(2));
 
   if (!parsed.ok) {
@@ -67,6 +71,29 @@ function main(): number {
     return fail(authorization.error);
   }
 
+  if (parsed.value.migrationSubcommand && isHomologMigrationProfile(database.profile)) {
+    // Integridade das migrations (nomes + SHA-256) antes de qualquer conexão da homologação.
+    const problems = verifyMigrationDirectory(path.join(backendRoot, 'prisma', 'migrations'));
+    if (problems.length > 0) {
+      return fail(`Integridade das migrations violada: ${problems.join(' ')}`);
+    }
+
+    // Identidade do SERVIDOR (somente leitura): hostname não basta. Cluster marcado, TLS efetivo, sem bancos Dev/Shadow.
+    const client = new PrismaClient({ datasources: { db: { url: database.databaseUrl } } });
+    try {
+      const identityProblems = evaluateServerIdentity(await readServerFacts(client), {
+        phase: database.environment === 'homolog-replay' ? 'replay' : 'final',
+        expectedClusterId: database.clusterId ?? '',
+        expectedUser: database.user,
+      });
+      if (identityProblems.length > 0) return fail(`Identidade do servidor não confere: ${identityProblems.join(' ')}`);
+    } catch {
+      return fail('Não foi possível verificar a identidade do servidor de homologação; nada foi executado.');
+    } finally {
+      await client.$disconnect().catch(() => undefined);
+    }
+  }
+
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
     DATABASE_URL: database.databaseUrl,
@@ -103,4 +130,4 @@ function main(): number {
   return result.status ?? 1;
 }
 
-process.exit(main());
+main().then((code) => process.exit(code));

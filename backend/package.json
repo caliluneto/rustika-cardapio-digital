@@ -24,7 +24,16 @@
     "db:validate:app": "tsx scripts/prisma-run.ts app-dev validate",
     "db:generate:app": "tsx scripts/prisma-run.ts app-dev generate",
     "db:migrate:status:test": "tsx scripts/prisma-run.ts migrate-test migrate status",
-    "db:migrate:deploy:test": "tsx scripts/prisma-run.ts migrate-test migrate deploy"
+    "db:migrate:deploy:test": "tsx scripts/prisma-run.ts migrate-test migrate deploy",
+    "homolog:preflight": "tsx scripts/homolog-preflight.ts",
+    "homolog:replay:status": "tsx scripts/prisma-run.ts migrate-homolog-replay migrate status",
+    "homolog:replay:deploy": "tsx scripts/prisma-run.ts migrate-homolog-replay migrate deploy",
+    "schema:fingerprint": "tsx scripts/schema-fingerprint.ts",
+    "schema:compare": "tsx scripts/schema-compare.ts",
+    "homolog:migrate:status": "tsx scripts/prisma-run.ts migrate-homolog migrate status",
+    "homolog:migrate:deploy": "tsx scripts/prisma-run.ts migrate-homolog migrate deploy",
+    "homolog:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
+    "test:homolog:ephemeral": "vitest run --config vitest.homolog-ephemeral.config.mts"
   },
   "engines": {
     "node": ">=20.19"

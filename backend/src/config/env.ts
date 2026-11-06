@@ -22,9 +22,19 @@ export function assertRuntimeDatabaseProfile(profile: string, runtimeEnv: string
   if (runtimeEnv === 'test' && profile !== 'app-test') {
     throw new Error('NODE_ENV=test exige exclusivamente DB_PROFILE=app-test.');
   }
+  // 3D.5.2: a homologação roda em modo production e só com o perfil dela; production nunca usa Dev/Test.
+  if (profile === 'app-homolog' && runtimeEnv !== 'production') {
+    throw new Error('DB_PROFILE=app-homolog exige NODE_ENV=production.');
+  }
+  if (runtimeEnv === 'production' && profile !== 'app-homolog') {
+    throw new Error('NODE_ENV=production exige exclusivamente DB_PROFILE=app-homolog.');
+  }
 }
 
 export function resolveDatabaseProfile(runtimeEnv: string, configuredProfile?: string): string {
+  if (runtimeEnv === 'production' && (configuredProfile === undefined || configuredProfile.trim() === '')) {
+    throw new Error('NODE_ENV=production exige DB_PROFILE explícito (app-homolog).');
+  }
   const profile = configuredProfile === undefined
     ? (runtimeEnv === 'test' ? 'app-test' : 'app-dev') : configuredProfile.trim();
   assertRuntimeDatabaseProfile(profile, runtimeEnv);

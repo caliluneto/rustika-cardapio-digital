@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { healthRouter } from './routes/health.routes';
+import { createReadyRouter } from './routes/ready.routes';
 import { createAccessRouters } from './routes/access.routes';
 import { createCatalogRouter } from './routes/catalog.routes';
 import { createOrderRouter } from './routes/order.routes';
@@ -24,6 +25,7 @@ export function createApp(dependencies: AppDependencies = {}): express.Express {
     allowedHeaders: ['Content-Type', 'X-Rustika-Request', 'Idempotency-Key'] }));
 
   app.use('/api/health', healthRouter);
+  app.use('/api/ready', createReadyRouter(dependencies.prisma));
   app.use('/api', createCatalogRouter(dependencies.prisma));
   const access = createAccessRouters(dependencies.prisma, {
     origin: env.corsOrigin,

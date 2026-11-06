@@ -24,5 +24,33 @@
     "user": "cardapio_migrator",
     "requiresShadow": true,
     "shadowDatabase": "cardapio_digital_shadow"
+  },
+  "app-homolog": {
+    "purpose": "runtime",
+    "environment": "homolog",
+    "database": "cardapio_digital_homolog",
+    "user": "cardapio_homolog_app",
+    "requiresShadow": false
+  },
+  "migrate-homolog": {
+    "purpose": "migration",
+    "environment": "homolog",
+    "database": "cardapio_digital_homolog",
+    "user": "cardapio_homolog_migrator",
+    "requiresShadow": false
+  },
+  "bootstrap-homolog": {
+    "purpose": "bootstrap",
+    "environment": "homolog",
+    "database": "cardapio_digital_homolog",
+    "user": "cardapio_homolog_bootstrap",
+    "requiresShadow": false
+  },
+  "migrate-homolog-replay": {
+    "purpose": "migration",
+    "environment": "homolog-replay",
+    "database": "cardapio_digital_test",
+    "user": "cardapio_migrator",
+    "requiresShadow": false
   }
 }
