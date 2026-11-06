@@ -20,8 +20,15 @@ export const DEFAULT_ROLE_ALIASES: Readonly<Record<string, string>> = {
   cardapio_homolog_bootstrap: 'bootstrap',
 };
 
+/**
+ * FIX04 - roles NATIVAS do PostgreSQL que aparecem legitimamente como proprietárias/concedidas. Lista fechada, por nome exato:
+ * `pg_database_owner` (PG ≥ 14) é o dono padrão do schema `public` e representa "o dono do banco" (que aqui é a role do
+ * projeto já mapeada). Qualquer outra role, inclusive outra iniciada por `pg_`, continua desconhecida (`?nome`).
+ */
+export const NATIVE_SPECIAL_ROLES: ReadonlySet<string> = new Set(['pg_database_owner']);
+
 export const aliasRole = (role: string, aliases: Readonly<Record<string, string>> = DEFAULT_ROLE_ALIASES): string =>
-  role === 'PUBLIC' ? 'PUBLIC' : (aliases[role] ?? `?${role}`);
+  role === 'PUBLIC' ? 'PUBLIC' : NATIVE_SPECIAL_ROLES.has(role) ? role : (aliases[role] ?? `?${role}`);
 
 /**
  * FIX03 - seções que o schema histórico OBRIGATORIAMENTE popula (ausência = coleta quebrada ou schema incompleto).
