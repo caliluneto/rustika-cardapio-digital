@@ -40,9 +40,21 @@ FROM matrix m CROSS JOIN privileges
 WHERE has_table_privilege(m.role_name, 'public.' || m.table_name, p) IS DISTINCT FROM (p = ANY(string_to_array(m.allowed, ',')))
    OR has_table_privilege(m.role_name, 'public.' || m.table_name, p || ' WITH GRANT OPTION')
 UNION ALL
-SELECT r.rolname || ':column ACL' FROM roles r JOIN pg_class c ON c.relnamespace = 'public'::regnamespace
+SELECT r.rolname || ':column ACL:' || c.relname || '.' || a.attname FROM roles r JOIN pg_class c ON c.relnamespace = 'public'::regnamespace
 JOIN pg_attribute a ON a.attrelid = c.oid CROSS JOIN LATERAL aclexplode(a.attacl) acl
 WHERE acl.grantee IN (0, r.oid)
+  -- 3D.4.1: the ONLY column ACL allowed is UPDATE (status, updated_at) on orders for the runtime role,
+  -- without GRANT OPTION. Anything else (PUBLIC, fixtures, other columns/privileges) is a violation.
+  AND NOT (r.rolname = 'cardapio_test_app' AND acl.grantee = r.oid AND c.relname = 'orders'
+           AND a.attname IN ('status', 'updated_at') AND acl.privilege_type = 'UPDATE' AND NOT acl.is_grantable)
+UNION ALL
+SELECT 'cardapio_test_app:column UPDATE:orders.' || a.attname FROM pg_attribute a
+WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+AND has_column_privilege('cardapio_test_app', a.attrelid, a.attnum, 'UPDATE') IS DISTINCT FROM (a.attname IN ('status', 'updated_at'))
+UNION ALL
+SELECT 'cardapio_test_fixtures:column UPDATE:orders.' || a.attname FROM pg_attribute a
+WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+AND has_column_privilege('cardapio_test_fixtures', a.attrelid, a.attnum, 'UPDATE')
 UNION ALL
 SELECT r.rolname || ':sequence:' || c.relname FROM roles r CROSS JOIN pg_class c
 CROSS JOIN (VALUES ('USAGE'),('SELECT'),('UPDATE')) p(privilege)

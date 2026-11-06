@@ -24,7 +24,11 @@ export interface RunManifest {
   roles: { runtime: 'cardapio_test_app'; fixtures: 'cardapio_test_fixtures' };
   ids: { adminIds: string[]; categoryIds: string[]; productIds: string[] };
   comandaNumbers: string[];
-  journey: { comanda: string; productName: string; productKey: string; priceInCents: number };
+  /**
+   * `orderOps` (3D.4.1, opcional): a jornada também move o pedido para IN_PREPARATION pelo painel administrativo.
+   * Ausente/false = jornada original (RECEIVED, histórico inicial único).
+   */
+  journey: { comanda: string; productName: string; productKey: string; priceInCents: number; orderOps?: boolean };
 }
 
 export const reservedComandaNumbers = (runId: string): string[] => {
@@ -56,6 +60,7 @@ export function validateManifest(raw: unknown, expectedRunId?: string): RunManif
     if (m.journey?.comanda !== createRunIdentity(m.runId).comandas.open) reasons.push('journey.comanda fora da faixa reservada.');
   }
   if (typeof m.journey?.productName !== 'string' || !Number.isSafeInteger(m.journey?.priceInCents)) reasons.push('journey inválido.');
+  if (m.journey?.orderOps !== undefined && typeof m.journey.orderOps !== 'boolean') reasons.push('journey.orderOps inválido.');
   if (reasons.length) throw new E2eAbort(reasons.map((r) => `manifesto: ${r}`));
   return m as RunManifest;
 }

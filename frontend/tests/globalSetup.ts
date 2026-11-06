@@ -17,6 +17,7 @@ const tsxCli = path.join(backendDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const ENV_KEYS = [
   'RUSTIKA_E2E_RUN_ID', 'RUSTIKA_E2E_ADMIN_EMAIL', 'RUSTIKA_E2E_ADMIN_PASSWORD',
   'RUSTIKA_E2E_COMANDA', 'RUSTIKA_E2E_PRODUCT_NAME', 'RUSTIKA_E2E_PRODUCT_PRICE_CENTS', 'RUSTIKA_E2E_STATE_DIR',
+  'RUSTIKA_E2E_ORDER_OPS', // 3D.4.1: "enabled" quando a jornada inclui a operacao administrativa de pedidos
 ] as const;
 
 export default async function globalSetup(): Promise<void> {

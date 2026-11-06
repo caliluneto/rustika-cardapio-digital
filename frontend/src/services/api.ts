@@ -280,7 +280,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
    * Cookie-authenticated call. Credentials always travel as HttpOnly cookies set by the backend;
    * nothing is read from or written to localStorage. Network failures become ApiError('NETWORK').
    */
-  async function authenticated<T>(method: 'GET' | 'POST', path: string, init: RequestInit, signal?: AbortSignal): Promise<T> {
+  async function authenticated<T>(method: 'GET' | 'POST' | 'PATCH', path: string, init: RequestInit, signal?: AbortSignal): Promise<T> {
     let response: ResponseLike;
     try {
       response = await request(method, path, { ...init, credentials: 'include' }, signal);
@@ -314,6 +314,12 @@ export function createApiClient(options: ApiClientOptions = {}) {
     return authenticated<T>('POST', path, { ...init, headers, body: JSON.stringify(body) }, signal);
   }
 
+  /** PATCH carries the same write contract as POST (exact Origin, JSON, X-Rustika-Request). */
+  async function patch<T = unknown>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', [WRITE_HEADER]: '1' };
+    return authenticated<T>('PATCH', path, { headers, body: JSON.stringify(body) }, signal);
+  }
+
   async function getWithAuth<T = unknown>(path: string, signal?: AbortSignal): Promise<T> {
     return authenticated<T>('GET', path, { headers: { Accept: 'application/json' } }, signal);
   }
@@ -324,7 +330,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
     return post<OrderConfirmation>('/orders', body, signal, { headers: { 'Idempotency-Key': idempotencyKey } });
   }
 
-  return { getCategories, getAllProducts, getProduct, getCatalog, post, getWithAuth, createOrder };
+  return { getCategories, getAllProducts, getProduct, getCatalog, post, patch, getWithAuth, createOrder };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

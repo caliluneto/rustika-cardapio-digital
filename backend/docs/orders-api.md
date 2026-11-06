@@ -309,3 +309,7 @@ npm test
 npm run typecheck
 npm run build
 ```
+
+## Operação administrativa (3D.4.1)
+
+A listagem e a atualização de status feitas pelo estabelecimento estão em `docs/order-operations.md`. O pedido criado aqui nasce em `RECEIVED`; a transição é feita apenas pelas rotas administrativas.

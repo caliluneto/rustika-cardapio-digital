@@ -4,7 +4,7 @@ Suíte que exercita **Express real, rotas reais, services reais e Prisma real** 
 `cardapio_digital_test`. Preparada e não executada: depende das migrations em Test,
 da role de fixtures e de autorização expressa para escrever em Test.
 
-Esta é a revisão da 3D.3.9 para a 3D.3.10: agora são **5 migrations** (a quinta endurece ACLs),
+Esta é a revisão da 3D.3.9 para a 3D.3.10: agora são **5 migrations** (a quinta endurece ACLs; desde a 3D.4.1 o conjunto esperado tem **6**, a sexta concede `UPDATE (status, updated_at)` em `orders`),
 a role de fixtures deixou de ser apenas uma proposta textual e a restauração do backup foi
 corrigida para um plano executável — porém o dump registrado na 3D.3.9 está ausente.
 
@@ -51,14 +51,14 @@ Testado: rodar `npm run test:integration:db` sem as variáveis aborta no `global
 | Nenhuma role com superuser, bypassrls, createrole, createdb ou replication | todas |
 | Mesmo servidor (`inet_server_addr():port`) nas três conexões | aplicação, fixtures, migrator |
 | `server_version_num >= 170000` | todas |
-| `_prisma_migrations`: exatamente as **5** migrations, concluídas, não revertidas, checksums esperados | migrator em `SET TRANSACTION READ ONLY` |
-| SHA-256 dos **5** arquivos no disco iguais aos esperados | arquivo |
+| `_prisma_migrations`: exatamente as **6** migrations (a 6ª, 3D.4.1, está preparada e não aplicada), concluídas, não revertidas, checksums esperados | migrator em `SET TRANSACTION READ ONLY` |
+| SHA-256 dos **6** arquivos no disco iguais aos esperados | arquivo |
 | Nenhum resíduo de fixture de execução anterior | fixtures |
 | Nenhum produto real com `source_code = PA062240` | fixtures |
 | Matriz de ACL de runtime e fixtures, incluindo PUBLIC, defaults, colunas, schema e sequências | migrator em `SET TRANSACTION READ ONLY` |
 | `pg_try_advisory_lock(3039390001)` obtido (uma execução por vez) | fixtures |
 
-Hoje (1 aplicada, 4 pendentes) o preflight aborta por "migrations pendentes" — por desenho.
+Hoje (1 aplicada, 5 pendentes) o preflight aborta por "migrations pendentes" — por desenho.
 Depois da 3D.3.10, a quinta migration precisa estar concluída com o checksum
 `24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e`.
 
@@ -71,7 +71,7 @@ A matriz foi derivada do uso real de `tests/integration-db/support/fixtures.ts`:
 | `admins`, `categories`, `products` | `SELECT` | `admins/categories`: `SELECT,INSERT,DELETE`; `products`: `SELECT,INSERT,UPDATE,DELETE` |
 | `comandas`, `comanda_invitations` | `SELECT,INSERT,UPDATE` | `comandas`: `SELECT,INSERT,UPDATE,DELETE`; `comanda_invitations`: `SELECT,INSERT,DELETE` |
 | `comanda_sessions` | `SELECT,INSERT` | `SELECT,INSERT,DELETE` |
-| `orders`, `order_items`, `order_status_history` | `SELECT,INSERT` | `SELECT,DELETE` |
+| `orders`, `order_items`, `order_status_history` | `SELECT,INSERT` (`orders` também `UPDATE (status, updated_at)` por coluna, migration 3D.4.1 preparada e não aplicada) | `SELECT,DELETE` |
 | `_prisma_migrations` | nenhum | nenhum |
 | `orders_order_number_seq` | `USAGE` | nenhum |
 | Schema `public` | `USAGE` | `USAGE`, sem `CREATE` |
@@ -135,7 +135,7 @@ de apagar.
 ## Execução futura (Operações C/D/E, com autorização)
 
 ```powershell
-cd C:\Users\<USUARIO>\OneDrive\Documentos\Cardapio_Digital\backend
+cd C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend
 $env:NODE_ENV = 'test'; $env:DB_PROFILE = 'app-test'
 $env:RUSTIKA_DB_INTEGRATION = '1'
 $env:RUSTIKA_DB_INTEGRATION_CONFIRM = 'WRITE_CARDAPIO_DIGITAL_TEST'

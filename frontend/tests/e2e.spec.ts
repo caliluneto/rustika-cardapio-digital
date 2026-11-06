@@ -101,5 +101,55 @@ test.describe('E2E Real Journey', () => {
     expect(replay.status(), `replay respondeu ${replay.status()}`).toBe(200);
     const replayed = (await replay.json()) as { data: { orderNumber: number } };
     expect(replayed.data.orderNumber).toBe(created.data.orderNumber);
+
+    // 7. 3D.4.1 (PREPARADO, NAO EXECUTADO): operacao administrativa do pedido recem-criado.
+    // So roda quando o setup foi iniciado com RUSTIKA_E2E_ORDER_OPS=enabled; o teardown entao espera
+    // IN_PREPARATION e exatamente duas linhas de historico (verifyJourney). Sem atalhos: so a interface
+    // para a transicao valida; as tentativas invalidas usam a API com a sessao do navegador e NAO gravam nada.
+    if (fixture('RUSTIKA_E2E_ORDER_OPS') !== 'enabled') return;
+    const orderId = (created.data as unknown as { id: string }).id;
+    expect(orderId).toMatch(UUID_V4);
+
+    await page.goto('/#admin'); // mesma pagina (so o hash muda): a sessao admin continua; se o formulario voltar, entra de novo
+    if (await page.locator('input[type="email"]').isVisible().catch(() => false)) {
+      await page.fill('input[type="email"]', adminEmail);
+      await page.fill('input[type="password"]', adminPassword);
+      await page.click('button[type="submit"]');
+    }
+    const card = page.locator('.admin-order', { hasText: `Pedido #${created.data.orderNumber}` });
+    await expect(card).toBeVisible({ timeout: 25000 }); // polling de 10 s ou o primeiro carregamento
+    await expect(card).toContainText(`Comanda ${comanda}`);
+    await expect(card).toContainText(productName);
+    await expect(card.locator('.admin-order-status')).toHaveText('Recebido');
+    // A interface so oferece o que a maquina de estados permite (RECEIVED -> preparo | cancelamento).
+    await expect(card.locator('[data-to-status="READY"]')).toHaveCount(0);
+    await expect(card.locator('[data-to-status="DELIVERED"]')).toHaveCount(0);
+
+    // Transicao valida pela interface, com confirmacao explicita.
+    await card.locator('[data-to-status="IN_PREPARATION"]').click();
+    const [patchResponse] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/admin/orders/${orderId}/status`) && r.request().method() === 'PATCH', { timeout: 15000 }),
+      card.getByRole('button', { name: 'Confirmar' }).click(),
+    ]);
+    expect(patchResponse.status(), `PATCH respondeu ${patchResponse.status()}: ${await patchResponse.text()}`).toBe(200);
+    const patchHeaders = await patchResponse.request().allHeaders();
+    expect(patchHeaders['x-rustika-request']).toBe('1');
+    expect(patchHeaders.origin).toBe(baseURL);
+    expect(JSON.parse(patchResponse.request().postData() ?? '{}')).toEqual({ expectedStatus: 'RECEIVED', toStatus: 'IN_PREPARATION' });
+    await expect(card.locator('.admin-order-status')).toHaveText('Em preparo', { timeout: 15000 });
+
+    // Conflito (expectedStatus desatualizado) e transicao proibida: rejeitados, nada e gravado.
+    const patchUrl = patchResponse.request().url();
+    const send = (data: object) => page.request.patch(patchUrl, {
+      headers: { 'content-type': 'application/json', 'x-rustika-request': '1', origin: String(baseURL) }, data,
+    });
+    const stale = await send({ expectedStatus: 'RECEIVED', toStatus: 'IN_PREPARATION' });
+    expect(stale.status()).toBe(409);
+    expect(((await stale.json()) as { error: { code: string } }).error.code).toBe('STATUS_CONFLICT');
+    const forbidden = await send({ expectedStatus: 'IN_PREPARATION', toStatus: 'DELIVERED' });
+    expect(forbidden.status()).toBe(422);
+    expect(((await forbidden.json()) as { error: { code: string } }).error.code).toBe('INVALID_TRANSITION');
+    // A persistencia e o historico (RECEIVED inicial + 1 transicao do admin) sao conferidos pelo globalTeardown,
+    // somente leitura, antes da limpeza cirurgica (residuo zero).
   });
 });

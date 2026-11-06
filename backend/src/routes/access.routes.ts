@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { createAdminAuth, accessBody } from '../services/adminAuth.service';
 import { createComandaAccess } from '../services/comandaAccess.service';
+import { createOrderOperations } from '../services/orderOperations.service';
 import { ADMIN_COOKIE, readOpaqueCookie } from '../security/adminSessions';
 import { accessLimit } from '../security/accessLimits';
 import { assertWriteRequest } from '../security/writeGuard';
@@ -19,9 +20,10 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   const now = options.now ?? (() => new Date());
   const auth = prisma ? createAdminAuth(prisma, now) : undefined;
   const access = prisma && auth ? createComandaAccess(prisma, auth, now) : undefined;
+  const orders = prisma && auth ? createOrderOperations(prisma, auth) : undefined;
   function services() {
-    if (!auth || !access) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
-    return { auth, access };
+    if (!auth || !access || !orders) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
+    return { auth, access, orders };
   }
   const adminRouter = Router(); const sessionRouter = Router();
   const noStore: RequestHandler = (req, res, next) => {
@@ -52,6 +54,13 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   }));
   adminRouter.post('/comanda-invitations', writeGuard, accessLimit(60, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     res.status(201).json({ success: true, data: await services().access.issue(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  // 3D.4.1: operação de pedidos. GET sem parâmetros (o `noStore` do roteador já recusa query string).
+  adminRouter.get('/orders', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().orders.listActive(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.patch('/orders/:orderId/status', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().orders.updateStatus(req.params.orderId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
   sessionRouter.post('/', writeGuard, accessLimit(30, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     const result = await services().access.redeem(req.body);

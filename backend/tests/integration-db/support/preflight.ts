@@ -21,6 +21,7 @@ export const EXPECTED_MIGRATIONS: ReadonlyArray<{ name: string; checksum: string
   { name: '20261031000000_rf004_fix_permissions', checksum: '960766a8fb1576e6094622f112e1a3a9cd7455f56907a3405a8fbb183959e10b' },
   { name: '20261102000000_update_products_source_identity_constraint', checksum: '885b8de5dcc0cf5e7618d574ba5c013ae8b60c9b983260706c5819422564454f' },
   { name: '20261104000000_runtime_least_privilege', checksum: '24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e' },
+  { name: '20261105000000_order_status_update_privilege', checksum: '3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84' },
 ];
 
 export class IntegrationAbort extends Error {

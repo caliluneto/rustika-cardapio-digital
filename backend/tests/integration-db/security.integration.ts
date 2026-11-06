@@ -74,9 +74,12 @@ describe('segurança e concorrência com PostgreSQL real', () => {
     expect(await count()).toBe(before + 1);
   });
 
-  it('a role da aplicação não consegue apagar nem alterar pedidos (privilégios pós-migration)', async () => {
+  it('a role da aplicação não consegue apagar pedidos nem alterar colunas além de status/updated_at (privilégios pós-migration 3D.4.1)', async () => {
     await expect(h.db.app.order.deleteMany({ where: { comanda: { number } } })).rejects.toThrow();
-    await expect(h.db.app.order.updateMany({ where: { comanda: { number } }, data: { status: 'DELIVERED' } })).rejects.toThrow();
+    // 3D.4.1: UPDATE só nas colunas status e updated_at. Qualquer outra coluna continua negada.
+    await expect(h.db.app.order.updateMany({ where: { comanda: { number } }, data: { customerName: 'x' } })).rejects.toThrow();
+    await expect(h.db.app.order.updateMany({ where: { comanda: { number } }, data: { totalAmount: 0 } })).rejects.toThrow();
+    await expect(h.db.app.$executeRawUnsafe('TRUNCATE TABLE orders')).rejects.toThrow();
     await expect(h.db.app.$queryRawUnsafe('SELECT count(*) FROM _prisma_migrations')).rejects.toThrow();
   });
 
@@ -104,6 +107,13 @@ describe('segurança e concorrência com PostgreSQL real', () => {
       orders: 'SELECT,INSERT', order_items: 'SELECT,INSERT', order_status_history: 'SELECT,INSERT', comanda_sessions: 'SELECT,INSERT',
       comandas: 'SELECT,INSERT,UPDATE', comanda_invitations: 'SELECT,INSERT,UPDATE',
     });
+  });
+
+  it('UPDATE em orders é exclusivamente por coluna: apenas status e updated_at (3D.4.1)', async () => {
+    const rows = await h.db.app.$queryRawUnsafe<{ attname: string; can_update: boolean }[]>(
+      `SELECT a.attname, has_column_privilege(a.attrelid, a.attnum, 'UPDATE') AS can_update
+       FROM pg_attribute a WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped ORDER BY 1`);
+    expect(rows.filter((row) => row.can_update).map((row) => row.attname)).toEqual(['status', 'updated_at']);
   });
 
   it('role de fixtures não acessa migrations, sequência nem cria objetos', async () => {

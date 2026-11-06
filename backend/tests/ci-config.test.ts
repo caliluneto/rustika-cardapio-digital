@@ -179,7 +179,7 @@ describe('gatilhos e superfície de ataque do workflow', () => {
 
   it('todos os inputs são booleanos: nenhum aceita URL, string ou nome de banco', () => {
     const types = [...onBlock.matchAll(/^ {8}type: (\S+)/gm)].map((m) => m[1]);
-    expect(types.length).toBe(4);
+    expect(types.length).toBe(7);
     for (const t of types) expect(t).toBe('boolean');
     expect(code).not.toMatch(/inputs\.(database|db|url|host|pg|postgres)/i);
   });
@@ -189,6 +189,27 @@ describe('gatilhos e superfície de ataque do workflow', () => {
     expect(cond).toContain("github.event_name == 'workflow_dispatch'");
     expect(cond).not.toContain('||');
     expect(cond).not.toContain('pull_request');
+  });
+
+  it('3D.4.1-B: integração PostgreSQL e operação de pedidos são opt-in, só no job e2e e só no passo autorizado', () => {
+    for (const name of ['run_integration', 'run_order_ops']) expect(code).toMatch(new RegExp(`${name}:[\\s\\S]*?type: boolean\\n\\s+default: false`));
+    expect(code).toMatch(/run_playwright:[\s\S]*?type: boolean\n\s+default: true/);
+    const e2e = jobBlock('e2e');
+    // a integração roda antes do Playwright, com os mesmos gates do job, e só sob input explícito
+    const integration = e2e.indexOf('npm run test:integration:db');
+    expect(integration).toBeGreaterThan(e2e.indexOf('npm run e2e:inspect'));
+    expect(integration).toBeLessThan(e2e.indexOf('npx playwright test'));
+    expect(e2e).toMatch(/if: inputs\.run_integration == true\n\s+working-directory: backend\n\s+run: npm run test:integration:db/);
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true\n\s+working-directory: frontend\n\s+run: npx playwright/);
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+run: npx playwright/);
+    // a variável do E2E ampliado existe como chave só no env do passo ampliado, com valor constante
+    expect(code.match(/RUSTIKA_E2E_ORDER_OPS:/g)).toHaveLength(1);
+    expect(e2e.slice(0, e2e.indexOf('steps:'))).not.toContain('RUSTIKA_E2E_ORDER_OPS');
+    expect(jobBlock('backend')).not.toMatch(/test:integration:db|ORDER_OPS/);
+    expect(jobBlock('frontend')).not.toMatch(/test:integration:db|ORDER_OPS/);
+    // nenhuma migration automática em banco persistente: o único deploy é o do banco efêmero, com confirmação
+    expect(code.match(/db:migrate:deploy/g)).toHaveLength(1);
+    expect(e2e).toContain('APPLY_CARDAPIO_DIGITAL_TEST');
   });
 
   it('backend e frontend só rodam em pull_request ou sob demanda', () => {

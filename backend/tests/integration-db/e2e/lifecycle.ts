@@ -14,7 +14,7 @@ import type { RunManifest } from './manifest';
  *
  * Rules enforced here:
  * - the only writer is the dedicated fixtures role through the approved harness (full preflight:
- *   database identity, 5 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
+ *   database identity, 6 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
  * - nothing global: no TRUNCATE, no unscoped DELETE, no sequence changes, no pre-existing row is touched;
  * - a manifest is written BEFORE provisioning; any manifest left behind blocks the next run;
  * - teardown deletes only what the run identity + manifest describe, and ABORTS (deleting nothing) when
@@ -41,7 +41,7 @@ export interface OrderView {
   orderNumber: number; status: string; customerName: string | null; totalAmount: { toString(): string };
   idempotencyKey: string; requestDigest: string;
   items: { productPublicKeySnapshot: string | null; quantity: number; unitPriceSnapshot: { toString(): string }; subtotal: { toString(): string } }[];
-  statusHistory: { fromStatus: string | null; toStatus: string }[];
+  statusHistory: { fromStatus: string | null; toStatus: string; changedByAdminId?: string | null }[];
 }
 export interface InvitationView { consumedAt: Date | null; revokedAt: Date | null; session: { revokedAt: Date | null } | null }
 
@@ -76,7 +76,7 @@ export async function e2eSetup(deps: LifecycleDeps): Promise<E2eSetupResult> {
       version: MANIFEST_VERSION, runId: identity.runId, status: 'pending', createdAt: (deps.now?.() ?? new Date()).toISOString(), pid: process.pid,
       target: { database: E2E_TARGET_DATABASE }, roles: { runtime: 'cardapio_test_app', fixtures: 'cardapio_test_fixtures' },
       ids: { adminIds: [], categoryIds: [], productIds: [] }, comandaNumbers: reservedComandaNumbers(identity.runId),
-      journey: { comanda: identity.comandas.open, productName: e2eProductName(identity), productKey: '', priceInCents: 0 },
+      journey: { comanda: identity.comandas.open, productName: e2eProductName(identity), productKey: '', priceInCents: 0, orderOps: deps.env.RUSTIKA_E2E_ORDER_OPS === 'enabled' },
     };
     writeManifestExclusive(dir, base); // intent first: a crash during provisioning leaves a trace
     log(`manifesto ${identity.runId} criado (pending)`);
@@ -100,6 +100,7 @@ export async function e2eSetup(deps: LifecycleDeps): Promise<E2eSetupResult> {
         RUSTIKA_E2E_COMANDA: identity.comandas.open,
         RUSTIKA_E2E_PRODUCT_NAME: manifest.journey.productName,
         RUSTIKA_E2E_PRODUCT_PRICE_CENTS: String(manifest.journey.priceInCents),
+        RUSTIKA_E2E_ORDER_OPS: manifest.journey.orderOps ? 'enabled' : 'disabled',
         RUSTIKA_E2E_STATE_DIR: dir,
       },
     };
@@ -118,7 +119,8 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
   const order = orders[0];
   if (order) {
     const cents = (value: { toString(): string }) => Math.round(Number(value.toString()) * 100);
-    if (order.status !== 'RECEIVED') problems.push(`status ${order.status} (esperado RECEIVED)`);
+    const expectedStatus = manifest.journey.orderOps ? 'IN_PREPARATION' : 'RECEIVED';
+    if (order.status !== expectedStatus) problems.push(`status ${order.status} (esperado ${expectedStatus})`);
     if (order.customerName !== E2E_CUSTOMER_NAME) problems.push('nome do cliente diverge');
     if (cents(order.totalAmount) !== priceInCents * E2E_QUANTITY) problems.push(`total ${cents(order.totalAmount)} diverge de ${priceInCents * E2E_QUANTITY}`);
     if (order.items.length !== 1) problems.push(`itens: ${order.items.length} (esperado 1)`);
@@ -128,7 +130,14 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
       if (item.quantity !== E2E_QUANTITY) problems.push(`quantidade ${item.quantity}`);
       if (cents(item.unitPriceSnapshot) !== priceInCents || cents(item.subtotal) !== priceInCents * E2E_QUANTITY) problems.push('preço/subtotal do item diverge');
     }
-    if (order.statusHistory.length !== 1 || order.statusHistory[0]?.fromStatus !== null || order.statusHistory[0]?.toStatus !== 'RECEIVED') problems.push('histórico inicial diverge');
+    const history = order.statusHistory;
+    if (history[0]?.fromStatus !== null || history[0]?.toStatus !== 'RECEIVED') problems.push('histórico inicial diverge');
+    if (manifest.journey.orderOps) {
+      // 3D.4.1: exatamente uma transição válida feita pelo administrador da execução; conflito/transição inválida não gravam nada.
+      const step = history[1];
+      if (history.length !== 2 || step?.fromStatus !== 'RECEIVED' || step?.toStatus !== 'IN_PREPARATION') problems.push('histórico da transição administrativa diverge');
+      else if (!manifest.ids.adminIds.includes(step.changedByAdminId ?? '')) problems.push('transição não foi registrada pelo administrador da execução');
+    } else if (history.length !== 1) problems.push('histórico inicial diverge');
     if (!/^[0-9a-f]{64}$/.test(order.idempotencyKey) || !/^[0-9a-f]{64}$/.test(order.requestDigest)) problems.push('chave/digest de idempotência fora do formato');
   }
   const invitations = await run.invitationsFor(comanda);

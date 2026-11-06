@@ -2,8 +2,10 @@
 
 > 3D.3.23-E: a limpeza do resíduo legado (comanda 999999) foi executada e validada; o passo 2 das pré-condições está cumprido. 3D.3.25-A: execução alternativa em runner descartável do GitHub Actions: ver `github-actions-e2e.md`.
 
-**Estado: preparada, NÃO executada.** Qualquer execução escreve em `cardapio_digital_test` e exige
-autorização específica. Nenhum item abaixo foi executado nas entregas 3D.3.21-A/B.
+**Estado (3D.3.30):** a jornada **foi executada e aprovada no GitHub Actions** (CI #5, PostgreSQL 18 efêmero no runner,
+1 teste Playwright em 8,6 s, teardown e resíduo zero confirmados; ver `github-actions-e2e.md`). **Neste notebook ela
+continua NÃO executada**: qualquer execução local escreve em `cardapio_digital_test` e exige autorização específica.
+O texto abaixo descreve o fluxo local e as proteções, que valem também para o CI.
 
 ## O que mudou em relação ao E2E antigo
 
@@ -13,7 +15,7 @@ autorização específica. Nenhum item abaixo foi executado nas entregas 3D.3.21
 | Credencial embutida no arquivo | Role `cardapio_test_fixtures` pelo mecanismo de segredos existente (`fixtures-test.env`) |
 | Sem teardown (resíduo permanente) | Manifesto + teardown cirúrgico + prova de resíduo zero |
 | IDs e comanda fixos (`999999`), reabertos por `ON CONFLICT DO UPDATE` | Identificadores por execução (`runId`), faixa de comandas reservada, nada preexistente é alterado |
-| Sem checagem de ambiente | Preflight completo do harness aprovado (banco, 5 migrations + checksums, ACL efetiva, sondagem do `pg_hba`, advisory lock) |
+| Sem checagem de ambiente | Preflight completo do harness aprovado (banco, 6 migrations + checksums, ACL efetiva, sondagem do `pg_hba`, advisory lock) |
 | Servidores reaproveitados, portas 4000/5173 | `reuseExistingServer: false`, portas isoladas 4100/5174 |
 
 `backend/seed_raw.js` foi **preservado sem alteração** para análise (não é mais invocado por nada). Não o execute.
@@ -51,7 +53,7 @@ Não podem existir: `DATABASE_URL`, `SHADOW_DATABASE_URL`, `CARDAPIO_MIGRATE_DEP
    E2E exige a rotação. Procedimento em `secrets-rotation.md` mantido apenas como referência.
 2. **Resíduo do E2E antigo removido** (a comanda `999999` do `seed_raw.js` é uma colisão e bloqueia o
    preflight): primeiro `npm run e2e:cleanup-legacy` (dry-run), depois `-- --execute` com autorização.
-3. `npm run e2e:inspect` (somente leitura): 5 migrations concluídas, `orders` = 0, resíduo legado = 0,
+3. `npm run e2e:inspect` (somente leitura): 6 migrations concluídas (a 6ª só existe após a aplicação autorizada), `orders` = 0, resíduo legado = 0,
    sem sessões de `cardapio_test_app`/`cardapio_test_fixtures`, sem advisory locks.
 4. Portas 4100 e 5174 livres (`Get-NetTCPConnection -LocalPort 4100,5174 -State Listen` vazio).
 5. Nenhum manifesto remanescente em `%TEMP%\rustika-e2e`.
@@ -61,7 +63,7 @@ Não podem existir: `DATABASE_URL`, `SHADOW_DATABASE_URL`, `CARDAPIO_MIGRATE_DEP
 ## Sequência da execução (autorização única, todas as etapas em ordem)
 
 ```powershell
-cd C:\Users\<USUARIO>\OneDrive\Documentos\Cardapio_Digital\backend
+cd C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend
 npm run e2e:inspect                              # 1. estado inicial (somente leitura)
 npm run e2e:cleanup-legacy                       # 2. dry-run do resíduo legado (lista, não apaga)
 $env:RUSTIKA_E2E_LEGACY_CLEANUP = 'ERASE_LEGACY_E2E_FIXTURES'
@@ -110,7 +112,7 @@ Remove-Item Env:NODE_ENV, Env:DB_PROFILE, Env:RUSTIKA_DB_INTEGRATION, Env:RUSTIK
 | --- | --- |
 | Variável de confirmação ausente, `NODE_ENV`/`DB_PROFILE` com espaço ou valor errado | config/setup recusam; nada sobe, nada é escrito |
 | Porta 4100 ou 5174 ocupada | Playwright falha ao iniciar o servidor |
-| Preflight reprovado (banco, role, 5 migrations/checksums, ACL, `pg_hba`, lock, resíduo, colisão) | setup aborta antes de escrever |
+| Preflight reprovado (banco, role, 6 migrations/checksums, ACL, `pg_hba`, lock, resíduo, colisão) | setup aborta antes de escrever |
 | Manifesto anterior presente | setup aborta antes de abrir o banco |
 | Botão "Enviar pedido" desabilitado | jornada falha ali |
 | POST ≠ 201 ou replay ≠ 200 | jornada falha com status e corpo |
@@ -129,3 +131,7 @@ Em estado incerto **não** limpe à mão: investigue com `npm run e2e:inspect` e
 - Testes com mocks (`tests/e2e-fixtures.test.ts`, 70+ casos) provam que linhas preexistentes — dados
   reais, resíduo de outra execução, E2E legado, comanda 999999, faixa de comandas de outra execução —
   **não** são removidas, e que uma chave estrangeira violada reverte a transação inteira.
+
+## Operação de pedidos na jornada (opt-in, 3D.4.1)
+
+`RUSTIKA_E2E_ORDER_OPS=enabled` (ambiente do setup) acrescenta o passo 7 da jornada (admin vê o pedido, move para IN_PREPARATION, conflito 409 e transição 422 rejeitados). O teardown passa a exigir IN_PREPARATION e dois históricos. Sem a variável nada muda. **Preparado, não executado**; detalhes em `docs/order-operations.md`.

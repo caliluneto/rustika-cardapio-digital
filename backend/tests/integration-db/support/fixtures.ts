@@ -159,7 +159,7 @@ export class FixtureRun {
   async ordersFor(number: string) {
     return this.db.order.findMany({
       where: { comanda: { number } }, orderBy: { orderNumber: 'asc' },
-      include: { items: true, statusHistory: true },
+      include: { items: true, statusHistory: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] } },
     });
   }
 

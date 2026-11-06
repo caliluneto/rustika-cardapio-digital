@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, ApiError } from '../services/api';
 import type { AdminSession } from './AdminLogin';
+import AdminOrders from './AdminOrders';
 
 interface InvitationPayload { comanda: { number: string }; inviteToken: string; expiresAt: string }
 
@@ -9,8 +10,10 @@ export default function AdminDashboard({ admin, onLogout }: { admin: AdminSessio
   const [loading, setLoading] = useState(false);
   const [invitation, setInvitation] = useState<InvitationPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setLoggingOut(true); // desmonta o painel de pedidos: o polling para ANTES do POST de logout
     try {
       await api.post('/admin/auth/logout', {});
     } catch {
@@ -50,6 +53,8 @@ export default function AdminDashboard({ admin, onLogout }: { admin: AdminSessio
       </header>
 
       <main className="admin-main">
+        {!loggingOut && <AdminOrders onUnauthorized={onLogout} />}
+
         <section className="admin-section">
           <h3>Emitir Convite de Comanda</h3>
           <form onSubmit={handleIssueInvite} className="admin-form">
