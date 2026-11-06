@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { openAdminProducts } from './helpers/adminAccess';
+import { reviewBlocker } from './helpers/cartPreconditions';
+import type { CartFacts } from './helpers/cartPreconditions';
 
 /**
  * Jornada real: login admin -> convite -> resgate -> carrinho -> pedido (POSTGRES TEST).
@@ -189,13 +191,32 @@ test.describe('E2E Real Journey', () => {
       };
       const openCatalogFresh = async () => {
         await page.goto('/#catalog');
-        await page.reload(); // o catalogo e lido de novo; a sessao da comanda (cookie) continua
+        await page.reload(); // o catalogo e lido de novo; o cookie HttpOnly da comanda continua, mas a comanda em memoria React e perdida
         await expect(page.locator('#hero-title')).toContainText('Bem-vindo ao');
+        // Restauracao legitima pela interface (ComandaRedeem consulta /comanda-sessions/current ao abrir o carrinho), como no resgate original.
+        await page.click('button[aria-label="Abrir carrinho"]');
+        await expect(page.locator('.comanda-active-status')).toBeVisible({ timeout: 15000 });
+        await page.locator('dialog.cart-drawer button:has-text("Fechar")').first().click();
+        await expect(page.locator('#hero-title')).toContainText('Bem-vindo ao');
+      };
+      const readCartFacts = async (name: string): Promise<CartFacts> => {
+        const drawer = page.locator('dialog.cart-drawer[open]');
+        return {
+          drawerOpen: (await drawer.count()) > 0,
+          itemShown: (await drawer.filter({ hasText: name }).count()) > 0,
+          comandaTitle: (await drawer.locator('#cart-comanda-title').count()) > 0 ? await drawer.locator('#cart-comanda-title').first().innerText() : null,
+          editingHint: (await drawer.filter({ hasText: 'conclua a edição da comanda' }).count()) > 0,
+          reviewButton: (await drawer.getByRole('button', { name: 'Revisar pedido' }).count()) > 0,
+        };
       };
       const addToCartAndReview = async (name: string) => {
         await page.click(`.product-card:has-text("${name}")`);
         await page.click('.product-add-form button:has-text("Adicionar ao carrinho")');
         await page.click('button:has-text("Ver meu carrinho")');
+        // Pre-condicoes explicitas: falha rapida e especifica em vez de esperar um botao que nao pode existir.
+        await expect.poll(async () => reviewBlocker(await readCartFacts(name), comanda), {
+          message: 'o pedido nao pode ser revisado', timeout: 10000,
+        }).toBeNull();
         await page.click('button:has-text("Revisar pedido")');
         await page.click('button:has-text("Prosseguir para envio")');
         await page.fill('input[id="checkout-name"]', 'E2E Customer');

@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --import ./tests/register.mjs --test tests/cart.test.mjs tests/order-review.test.mjs tests/catalog-api.test.mjs tests/catalog-state.test.mjs tests/checkout.test.mjs tests/http-client.test.mjs tests/order-submission.test.mjs tests/order-recovery.test.mjs tests/styles-smoke.test.mjs tests/vite-env-injection.test.mjs tests/e2e-guard.test.mjs tests/admin-orders.test.mjs tests/admin-products.test.mjs tests/admin-access.test.mjs"
+    "test": "node --import ./tests/register.mjs --test tests/cart.test.mjs tests/order-review.test.mjs tests/catalog-api.test.mjs tests/catalog-state.test.mjs tests/checkout.test.mjs tests/http-client.test.mjs tests/order-submission.test.mjs tests/order-recovery.test.mjs tests/styles-smoke.test.mjs tests/vite-env-injection.test.mjs tests/e2e-guard.test.mjs tests/admin-orders.test.mjs tests/admin-products.test.mjs tests/admin-access.test.mjs tests/e2e-second-order.test.mjs"
   },
   "engines": {
     "node": ">=20.19"
