@@ -46,5 +46,6 @@ export const env = {
   port: readPort(process.env.PORT, 4000),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   databaseProfile: resolveDatabaseProfile(nodeEnv, process.env.DB_PROFILE),
-  secretsDir: resolveSecretsDir(),
+  // 3D.5.3-B.1: com CARDAPIO_SECRETS_SOURCE=env não há pasta de segredos; evitar falhar na importação por causa de um HOME atípico.
+  secretsDir: process.env.CARDAPIO_SECRETS_SOURCE?.trim() === 'env' ? '' : resolveSecretsDir(),
 };

@@ -1,14 +1,22 @@
+import path from 'node:path';
 import { createApp } from './app';
 import { env } from './config/env';
 import { createPrismaRuntime } from './lib/prisma';
 import { assertHomologRuntimeConfig } from './config/homologRuntime';
-import { HOMOLOG_ROLES, loadDatabaseProfile } from './config/secrets';
+import { HOMOLOG_ROLES, getBackendRoot, loadDatabaseProfile } from './config/secrets';
+import { readWebConfig } from './config/webConfig';
 import { evaluateServerIdentity, readServerFacts } from './config/serverIdentity';
 
 if (env.nodeEnv === 'production') assertHomologRuntimeConfig(env);
 
+// 3D.5.3-B: hospedagem em um único serviço. Falha fechada se a configuração for inválida (mensagens sem valores).
+const web = readWebConfig(process.env, () => path.resolve(getBackendRoot(), '..', 'frontend', 'dist'));
+if (env.nodeEnv === 'production' && web.frontendDir && !web.gate) {
+  console.warn('[api] Portão de homologação desativado (HOMOLOG_GATE): o frontend e a API estão acessíveis sem credencial adicional.');
+}
+
 const { databaseInfo, prisma } = createPrismaRuntime();
-const app = createApp({ prisma });
+const app = createApp({ prisma, web });
 
 let server: ReturnType<typeof app.listen> | undefined;
 

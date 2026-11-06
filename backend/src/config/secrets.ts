@@ -34,7 +34,17 @@ export interface DatabaseSecrets {
 export interface LoadDatabaseProfileOptions {
   purpose?: RequestedPurpose;
   secretsDir?: string;
+  /** Ambiente lido para CARDAPIO_SECRETS_SOURCE e variáveis de segredo (padrão: process.env); injetável em testes. */
+  env?: NodeJS.ProcessEnv;
 }
+
+/** 3D.5.3-B: variáveis (prefixadas, sem colisão com DATABASE_URL genérica) usadas só com CARDAPIO_SECRETS_SOURCE=env. */
+export const ENV_SECRET_VARIABLES = {
+  DATABASE_URL: 'RUSTIKA_HOMOLOG_DATABASE_URL',
+  EXPECTED_DATABASE_HOST: 'RUSTIKA_HOMOLOG_EXPECTED_DATABASE_HOST',
+  EXPECTED_CLUSTER_ID: 'RUSTIKA_HOMOLOG_EXPECTED_CLUSTER_ID',
+} as const;
+export const ENV_SECRETS_ORIGIN = '(variáveis de ambiente)';
 
 export class SecretsConfigError extends Error {
   constructor(message: string) {
@@ -462,31 +472,52 @@ export function loadDatabaseProfile(
 
   const homolog = profile.environment !== undefined;
 
-  if (homolog && options.secretsDir === undefined && !process.env.CARDAPIO_SECRETS_DIR?.trim()) {
+  // 3D.5.3-B: origem dos segredos. Padrão `file` (inalterado). `env` é um opt-in EXPLÍCITO, restrito ao perfil de aplicação
+  // (runtime) da homologação, para provedores sem arquivos com modo 0600 garantido. Todas as demais validações (host remoto,
+  // TLS, banco/usuário exatos, EXPECTED_DATABASE_HOST, UUID do cluster, ausência de SHADOW) continuam valendo.
+  const runtimeEnv = options.env ?? process.env;
+  const source = runtimeEnv.CARDAPIO_SECRETS_SOURCE?.trim() ?? '';
+  if (source !== '' && source !== 'file' && source !== 'env') {
+    throw new SecretsConfigError('CARDAPIO_SECRETS_SOURCE deve ser "file" ou "env".');
+  }
+  const fromEnv = source === 'env';
+  if (fromEnv && !(homolog && profile.purpose === 'runtime')) {
+    throw new SecretsConfigError(`CARDAPIO_SECRETS_SOURCE=env não é permitido para o perfil ${profileName}: só o perfil de aplicação da homologação aceita segredos por variável de ambiente.`);
+  }
+
+  if (!fromEnv && homolog && options.secretsDir === undefined && !process.env.CARDAPIO_SECRETS_DIR?.trim()) {
     throw new SecretsConfigError(
       `O perfil ${profileName} exige uma pasta de segredos própria: defina CARDAPIO_SECRETS_DIR (não reutilize a pasta de Dev/Test).`,
     );
   }
 
-  const secretsDir = options.secretsDir ?? resolveSecretsDir();
-  const secretsFilePath = path.join(secretsDir, `${profileName}.env`);
-
-  if (!fs.existsSync(secretsFilePath)) {
-    throw new SecretsConfigError(
-      `Arquivo de segredo ausente para o perfil ${profileName}: ${secretsFilePath}.`,
-    );
-  }
-
-  if (homolog) assertSecretsFileMode(secretsFilePath, profileName);
+  const secretsDir = fromEnv ? '' : (options.secretsDir ?? resolveSecretsDir());
+  const secretsFilePath = fromEnv ? ENV_SECRETS_ORIGIN : path.join(secretsDir, `${profileName}.env`);
 
   let values: Record<string, string>;
 
-  try {
-    values = dotenv.parse(fs.readFileSync(secretsFilePath, 'utf8'));
-  } catch {
-    throw new SecretsConfigError(
-      `Não foi possível ler o arquivo de segredo do perfil ${profileName}.`,
-    );
+  if (fromEnv) {
+    values = {};
+    for (const [key, variable] of Object.entries(ENV_SECRET_VARIABLES)) {
+      const value = runtimeEnv[variable];
+      if (value !== undefined && value.trim() !== '') values[key] = value;
+    }
+  } else {
+    if (!fs.existsSync(secretsFilePath)) {
+      throw new SecretsConfigError(
+        `Arquivo de segredo ausente para o perfil ${profileName}: ${secretsFilePath}.`,
+      );
+    }
+
+    if (homolog) assertSecretsFileMode(secretsFilePath, profileName);
+
+    try {
+      values = dotenv.parse(fs.readFileSync(secretsFilePath, 'utf8'));
+    } catch {
+      throw new SecretsConfigError(
+        `Não foi possível ler o arquivo de segredo do perfil ${profileName}.`,
+      );
+    }
   }
 
   for (const key of Object.keys(values)) {
