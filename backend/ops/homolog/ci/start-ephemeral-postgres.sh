@@ -42,12 +42,21 @@ openssl x509 -req -in "${WORK}/tls/server.csr" -CA "${WORK}/tls/ca.crt" -CAkey "
   -days 1 -extfile "${WORK}/tls/server.ext" -out "${WORK}/tls/server.crt" 2>/dev/null
 rm -f "${WORK}/tls/ca.key" "${WORK}/tls/wrong-ca.key" "${WORK}/tls/server.csr"
 # A imagem oficial roda como o usuario postgres (uid 999); a chave precisa pertencer a ele com modo 0600.
-sudo chown 999:999 "${WORK}/tls/server.key" "${WORK}/tls/server.crt"
-chmod 600 "${WORK}/tls/server.key"
+# ORDEM IMPORTANTE (FIX01): aplicar os modos ANTES de transferir a propriedade. Depois do chown o usuario do runner deixa de ser
+# dono da chave e o chmod falharia com "Operation not permitted". O UID do usuario postgres e confirmado na propria imagem.
+chmod 600 "${WORK}/tls/server.key" "${WORK}/tls/server.crt"
 chmod 644 "${WORK}/tls/ca.crt" "${WORK}/tls/wrong-ca.crt"
+PG_UID="$(docker run --rm --entrypoint id "${PG_IMAGE}" -u postgres)"
+case "${PG_UID}" in ''|*[!0-9]*) echo "UID do usuario postgres invalido na imagem: '${PG_UID}'" >&2; exit 1 ;; esac
+sudo chown "${PG_UID}:${PG_UID}" "${WORK}/tls/server.key" "${WORK}/tls/server.crt"
 # O umask 077 deixaria as pastas inacessiveis ao uid 999 do container (bind mount preserva o modo do host). As pastas ficam
 # atravessaveis (755); a protecao da chave privada e o modo 0600 do arquivo, que pertence ao usuario postgres.
 chmod 755 "${WORK}" "${WORK}/tls"
+# Verificacao efetiva antes de iniciar o container: chave do postgres, modo 600, e nenhum acesso para grupo/outros.
+if [ "$(stat -c '%u:%a' "${WORK}/tls/server.key")" != "${PG_UID}:600" ]; then
+  echo "Propriedade/modo inesperados em server.key (esperado ${PG_UID}:600)." >&2; exit 1
+fi
+if [ "$(stat -c '%u' "${WORK}/tls/server.crt")" != "${PG_UID}" ]; then echo "Propriedade inesperada em server.crt." >&2; exit 1; fi
 
 # --- pg_hba: somente TLS para conexoes TCP; socket local (trust) existe apenas dentro do container, para a prontidao.
 cat > "${WORK}/pg_hba.conf" <<'HBA'

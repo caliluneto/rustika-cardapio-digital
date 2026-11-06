@@ -116,8 +116,16 @@ describe('proteção da renomeação (3D.5.2-C, verificação estática)', () =>
   it('o script de CI mantém as pastas TLS atravessáveis pelo uid 999 do container (senão o PostgreSQL não lê a chave)', () => {
     const start = fs.readFileSync(path.join(process.cwd(), 'ops', 'homolog', 'ci', 'start-ephemeral-postgres.sh'), 'utf8');
     expect(start).toMatch(/chmod 755 "\$\{WORK\}" "\$\{WORK\}\/tls"/);
-    expect(start).toMatch(/chown 999:999 "\$\{WORK\}\/tls\/server\.key"/);
+    expect(start).toMatch(/sudo chown "\$\{PG_UID\}:\$\{PG_UID\}" "\$\{WORK\}\/tls\/server\.key"/);
     expect(start).toMatch(/chmod 600 "\$\{WORK\}\/tls\/server\.key"/);
+    // FIX01: nenhum chmod do material TLS pode vir DEPOIS do chown (o runner deixa de ser dono e o chmod falha).
+    const lines = start.split('\n');
+    const chownAt = lines.findIndex((line) => /^\s*sudo chown /.test(line));
+    expect(chownAt).toBeGreaterThan(-1);
+    const chmodOfTlsFiles = (line: string) => /^\s*chmod\s+\d+\s+.*tls\/(server\.key|server\.crt)/.test(line);
+    lines.forEach((line, index) => { if (chmodOfTlsFiles(line)) expect(index, `chmod após chown: ${line}`).toBeLessThan(chownAt); });
+    expect(start).toMatch(/stat -c '%u:%a' "\$\{WORK\}\/tls\/server\.key"/);
+    expect(start).not.toMatch(/chmod\s+(777|666|755|644)\s+[^\n]*server\.key/);
   });
 
   it('a cópia temporária da 8ª migration fica em <tmp>/<dir>/backend (a pasta de segredos precisa ficar fora do workspace)', () => {
