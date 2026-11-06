@@ -24,6 +24,7 @@ import { spawnSync } from 'node:child_process';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { PROJECT_DATABASES_SQL, PROJECT_ROLES_SQL, assertOnlyEphemeralAdminRole, assertOnlyPostgresDatabase } from './roleGuard';
 import { createApp } from '../../src/app';
 import { env } from '../../src/config/env';
 import { evaluateServerIdentity, MARKER_PREFIX, readServerFacts } from '../../src/config/serverIdentity';
@@ -55,7 +56,6 @@ const SQL = (file: string) => path.join(BACKEND, 'ops', 'homolog', 'sql', file);
 const TSX = path.join(BACKEND, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const REPLAY_DB = 'cardapio_digital_test';
 const FINAL_DB = 'cardapio_digital_homolog';
-const PROJECT_LIKE = "LIKE 'cardapio\\_%'";
 const LEGACY = { migrator: 'cardapio_migrator', app: 'cardapio_test_app', placeholder: 'cardapio_dev_app' } as const;
 const FINAL = { migrator: 'cardapio_homolog_migrator', app: 'cardapio_homolog_app', bootstrap: 'cardapio_homolog_bootstrap', placeholder: 'cardapio_homolog_placeholder' } as const;
 const ALL_ROLES = ['cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_migrator', 'cardapio_homolog_app', 'cardapio_homolog_placeholder', 'cardapio_homolog_bootstrap', 'rustika_homolog_marker'];
@@ -175,10 +175,11 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(head[0]!.cluster, 'cluster_name do servidor descartável').toBe(CLUSTER_NAME);
     expect(head[0]!.ssl, 'TLS ativo na conexão do ensaio').toBe(true);
     expect(head[0]!.ver).toBeGreaterThanOrEqual(170000);
-    const databases = await admin.$queryRawUnsafe<Array<{ datname: string }>>('SELECT datname FROM pg_database WHERE NOT datistemplate');
-    expect(databases.map((row) => row.datname), 'servidor deve conter somente o banco postgres').toEqual(['postgres']);
-    const roles = await admin.$queryRawUnsafe<Array<{ rolname: string }>>(`SELECT rolname FROM pg_roles WHERE rolname ${PROJECT_LIKE} OR rolname LIKE 'rustika\\_%'`);
-    expect(roles, 'nenhuma role do projeto pré-existente').toEqual([]);
+    const databases = await admin.$queryRawUnsafe<Array<{ datname: string }>>(PROJECT_DATABASES_SQL);
+    expect(() => assertOnlyPostgresDatabase(databases.map((row) => row.datname)), 'servidor deve conter somente o banco postgres').not.toThrow();
+    // FIX02: a única role do projeto permitida é a administrativa temporária do workflow (igualdade exata); ela deve existir.
+    const roles = await admin.$queryRawUnsafe<Array<{ rolname: string }>>(PROJECT_ROLES_SQL);
+    expect(() => assertOnlyEphemeralAdminRole(roles.map((row) => row.rolname), ADMIN_USER), 'nenhuma role do projeto pré-existente além da administrativa').not.toThrow();
     expect(spawnSync('psql', ['--version']).status, 'psql disponível no PATH').toBe(0);
     secrets = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-secrets-')); temps.push(secrets);
   });
@@ -191,9 +192,15 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
       for (const database of [FINAL_DB, REPLAY_DB, 'cardapio_digital_dev']) await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
       for (const role of ALL_ROLES) await admin.$executeRawUnsafe(`DROP ROLE IF EXISTS ${role}`);
     }
-    const leftovers = await admin.$queryRawUnsafe<Array<{ n: bigint }>>(`SELECT (SELECT count(*) FROM pg_database WHERE NOT datistemplate AND datname <> 'postgres') + (SELECT count(*) FROM pg_roles WHERE rolname ${PROJECT_LIKE} OR rolname LIKE 'rustika\\_%') AS n`);
+    const leftoverDatabases = await admin.$queryRawUnsafe<Array<{ datname: string }>>(PROJECT_DATABASES_SQL);
+    const leftoverRoles = await admin.$queryRawUnsafe<Array<{ rolname: string }>>(PROJECT_ROLES_SQL);
     await admin.$disconnect();
-    expect(Number(leftovers[0]!.n), 'cleanup: nenhum banco/role do ensaio pode sobrar').toBe(0);
+    // FIX02: resíduo zero para tudo que pertence à suíte; a role administrativa do workflow permanece (o cleanup externo cuida dela).
+    const residue = (): void => {
+      assertOnlyPostgresDatabase(leftoverDatabases.map((row) => row.datname));
+      assertOnlyEphemeralAdminRole(leftoverRoles.map((row) => row.rolname), ADMIN_USER);
+    };
+    expect(residue, 'cleanup: nenhum banco/role do ensaio pode sobrar').not.toThrow();
     expect(temps.length).toBe(0);
   });
 
