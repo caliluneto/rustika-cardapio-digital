@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openAdminProducts } from './helpers/adminAccess';
 
 /**
  * Jornada real: login admin -> convite -> resgate -> carrinho -> pedido (POSTGRES TEST).
@@ -165,14 +166,8 @@ test.describe('E2E Real Journey', () => {
       const unknownName = fixture('RUSTIKA_E2E_UNKNOWN_PRODUCT_NAME');
       const blockedName = fixture('RUSTIKA_E2E_BLOCKED_PRODUCT_NAME');
       const adminPage = await page.context().newPage(); // mesma sessao de navegador; o cliente continua na pagina original
-      await adminPage.goto('/#admin');
-      if (await adminPage.locator('input[type="email"]').isVisible().catch(() => false)) {
-        await adminPage.fill('input[type="email"]', adminEmail);
-        await adminPage.fill('input[type="password"]', adminPassword);
-        await adminPage.click('button[type="submit"]');
-      }
+      await openAdminProducts(adminPage, { email: adminEmail, password: adminPassword });
       const panel = adminPage.locator('.admin-products');
-      await expect(panel).toBeVisible({ timeout: 25000 });
 
       const change = async (name: string, from: string, to: string, labelFrom: string, labelTo: string): Promise<string> => {
         await panel.locator('input[type="search"]').fill(name);
