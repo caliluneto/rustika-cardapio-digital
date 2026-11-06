@@ -309,6 +309,51 @@ describe('PATCH /api/admin/orders/:orderId/status', () => {
   });
 });
 
+describe('sessões administrativas: ciclo de vida por instância da aplicação (regressão 3D.4.1-D)', () => {
+  const body = { expectedStatus: 'RECEIVED', toStatus: 'IN_PREPARATION' };
+
+  it('login e requisições autenticadas na MESMA aplicação funcionam (listagem e PATCH)', async () => {
+    const { list, patch, orders } = await setup();
+    expect((await list()).status).toBe(200);
+    expect((await patch(orderId(1), body)).status).toBe(200);
+    expect(orders()[0]!.status).toBe('IN_PREPARATION');
+  });
+
+  it('sem cookie e com cookie inventado: 401, e o pedido não muda (PATCH e GET)', async () => {
+    const { patch, app, orders } = await setup();
+    expect((await patch(orderId(1), body, false)).status).toBe(401);
+    const forged = await request(app).patch(`/api/admin/orders/${orderId(1)}/status`).set('Origin', env.corsOrigin)
+      .set('X-Rustika-Request', '1').set('Cookie', 'rustika_admin=' + 'f'.repeat(64)).send(body);
+    expect(forged.status).toBe(401);
+    expect((await request(app).get('/api/admin/orders').set('Cookie', 'rustika_admin=' + 'f'.repeat(64))).status).toBe(401);
+    expect(orders()[0]!.status).toBe('RECEIVED');
+  });
+
+  it('sem sessão e com sessão válida em pedido inexistente são condições distintas: 401 versus 404', async () => {
+    const { patch } = await setup();
+    const missing = orderId(99);
+    expect((await patch(missing, body, false)).status).toBe(401);
+    expect((await patch(missing, body)).status).toBe(404);
+  });
+
+  it('a sessão de uma instância NÃO vale em outra (sessões em memória por createApp; segurança inalterada)', async () => {
+    const { cookie, prisma, now, orders } = await setup();
+    const other = createApp({ prisma, authClock: now });
+    expect((await request(other).get('/api/admin/orders').set('Cookie', cookie)).status).toBe(401);
+    const response = await request(other).patch(`/api/admin/orders/${orderId(1)}/status`).set('Origin', env.corsOrigin)
+      .set('X-Rustika-Request', '1').set('Cookie', cookie).send(body);
+    expect(response.status).toBe(401);
+    expect(orders()[0]!.status).toBe('RECEIVED');
+  });
+
+  it('requisições concorrentes na mesma aplicação, todas autenticadas, não recebem 401', async () => {
+    const { patch, control } = await setup();
+    control.barrier = 2;
+    const results = await Promise.all([patch(orderId(1), body), patch(orderId(1), { ...body, toStatus: 'CANCELLED' })]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+  });
+});
+
 describe('estrutura: privilégio mínimo e sem DELETE no código novo', () => {
   it('o serviço só usa as operações previstas pela concessão (findMany/findUnique/updateMany/create)', async () => {
     const fs = await import('node:fs');
