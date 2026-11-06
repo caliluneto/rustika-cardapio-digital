@@ -179,7 +179,7 @@ describe('gatilhos e superfície de ataque do workflow', () => {
 
   it('todos os inputs são booleanos: nenhum aceita URL, string ou nome de banco', () => {
     const types = [...onBlock.matchAll(/^ {8}type: (\S+)/gm)].map((m) => m[1]);
-    expect(types.length).toBe(7);
+    expect(types.length).toBe(8);
     for (const t of types) expect(t).toBe('boolean');
     expect(code).not.toMatch(/inputs\.(database|db|url|host|pg|postgres)/i);
   });
@@ -192,7 +192,7 @@ describe('gatilhos e superfície de ataque do workflow', () => {
   });
 
   it('3D.4.1-B: integração PostgreSQL e operação de pedidos são opt-in, só no job e2e e só no passo autorizado', () => {
-    for (const name of ['run_integration', 'run_order_ops']) expect(code).toMatch(new RegExp(`${name}:[\\s\\S]*?type: boolean\\n\\s+default: false`));
+    for (const name of ['run_integration', 'run_order_ops', 'run_product_availability']) expect(code).toMatch(new RegExp(`${name}:[\\s\\S]*?type: boolean\\n\\s+default: false`));
     expect(code).toMatch(/run_playwright:[\s\S]*?type: boolean\n\s+default: true/);
     const e2e = jobBlock('e2e');
     // a integração roda antes do Playwright, com os mesmos gates do job, e só sob input explícito
@@ -200,10 +200,17 @@ describe('gatilhos e superfície de ataque do workflow', () => {
     expect(integration).toBeGreaterThan(e2e.indexOf('npm run e2e:inspect'));
     expect(integration).toBeLessThan(e2e.indexOf('npx playwright test'));
     expect(e2e).toMatch(/if: inputs\.run_integration == true\n\s+working-directory: backend\n\s+run: npm run test:integration:db/);
-    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true\n\s+working-directory: frontend\n\s+run: npx playwright/);
-    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+run: npx playwright/);
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true && inputs\.run_product_availability != true\n\s+working-directory: frontend\n\s+run: npx playwright/);
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true && inputs\.run_product_availability != true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+run: npx playwright/);
+    // 3D.4.2: disponibilidade de produtos, sozinha ou combinada com a operação de pedidos; variáveis constantes
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true && inputs\.run_product_availability == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_PRODUCT_AVAILABILITY: enabled\n\s+run: npx playwright/);
+    expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true && inputs\.run_product_availability == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+RUSTIKA_E2E_PRODUCT_AVAILABILITY: enabled\n\s+run: npx playwright/);
+    expect(code.match(/RUSTIKA_E2E_PRODUCT_AVAILABILITY:/g)).toHaveLength(2);
+    expect(e2e.slice(0, e2e.indexOf('steps:'))).not.toContain('RUSTIKA_E2E_PRODUCT_AVAILABILITY');
+    expect(jobBlock('backend')).not.toMatch(/PRODUCT_AVAILABILITY/);
+    expect(jobBlock('frontend')).not.toMatch(/PRODUCT_AVAILABILITY/);
     // a variável do E2E ampliado existe como chave só no env do passo ampliado, com valor constante
-    expect(code.match(/RUSTIKA_E2E_ORDER_OPS:/g)).toHaveLength(1);
+    expect(code.match(/RUSTIKA_E2E_ORDER_OPS:/g)).toHaveLength(2); // passo de pedidos + passo combinado
     expect(e2e.slice(0, e2e.indexOf('steps:'))).not.toContain('RUSTIKA_E2E_ORDER_OPS');
     expect(jobBlock('backend')).not.toMatch(/test:integration:db|ORDER_OPS/);
     expect(jobBlock('frontend')).not.toMatch(/test:integration:db|ORDER_OPS/);

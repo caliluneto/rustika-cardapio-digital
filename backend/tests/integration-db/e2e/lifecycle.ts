@@ -14,7 +14,7 @@ import type { RunManifest } from './manifest';
  *
  * Rules enforced here:
  * - the only writer is the dedicated fixtures role through the approved harness (full preflight:
- *   database identity, 6 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
+ *   database identity, 7 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
  * - nothing global: no TRUNCATE, no unscoped DELETE, no sequence changes, no pre-existing row is touched;
  * - a manifest is written BEFORE provisioning; any manifest left behind blocks the next run;
  * - teardown deletes only what the run identity + manifest describe, and ABORTS (deleting nothing) when
@@ -26,6 +26,9 @@ export const E2E_QUANTITY = 1;
 
 /** Product shown in the E2E catalog: the "numeric" fixture of FixtureRun, name = `<base> [<marker>]`. */
 export const e2eProductName = (identity: RunIdentity): string => `FRIOS FIXTURE [${identity.marker}]`;
+/** 3D.4.2 (opt-in): "unknown" fixture (starts UNKNOWN; the browser makes it AVAILABLE) and "priceChange" fixture (starts AVAILABLE; the browser makes it UNAVAILABLE). */
+export const e2eUnknownProductName = (identity: RunIdentity): string => `SEM CONFIRMACAO FIXTURE [${identity.marker}]`;
+export const e2eBlockedProductName = (identity: RunIdentity): string => `PRECO ALTERAVEL FIXTURE [${identity.marker}]`;
 
 export interface RunLike {
   readonly identity: RunIdentity;
@@ -35,6 +38,8 @@ export interface RunLike {
   remaining(): Promise<Record<string, number>>;
   ordersFor(number: string): Promise<OrderView[]>;
   invitationsFor(number: string): Promise<InvitationView[]>;
+  /** Optional: only needed by the 3D.4.2 availability journey. */
+  productStatesFor?(): Promise<{ publicKey: string | null; availabilityState: string }[]>;
 }
 
 export interface OrderView {
@@ -76,7 +81,7 @@ export async function e2eSetup(deps: LifecycleDeps): Promise<E2eSetupResult> {
       version: MANIFEST_VERSION, runId: identity.runId, status: 'pending', createdAt: (deps.now?.() ?? new Date()).toISOString(), pid: process.pid,
       target: { database: E2E_TARGET_DATABASE }, roles: { runtime: 'cardapio_test_app', fixtures: 'cardapio_test_fixtures' },
       ids: { adminIds: [], categoryIds: [], productIds: [] }, comandaNumbers: reservedComandaNumbers(identity.runId),
-      journey: { comanda: identity.comandas.open, productName: e2eProductName(identity), productKey: '', priceInCents: 0, orderOps: deps.env.RUSTIKA_E2E_ORDER_OPS === 'enabled' },
+      journey: { comanda: identity.comandas.open, productName: e2eProductName(identity), productKey: '', priceInCents: 0, orderOps: deps.env.RUSTIKA_E2E_ORDER_OPS === 'enabled', productAvailability: deps.env.RUSTIKA_E2E_PRODUCT_AVAILABILITY === 'enabled' },
     };
     writeManifestExclusive(dir, base); // intent first: a crash during provisioning leaves a trace
     log(`manifesto ${identity.runId} criado (pending)`);
@@ -101,6 +106,9 @@ export async function e2eSetup(deps: LifecycleDeps): Promise<E2eSetupResult> {
         RUSTIKA_E2E_PRODUCT_NAME: manifest.journey.productName,
         RUSTIKA_E2E_PRODUCT_PRICE_CENTS: String(manifest.journey.priceInCents),
         RUSTIKA_E2E_ORDER_OPS: manifest.journey.orderOps ? 'enabled' : 'disabled',
+        RUSTIKA_E2E_PRODUCT_AVAILABILITY: manifest.journey.productAvailability ? 'enabled' : 'disabled',
+        RUSTIKA_E2E_UNKNOWN_PRODUCT_NAME: e2eUnknownProductName(identity),
+        RUSTIKA_E2E_BLOCKED_PRODUCT_NAME: e2eBlockedProductName(identity),
         RUSTIKA_E2E_STATE_DIR: dir,
       },
     };
@@ -112,11 +120,13 @@ export async function e2eSetup(deps: LifecycleDeps): Promise<E2eSetupResult> {
 export interface Verification { ok: boolean; problems: string[]; orderNumber: number | null }
 
 /** Read-only check of the order the browser created. Expectations are fixed by the journey. */
-export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitationsFor'>, manifest: RunManifest): Promise<Verification> {
+export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitationsFor' | 'productStatesFor'>, manifest: RunManifest): Promise<Verification> {
   const problems: string[] = []; const { comanda, productKey, priceInCents } = manifest.journey;
+  const availability = manifest.journey.productAvailability === true;
   const orders = await run.ordersFor(comanda);
-  if (orders.length !== 1) problems.push(`esperado 1 pedido na comanda ${comanda}, encontrado ${orders.length} (idempotência/duplicidade)`);
-  const order = orders[0];
+  const expectedOrders = availability ? 2 : 1; // 3D.4.2: o pedido original + um pedido do produto tornado disponível; o bloqueado NÃO gera pedido
+  if (orders.length !== expectedOrders) problems.push(`esperado ${expectedOrders} pedido(s) na comanda ${comanda}, encontrado ${orders.length} (idempotência/duplicidade)`);
+  const order = availability ? orders.find((candidate) => candidate.items.some((entry) => entry.productPublicKeySnapshot === productKey)) : orders[0];
   if (order) {
     const cents = (value: { toString(): string }) => Math.round(Number(value.toString()) * 100);
     const expectedStatus = manifest.journey.orderOps ? 'IN_PREPARATION' : 'RECEIVED';
@@ -140,10 +150,34 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
     } else if (history.length !== 1) problems.push('histórico inicial diverge');
     if (!/^[0-9a-f]{64}$/.test(order.idempotencyKey) || !/^[0-9a-f]{64}$/.test(order.requestDigest)) problems.push('chave/digest de idempotência fora do formato');
   }
+  if (availability) problems.push(...(await verifyAvailability(run, manifest, orders, order)));
   const invitations = await run.invitationsFor(comanda);
   const consumed = invitations.filter((i) => i.consumedAt !== null && i.session !== null && i.session.revokedAt === null);
   if (consumed.length !== 1) problems.push(`convites consumidos com sessão ativa: ${consumed.length} (esperado 1)`);
   return { ok: problems.length === 0, problems, orderNumber: order?.orderNumber ?? null };
+}
+
+/**
+ * 3D.4.2 — conferência (somente leitura) da jornada de disponibilidade: o produto "unknown" terminou AVAILABLE e foi pedido uma vez
+ * (preço congelado); o produto "priceChange" terminou UNAVAILABLE e NÃO aparece em nenhum pedido; nenhum outro estado mudou.
+ */
+export async function verifyAvailability(run: Pick<RunLike, 'productStatesFor'>, manifest: RunManifest, orders: OrderView[], primary: OrderView | undefined): Promise<string[]> {
+  const problems: string[] = [];
+  const identity = createRunIdentity(manifest.runId);
+  const unknownKey = `rustika-${identity.codes.unknown}`; const blockedKey = `rustika-${identity.codes.priceChange}`;
+  if (typeof run.productStatesFor !== 'function') return ['verificação de disponibilidade indisponível (productStatesFor ausente)'];
+  const states = Object.fromEntries((await run.productStatesFor()).map((row) => [row.publicKey ?? '', row.availabilityState]));
+  const expected: Record<string, string> = {
+    [manifest.journey.productKey]: 'AVAILABLE', [unknownKey]: 'AVAILABLE', [blockedKey]: 'UNAVAILABLE',
+    [`rustika-${identity.codes.alphanumeric}`]: 'AVAILABLE', [`rustika-${identity.codes.unavailable}`]: 'UNAVAILABLE',
+  };
+  for (const [key, state] of Object.entries(expected)) if (states[key] !== state) problems.push(`disponibilidade de ${key}: ${states[key] ?? 'ausente'} (esperado ${state})`);
+  const second = orders.find((candidate) => candidate !== primary);
+  if (!second) { problems.push('segundo pedido (produto tornado disponível) ausente'); return problems; }
+  if (second.status !== 'RECEIVED' || second.statusHistory.length !== 1) problems.push('segundo pedido: status/histórico divergem');
+  if (second.items.length !== 1 || second.items[0]?.productPublicKeySnapshot !== unknownKey || second.items[0]?.quantity !== E2E_QUANTITY) problems.push('segundo pedido não contém exatamente o produto tornado disponível');
+  if (orders.some((candidate) => candidate.items.some((entry) => entry.productPublicKeySnapshot === blockedKey))) problems.push('há pedido com o produto indisponibilizado antes do envio');
+  return problems;
 }
 
 const sameSet = (found: string[], allowed: string[]): string[] => found.filter((id) => !allowed.includes(id));

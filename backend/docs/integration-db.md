@@ -4,7 +4,7 @@ Suíte que exercita **Express real, rotas reais, services reais e Prisma real** 
 `cardapio_digital_test`. Preparada e não executada: depende das migrations em Test,
 da role de fixtures e de autorização expressa para escrever em Test.
 
-Esta é a revisão da 3D.3.9 para a 3D.3.10: agora são **5 migrations** (a quinta endurece ACLs; desde a 3D.4.1 o conjunto esperado tem **6**, a sexta concede `UPDATE (status, updated_at)` em `orders`),
+Esta é a revisão da 3D.3.9 para a 3D.3.10: agora são **5 migrations** (a quinta endurece ACLs; desde a 3D.4.1 o conjunto esperado tem **6**, a sexta concede `UPDATE (status, updated_at)` em `orders`; desde a 3D.4.2 tem **7**, a sétima concede `UPDATE (availability_state, updated_at)` em `products`),
 a role de fixtures deixou de ser apenas uma proposta textual e a restauração do backup foi
 corrigida para um plano executável — porém o dump registrado na 3D.3.9 está ausente.
 

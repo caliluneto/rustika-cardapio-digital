@@ -5,6 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 import { createAdminAuth, accessBody } from '../services/adminAuth.service';
 import { createComandaAccess } from '../services/comandaAccess.service';
 import { createOrderOperations } from '../services/orderOperations.service';
+import { createProductAvailability } from '../services/productAvailability.service';
 import { ADMIN_COOKIE, readOpaqueCookie } from '../security/adminSessions';
 import { accessLimit } from '../security/accessLimits';
 import { assertWriteRequest } from '../security/writeGuard';
@@ -21,9 +22,10 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   const auth = prisma ? createAdminAuth(prisma, now) : undefined;
   const access = prisma && auth ? createComandaAccess(prisma, auth, now) : undefined;
   const orders = prisma && auth ? createOrderOperations(prisma, auth) : undefined;
+  const products = prisma && auth ? createProductAvailability(prisma, auth) : undefined;
   function services() {
-    if (!auth || !access || !orders) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
-    return { auth, access, orders };
+    if (!auth || !access || !orders || !products) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
+    return { auth, access, orders, products };
   }
   const adminRouter = Router(); const sessionRouter = Router();
   const noStore: RequestHandler = (req, res, next) => {
@@ -61,6 +63,13 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   }));
   adminRouter.patch('/orders/:orderId/status', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().orders.updateStatus(req.params.orderId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  // 3D.4.2: disponibilidade de produtos. GET sem parâmetros (filtros no cliente); PATCH com CAS por expectedState.
+  adminRouter.get('/products', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().products.list(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.patch('/products/:productId/availability', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().products.updateAvailability(req.params.productId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
   sessionRouter.post('/', writeGuard, accessLimit(30, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     const result = await services().access.redeem(req.body);

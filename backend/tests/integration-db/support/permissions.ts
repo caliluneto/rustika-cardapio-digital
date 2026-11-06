@@ -47,10 +47,17 @@ WHERE acl.grantee IN (0, r.oid)
   -- without GRANT OPTION. Anything else (PUBLIC, fixtures, other columns/privileges) is a violation.
   AND NOT (r.rolname = 'cardapio_test_app' AND acl.grantee = r.oid AND c.relname = 'orders'
            AND a.attname IN ('status', 'updated_at') AND acl.privilege_type = 'UPDATE' AND NOT acl.is_grantable)
+  -- 3D.4.2: and UPDATE (availability_state, updated_at) on products for the runtime role, without GRANT OPTION.
+  AND NOT (r.rolname = 'cardapio_test_app' AND acl.grantee = r.oid AND c.relname = 'products'
+           AND a.attname IN ('availability_state', 'updated_at') AND acl.privilege_type = 'UPDATE' AND NOT acl.is_grantable)
 UNION ALL
 SELECT 'cardapio_test_app:column UPDATE:orders.' || a.attname FROM pg_attribute a
 WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped
 AND has_column_privilege('cardapio_test_app', a.attrelid, a.attnum, 'UPDATE') IS DISTINCT FROM (a.attname IN ('status', 'updated_at'))
+UNION ALL
+SELECT 'cardapio_test_app:column UPDATE:products.' || a.attname FROM pg_attribute a
+WHERE a.attrelid = 'public.products'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+AND has_column_privilege('cardapio_test_app', a.attrelid, a.attnum, 'UPDATE') IS DISTINCT FROM (a.attname IN ('availability_state', 'updated_at'))
 UNION ALL
 SELECT 'cardapio_test_fixtures:column UPDATE:orders.' || a.attname FROM pg_attribute a
 WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped

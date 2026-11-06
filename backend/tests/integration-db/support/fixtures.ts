@@ -163,6 +163,13 @@ export class FixtureRun {
     });
   }
 
+  /** Read-only (3D.4.2): availability state of every product of THIS run, to verify what the browser changed. */
+  async productStatesFor() {
+    return this.db.product.findMany({
+      where: { category: { publicKey: this.identity.categoryKey } }, select: { publicKey: true, availabilityState: true }, orderBy: { publicKey: 'asc' },
+    });
+  }
+
   async invitationsFor(number: string) {
     return this.db.comandaInvitation.findMany({ where: { comanda: { number } }, include: { session: true } });
   }

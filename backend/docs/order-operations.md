@@ -5,7 +5,7 @@ entrega:** implementado e testado localmente **sem banco**; a migration de privi
 os testes com PostgreSQL real e o E2E estão **preparados e não executados**. Nada aqui afirma prontidão para produção.
 
 Pré-requisito do uso real: produtos com disponibilidade `AVAILABLE` (hoje o padrão é `UNKNOWN`, e o pedido exige
-`AVAILABLE`). A gestão de disponibilidade é a etapa seguinte (3D.4.2) e **não** faz parte desta.
+`AVAILABLE`). A gestão de disponibilidade é a etapa seguinte (3D.4.2, ver `product-availability.md`) e **não** faz parte desta.
 
 ## Estados e transições (fonte única: `src/domain/rules.ts`)
 

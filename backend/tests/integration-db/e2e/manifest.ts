@@ -27,8 +27,10 @@ export interface RunManifest {
   /**
    * `orderOps` (3D.4.1, opcional): a jornada também move o pedido para IN_PREPARATION pelo painel administrativo.
    * Ausente/false = jornada original (RECEIVED, histórico inicial único).
+   * `productAvailability` (3D.4.2, opcional): a jornada também altera a disponibilidade de dois produtos sintéticos
+   * pelo painel e faz um segundo pedido; ausente/false = exatamente 1 pedido e nenhum produto alterado.
    */
-  journey: { comanda: string; productName: string; productKey: string; priceInCents: number; orderOps?: boolean };
+  journey: { comanda: string; productName: string; productKey: string; priceInCents: number; orderOps?: boolean; productAvailability?: boolean };
 }
 
 export const reservedComandaNumbers = (runId: string): string[] => {
@@ -61,6 +63,7 @@ export function validateManifest(raw: unknown, expectedRunId?: string): RunManif
   }
   if (typeof m.journey?.productName !== 'string' || !Number.isSafeInteger(m.journey?.priceInCents)) reasons.push('journey inválido.');
   if (m.journey?.orderOps !== undefined && typeof m.journey.orderOps !== 'boolean') reasons.push('journey.orderOps inválido.');
+  if (m.journey?.productAvailability !== undefined && typeof m.journey.productAvailability !== 'boolean') reasons.push('journey.productAvailability inválido.');
   if (reasons.length) throw new E2eAbort(reasons.map((r) => `manifesto: ${r}`));
   return m as RunManifest;
 }

@@ -15,13 +15,13 @@ describe('3D.4.1 order status update privilege (static; migration NOT applied, n
   it('is pinned by checksum, last in order, and previous migrations are untouched', () => {
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(EXPECTED_MIGRATIONS.find((m) => m.name === name)?.checksum);
     const names = fs.readdirSync(root).filter((p) => fs.statSync(path.join(root, p)).isDirectory()).sort();
-    expect(names[names.length - 1]).toBe(name);
+    expect(names.indexOf(name)).toBe(5); // a 7ª (3D.4.2) é a última
     for (const m of EXPECTED_MIGRATIONS) {
       expect(createHash('sha256').update(fs.readFileSync(path.join(root, m.name, 'migration.sql'))).digest('hex')).toBe(m.checksum);
     }
   });
 
-  it('o conjunto esperado é EXATAMENTE estas seis migrations, nesta ordem e com estes checksums (sem validação genérica)', () => {
+  it('o conjunto esperado é EXATAMENTE estas sete migrations, nesta ordem e com estes checksums (sem validação genérica)', () => {
     expect(EXPECTED_MIGRATIONS).toEqual([
       { name: '20261023000000_initial_schema', checksum: '1a9cd08b9d49fa9f70eabcceaa4a696f5aee07555f6a88562ec789340f0d3983' },
       { name: '20261027000000_rf004_comandas_catalogo_pedidos', checksum: '05f583e854a87b77612c2f7d10a0a178ef45ea099d3237808b5bf0bd7c698122' },
@@ -29,6 +29,7 @@ describe('3D.4.1 order status update privilege (static; migration NOT applied, n
       { name: '20261102000000_update_products_source_identity_constraint', checksum: '885b8de5dcc0cf5e7618d574ba5c013ae8b60c9b983260706c5819422564454f' },
       { name: '20261104000000_runtime_least_privilege', checksum: '24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e' },
       { name: '20261105000000_order_status_update_privilege', checksum: '3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84' },
+      { name: '20261106000000_product_availability_update_privilege', checksum: '3665ed812c4033527d17c6de3a7c66a623d659d676c719fc1b6f6477f7e69308' },
     ]);
     const onDisk = fs.readdirSync(root).filter((p) => fs.statSync(path.join(root, p)).isDirectory()).sort();
     expect(onDisk).toEqual(EXPECTED_MIGRATIONS.map((m) => m.name)); // nenhuma migration desconhecida no disco

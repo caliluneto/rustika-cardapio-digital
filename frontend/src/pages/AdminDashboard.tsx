@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api, ApiError } from '../services/api';
 import type { AdminSession } from './AdminLogin';
 import AdminOrders from './AdminOrders';
+import AdminProducts from './AdminProducts';
 
 interface InvitationPayload { comanda: { number: string }; inviteToken: string; expiresAt: string }
 
@@ -54,6 +55,7 @@ export default function AdminDashboard({ admin, onLogout }: { admin: AdminSessio
 
       <main className="admin-main">
         {!loggingOut && <AdminOrders onUnauthorized={onLogout} />}
+        {!loggingOut && <AdminProducts onUnauthorized={onLogout} />}
 
         <section className="admin-section">
           <h3>Emitir Convite de Comanda</h3>
