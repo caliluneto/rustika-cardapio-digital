@@ -28,10 +28,12 @@ test('orderSubmissionEnabled: nenhum desvio em window liga o envio', () => {
   }
 });
 
-test('configuredApiUrl: usa VITE_API_URL (com trim) e cai no padrao local', () => {
+test('configuredApiUrl: usa VITE_API_URL; sem configuração usa local em dev e mesma origem no build', () => {
   assert.equal(configuredApiUrl({ VITE_API_URL: ' https://api.exemplo.test/api ' }), 'https://api.exemplo.test/api');
-  assert.equal(configuredApiUrl({}), 'http://localhost:4000/api');
-  assert.equal(configuredApiUrl({ VITE_API_URL: '   ' }), 'http://localhost:4000/api');
+  assert.equal(configuredApiUrl({ DEV: true }), 'http://localhost:4000/api');
+  assert.equal(configuredApiUrl({ VITE_API_URL: '   ', DEV: true }), 'http://localhost:4000/api');
+  assert.equal(configuredApiUrl({ DEV: false }), '/api');
+  assert.equal(configuredApiUrl({}), '/api');
 });
 
 test('o Vite injeta VITE_ORDER_SUBMISSION e VITE_API_URL nos modulos reais (sem abrir porta)', async () => {

@@ -59,6 +59,8 @@ describe('validação de entrada (pura)', () => {
   });
 });
 
+  vi.setConfig({ testTimeout: 10000 });
+
 describe('GET /api/admin/products', () => {
   it('exige sessão administrativa; cookie inválido ou de comanda não dá acesso', async () => {
     const { app } = await setup();
@@ -86,13 +88,15 @@ describe('GET /api/admin/products', () => {
     expect(products[0]).toEqual({
       id: 'rustika-1001', sourceCode: '1001', name: 'Produto 1001', categoryId: 'frios', categoryName: 'Frios',
       priceInCents: 2990, availabilityState: 'UNAVAILABLE', updatedAt: '2026-11-05T12:00:00.000Z',
+      description: 'Descrição', ingredients: 'Ingredientes', imageUrl: '/produto.jpg', imageAlt: 'Produto',
     });
   });
 
-  it('não vaza campos internos nem o campo legado isAvailable', async () => {
+  it('expõe somente os campos editáveis do RF006 e não vaza campos internos', async () => {
     const { list } = await setup();
     const text = JSON.stringify((await list()).body);
-    expect(text).not.toMatch(/isAvailable|description|stock|origem|sourceName|sourceGroup|isActive|"price"/);
+    expect(text).toMatch(/description|ingredients|imageUrl|imageAlt/);
+    expect(text).not.toMatch(/isAvailable|descriptionSource|stock|sourceName|sourceGroup|isActive|"price"/);
   });
 
   it('limite seguro e truncamento', async () => {

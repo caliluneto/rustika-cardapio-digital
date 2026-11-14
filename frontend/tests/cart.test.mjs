@@ -143,7 +143,7 @@ test('resultado da sessão reflete a decisão real do reducer para ações conse
 test('convenção local da comanda normaliza bordas e preserva zeros', () => {
   assert.equal(normalizeComanda('  001234  '), '001234');
   assert.equal(normalizeComanda('0'), '0');
-  for (const input of ['', '  ', '9041737', '12 34', '-1', '1.2', 'abc', '１２３']) {
+  for (const input of ['', '  ', '1234567', '12 34', '-1', '1.2', 'abc', '１２３']) {
     assert.equal(normalizeComanda(input), null);
   }
 });

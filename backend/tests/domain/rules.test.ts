@@ -9,7 +9,7 @@ const first = { productKey: 'rustika-131', quantity: 2, currentUnitPriceInCents:
 describe('regras puras RF004', () => {
   it('mantém zeros iniciais e restringe o formato público de comanda', () => {
     expect(isValidComandaNumber('000123')).toBe(true);
-    for (const value of ['', '9041737', ' 123', '123 ', '-1', '١٢٣']) {
+    for (const value of ['', '1234567', ' 123', '123 ', '-1', '١٢٣']) {
       expect(isValidComandaNumber(value)).toBe(false);
     }
   });

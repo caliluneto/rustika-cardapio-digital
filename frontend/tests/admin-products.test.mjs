@@ -126,7 +126,7 @@ test('carregando, vazio, erro e truncamento', () => {
   assert.match(view({ products: [product('1')], truncated: true }), /Lista parcial/);
 });
 
-test('lista: nome, código, categoria, preço e estado; ações por estado; sem campos de edição de preço', () => {
+test('lista: dados, disponibilidade e CRUD coexistem; formulário de preço fica fechado por padrão', () => {
   const html = view({ products: [
     product('1001', { availabilityState: 'AVAILABLE' }), product('2002', { availabilityState: 'UNAVAILABLE', name: 'Fora' }), product('3003'),
   ] });
@@ -136,7 +136,8 @@ test('lista: nome, código, categoria, preço e estado; ações por estado; sem 
   assert.match(available, /data-to-state="UNAVAILABLE"/); assert.doesNotMatch(available, /data-to-state="AVAILABLE"/);
   const unknown = html.split('data-product-id="rustika-3003"')[1].split('</li>')[0];
   assert.match(unknown, /data-to-state="AVAILABLE"/); assert.match(unknown, /data-to-state="UNAVAILABLE"/);
-  assert.doesNotMatch(html, /type="number"|name="price"|Excluir|Importar|Upload/i);
+  assert.doesNotMatch(html, /type="number"|name="price"|Importar|Upload/i);
+  assert.match(html, /Editar/); assert.match(html, /Excluir/);
   assert.match(html, /3 de 3 produtos/);
 });
 

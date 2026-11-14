@@ -9,7 +9,7 @@ const populated = cartReducer(initialCartState, { type: 'ADD_ITEM', product, qua
 
 test('revisão exige produtos e comanda local válida, preservando zeros', () => {
   assert.equal(canReviewOrder(initialCartState, '001'), false);
-  for (const value of [null, '', 'abc', '9041737', '1 2', ' 001 ']) assert.equal(canReviewOrder(populated, value), false);
+  for (const value of [null, '', 'abc', '1234567', '1 2', ' 001 ']) assert.equal(canReviewOrder(populated, value), false);
   assert.equal(canReviewOrder(populated, normalizeComanda(' 001 ')), true);
   assert.equal(selectItemSubtotal(populated.items[0]), 398);
   assert.equal(selectCartTotal(populated), 398);

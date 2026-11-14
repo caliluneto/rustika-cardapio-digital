@@ -24,6 +24,14 @@ export interface AdminOrderItem {
   notes: string | null;
 }
 
+export interface AdminOrderHistory {
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  notes: string | null;
+  createdAt: string;
+  actorName: string | null;
+}
+
 export interface AdminOrder {
   id: string;
   orderNumber: number;
@@ -37,9 +45,11 @@ export interface AdminOrder {
   updatedAt: string;
   allowedTransitions: OrderStatus[];
   items: AdminOrderItem[];
+  history: AdminOrderHistory[];
 }
 
-export interface AdminOrdersSnapshot { orders: AdminOrder[]; truncated: boolean }
+export interface AdminOrdersSnapshot { orders: AdminOrder[]; truncated: boolean; nextCursor: string | null }
+export interface AdminOrdersQuery { status?: OrderStatus; cursor?: string; limit?: number }
 
 export interface StatusChange { expectedStatus: OrderStatus; toStatus: OrderStatus; notes?: string }
 
@@ -56,7 +66,7 @@ const count = (value: unknown): number => { if (typeof value !== 'number' || !Nu
 const status = (value: unknown): OrderStatus => { if (typeof value !== 'string' || !STATUSES.includes(value as OrderStatus)) throw bad(); return value as OrderStatus; };
 
 export function parseAdminOrder(value: unknown): AdminOrder {
-  if (!isRecord(value) || !Array.isArray(value.items) || !Array.isArray(value.allowedTransitions)) throw bad();
+  if (!isRecord(value) || !Array.isArray(value.items) || !Array.isArray(value.allowedTransitions) || !Array.isArray(value.history)) throw bad();
   const id = text(value.id);
   if (!UUID.test(id)) throw bad();
   return {
@@ -81,12 +91,24 @@ export function parseAdminOrder(value: unknown): AdminOrder {
         notes: nullableText(item.notes),
       };
     }),
+    history: value.history.map((entry) => {
+      if (!isRecord(entry)) throw bad();
+      return {
+        fromStatus: entry.fromStatus === null ? null : status(entry.fromStatus),
+        toStatus: status(entry.toStatus),
+        notes: nullableText(entry.notes),
+        createdAt: text(entry.createdAt),
+        actorName: nullableText(entry.actorName),
+      };
+    }),
   };
 }
 
 export function parseSnapshot(value: unknown): AdminOrdersSnapshot {
-  if (!isRecord(value) || !Array.isArray(value.orders) || typeof value.truncated !== 'boolean') throw bad();
-  return { orders: value.orders.map(parseAdminOrder), truncated: value.truncated };
+  if (!isRecord(value) || !Array.isArray(value.orders) || typeof value.truncated !== 'boolean' ||
+      !(value.nextCursor === null || typeof value.nextCursor === 'string')) throw bad();
+  if (typeof value.nextCursor === 'string' && !UUID.test(value.nextCursor)) throw bad();
+  return { orders: value.orders.map(parseAdminOrder), truncated: value.truncated, nextCursor: value.nextCursor };
 }
 
 interface AdminOrdersTransport {
@@ -96,8 +118,13 @@ interface AdminOrdersTransport {
 
 export function createAdminOrdersClient(transport: AdminOrdersTransport) {
   return {
-    async list(signal?: AbortSignal): Promise<AdminOrdersSnapshot> {
-      return parseSnapshot(await transport.getWithAuth<unknown>('/admin/orders', signal));
+    async list(query: AdminOrdersQuery = {}, signal?: AbortSignal): Promise<AdminOrdersSnapshot> {
+      const params = new URLSearchParams();
+      if (query.status) params.set('status', query.status);
+      if (query.cursor) params.set('cursor', query.cursor);
+      if (query.limit !== undefined) params.set('limit', String(query.limit));
+      const suffix = params.size > 0 ? `?${params.toString()}` : '';
+      return parseSnapshot(await transport.getWithAuth<unknown>(`/admin/orders${suffix}`, signal));
     },
     async updateStatus(orderId: string, change: StatusChange, signal?: AbortSignal): Promise<AdminOrder> {
       if (!UUID.test(orderId)) throw new ApiError(0, 'INVALID_ORDER_ID', 'Identificador de pedido inválido.', null);

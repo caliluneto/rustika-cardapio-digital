@@ -39,7 +39,25 @@ BEGIN
      OR EXISTS (SELECT 1 FROM pg_event_trigger) THEN
     RAISE EXCEPTION 'NOMES: existem funcoes, views, triggers, politicas ou event triggers; revise se embutem nomes de roles antes de renomear';
   END IF;
-  IF EXISTS (SELECT 1 FROM pg_auth_members m WHERE pg_get_userbyid(m.roleid) LIKE 'cardapio\_%' OR pg_get_userbyid(m.member) LIKE 'cardapio\_%') THEN
+  -- PostgreSQL >= 16 concede automaticamente ao criador da role uma membership ADMIN-only,
+  -- registrada com grantor = superusuario de bootstrap (cloud_admin no Neon). Ela nao concede
+  -- SET ROLE nem heranca e nao pode ser revogada por quem tem apenas CREATEROLE; e a unica
+  -- membership externa tolerada. Qualquer SET/INHERIT ou role do projeto como membro bloqueia.
+  IF EXISTS (
+    SELECT 1
+      FROM pg_auth_members m
+      JOIN pg_roles granted_role ON granted_role.oid = m.roleid
+      JOIN pg_roles member_role ON member_role.oid = m.member
+      JOIN pg_roles grantor_role ON grantor_role.oid = m.grantor
+     WHERE (granted_role.rolname LIKE 'cardapio\_%' OR member_role.rolname LIKE 'cardapio\_%')
+       AND NOT (
+         member_role.rolname NOT LIKE 'cardapio\_%'
+         AND grantor_role.rolsuper
+         AND m.admin_option
+         AND NOT m.set_option
+         AND NOT m.inherit_option
+       )
+  ) THEN
     RAISE EXCEPTION 'ROLES: memberships inesperadas entre roles do projeto';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_db_role_setting WHERE setdatabase = (SELECT oid FROM pg_database WHERE datname = current_database()) OR setrole IN (SELECT oid FROM pg_roles WHERE rolname LIKE 'cardapio\_%')) THEN

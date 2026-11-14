@@ -15,6 +15,9 @@ export interface AdminOrdersViewProps {
   error: string | null;
   orders: AdminOrder[];
   truncated: boolean;
+  nextCursor: string | null;
+  filter: OrderStatus | '';
+  loadingMore: boolean;
   updatedAt: Date | null;
   busyId: string | null;
   notice: Notice | null;
@@ -25,6 +28,8 @@ export interface AdminOrdersViewProps {
   onAbort(): void;
   onCancelNote(value: string): void;
   onRefresh(): void;
+  onFilter(value: OrderStatus | ''): void;
+  onLoadMore(): void;
 }
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -38,13 +43,20 @@ const ACTION_LABEL: Record<OrderStatus, string> = {
 
 /** Apresentação pura (sem efeitos): testável por renderização estática. */
 export function AdminOrdersView(props: AdminOrdersViewProps) {
-  const { loading, error, orders, truncated, updatedAt, busyId, notice, confirming, cancelNote } = props;
+  const { loading, error, orders, truncated, nextCursor, filter, loadingMore, updatedAt, busyId, notice, confirming, cancelNote } = props;
   return (
     <section className="admin-section admin-orders" aria-labelledby="admin-orders-title">
       <div className="admin-orders-head">
         <h3 id="admin-orders-title">Pedidos</h3>
         <button type="button" className="cart-secondary-button" onClick={props.onRefresh} disabled={loading}>Atualizar</button>
       </div>
+      <label className="admin-orders-filter">
+        Filtrar por status
+        <select value={filter} onChange={(event) => props.onFilter(event.target.value as OrderStatus | '')} disabled={loading}>
+          <option value="">Todos</option>
+          {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
       <p className="admin-orders-meta" aria-live="off">
         {updatedAt ? `Atualizado às ${updatedAt.toLocaleTimeString('pt-BR')} (a lista atualiza sozinha).` : 'Aguardando a primeira atualização.'}
       </p>
@@ -54,8 +66,7 @@ export function AdminOrdersView(props: AdminOrdersViewProps) {
       )}
       {error && <div className="admin-error" role="alert">{error}</div>}
       {loading && orders.length === 0 && !error && <p role="status">Carregando pedidos…</p>}
-      {!loading && !error && orders.length === 0 && <p className="admin-orders-empty">Nenhum pedido ativo no momento.</p>}
-      {truncated && <p className="admin-orders-meta">Mostrando apenas os pedidos ativos mais antigos. Conclua alguns para ver os demais.</p>}
+      {!loading && !error && orders.length === 0 && <p className="admin-orders-empty">Nenhum pedido encontrado.</p>}
 
       <ul className="admin-order-list">
         {orders.map((order) => (
@@ -80,6 +91,19 @@ export function AdminOrdersView(props: AdminOrdersViewProps) {
             </ul>
             {order.notes ? <p className="admin-order-note">Observação: {order.notes}</p> : null}
             <div className="admin-order-total">Total {formatBRL(order.totalInCents)}</div>
+            <details className="admin-order-history">
+              <summary>Histórico ({order.history.length})</summary>
+              <ol>
+                {order.history.map((entry, index) => (
+                  <li key={`${entry.createdAt}-${index}`}>
+                    {entry.fromStatus ? `${ORDER_STATUS_LABEL[entry.fromStatus]} → ` : ''}{ORDER_STATUS_LABEL[entry.toStatus]}
+                    {` · ${new Date(entry.createdAt).toLocaleString('pt-BR')}`}
+                    {entry.actorName ? ` · ${entry.actorName}` : ' · sistema'}
+                    {entry.notes ? ` · ${entry.notes}` : ''}
+                  </li>
+                ))}
+              </ol>
+            </details>
 
             {confirming && confirming.orderId === order.id ? (
               <div className="admin-order-confirm" role="group" aria-label="Confirmar mudança de status">
@@ -112,6 +136,11 @@ export function AdminOrdersView(props: AdminOrdersViewProps) {
           </li>
         ))}
       </ul>
+      {truncated && nextCursor && (
+        <button type="button" className="cart-secondary-button" onClick={props.onLoadMore} disabled={loadingMore}>
+          {loadingMore ? 'Carregando…' : 'Carregar pedidos anteriores'}
+        </button>
+      )}
     </section>
   );
 }
@@ -119,7 +148,9 @@ export function AdminOrdersView(props: AdminOrdersViewProps) {
 /** Container: polling moderado (sem sobreposição, interrompido na desmontagem) + atualização de status. */
 export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized: () => void; client?: AdminOrdersClient }) {
   const ordersClient = useMemo(() => client ?? createAdminOrdersClient(api), [client]);
-  const [snapshot, setSnapshot] = useState<AdminOrdersSnapshot>({ orders: [], truncated: false });
+  const [snapshot, setSnapshot] = useState<AdminOrdersSnapshot>({ orders: [], truncated: false, nextCursor: null });
+  const [filter, setFilter] = useState<OrderStatus | ''>('');
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -129,12 +160,20 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
   const [cancelNote, setCancelNote] = useState('');
   const pollerRef = useRef<ReturnType<typeof createOrdersPoller<AdminOrdersSnapshot>> | null>(null);
   const unauthorized = useRef(onUnauthorized);
+  const knownOrderIds = useRef<Set<string>>(new Set());
   unauthorized.current = onUnauthorized;
 
   useEffect(() => {
     const poller = createOrdersPoller<AdminOrdersSnapshot>({
-      load: (signal) => ordersClient.list(signal),
-      onData: (data) => { setSnapshot(data); setError(null); setUpdatedAt(new Date()); setLoading(false); },
+      load: (signal) => ordersClient.list(filter ? { status: filter } : {}, signal),
+      onData: (data) => {
+        const newOrders = knownOrderIds.current.size > 0
+          ? data.orders.filter((order) => order.status === 'RECEIVED' && !knownOrderIds.current.has(order.id))
+          : [];
+        knownOrderIds.current = new Set(data.orders.map((order) => order.id));
+        if (newOrders.length > 0) setNotice({ kind: 'success', text: `${newOrders.length} novo(s) pedido(s) recebido(s).` });
+        setSnapshot(data); setError(null); setUpdatedAt(new Date()); setLoading(false);
+      },
       onError: (failure) => {
         const described = describeListError(failure);
         setLoading(false);
@@ -147,7 +186,32 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
     pollerRef.current = poller;
     poller.start();
     return () => { poller.stop(); pollerRef.current = null; };
-  }, [ordersClient]);
+  }, [ordersClient, filter]);
+
+  const onFilter = useCallback((value: OrderStatus | '') => {
+    knownOrderIds.current = new Set();
+    setSnapshot({ orders: [], truncated: false, nextCursor: null });
+    setLoading(true);
+    setFilter(value);
+  }, []);
+
+  const onLoadMore = useCallback(async () => {
+    if (!snapshot.nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await ordersClient.list({ ...(filter ? { status: filter } : {}), cursor: snapshot.nextCursor });
+      setSnapshot((current) => {
+        const ids = new Set(current.orders.map((order) => order.id));
+        return { ...page, orders: [...current.orders, ...page.orders.filter((order) => !ids.has(order.id))] };
+      });
+    } catch (failure) {
+      const described = describeListError(failure);
+      setError(described.message);
+      if (described.unauthorized) unauthorized.current();
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [snapshot.nextCursor, loadingMore, ordersClient, filter]);
 
   const onRequest = useCallback((orderId: string, toStatus: OrderStatus) => {
     setNotice(null); setCancelNote(''); setConfirming({ orderId, toStatus });
@@ -176,10 +240,11 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
 
   return (
     <AdminOrdersView
-      loading={loading} error={error} orders={snapshot.orders} truncated={snapshot.truncated} updatedAt={updatedAt}
+      loading={loading} error={error} orders={snapshot.orders} truncated={snapshot.truncated} nextCursor={snapshot.nextCursor}
+      filter={filter} loadingMore={loadingMore} updatedAt={updatedAt}
       busyId={busyId} notice={notice} confirming={confirming} cancelNote={cancelNote}
       onRequest={onRequest} onConfirm={() => { void onConfirm(); }} onAbort={() => setConfirming(null)}
-      onCancelNote={setCancelNote} onRefresh={() => pollerRef.current?.refresh()}
+      onCancelNote={setCancelNote} onRefresh={() => pollerRef.current?.refresh()} onFilter={onFilter} onLoadMore={() => { void onLoadMore(); }}
     />
   );
 }

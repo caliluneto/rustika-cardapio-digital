@@ -8,8 +8,9 @@ export interface StoredProduct {
   publicKey: string | null; sourceCode: string | null; sourceName: string | null; sourceGroup: string | null;
   name: string; price: Prisma.Decimal; availabilityState: StoredAvailability; updatedAt: Date; isActive: boolean;
   category: { publicKey: string | null; name: string; displayOrder: number; isActive: boolean };
-  // Campos que o painel nunca pode receber nem alterar (verificados pelos testes de vazamento/preservação).
-  isAvailable: boolean; description: string | null; stock: number | null;
+  // Campos editáveis do RF006 e campos internos que o painel nunca pode receber.
+  description: string | null; ingredients: string | null; imageUrl: string | null; imageAlt: string | null;
+  isAvailable: boolean; stock: number | null;
 }
 
 const serializationConflict = () => new Prisma.PrismaClientKnownRequestError('simulated serialization conflict', { code: 'P2034', clientVersion: '6.19.3' });
@@ -28,7 +29,8 @@ export function storedProduct(code: string, overrides: Partial<StoredProduct> = 
     name: `Produto ${code}`, price: new Prisma.Decimal('29.90'), availabilityState: 'UNKNOWN',
     updatedAt: new Date(Date.UTC(2026, 10, 5, 12, 0, 0)), isActive: true,
     category: { publicKey: 'frios', name: 'Frios', displayOrder: 1, isActive: true },
-    isAvailable: true, description: 'origem', stock: 7, ...overrides,
+    description: 'Descrição', ingredients: 'Ingredientes', imageUrl: '/produto.jpg', imageAlt: 'Produto',
+    isAvailable: true, stock: 7, ...overrides,
   };
 }
 

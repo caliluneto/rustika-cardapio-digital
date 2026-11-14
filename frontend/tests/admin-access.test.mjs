@@ -5,6 +5,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { classifyAdmin, nextAdminAction } from './helpers/adminState.ts';
 import AdminLogin from '../src/pages/AdminLogin.tsx';
+import { endAdminSession } from '../src/pages/AdminDashboard.tsx';
+import { ApiError } from '../src/services/api.ts';
 
 const facts = (o = {}) => ({ dashboard: false, loginForm: false, sessionState: null, alert: false, ...o });
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -65,4 +67,17 @@ test('o componente expõe o estado da verificação: começa em checking e vira 
   const component = source('../src/pages/AdminLogin.tsx');
   assert.match(component, /setSessionState\('anonymous'\)/);
   assert.match(component, /if \(!controller\.signal\.aborted\)/);
+});
+
+test('logout só conclui depois de confirmação do servidor', async () => {
+  let calls = 0;
+  assert.equal(await endAdminSession({ post: async (path, body) => {
+    calls++;
+    assert.equal(path, '/admin/auth/logout');
+    assert.deepEqual(body, {});
+  } }), true);
+  assert.equal(calls, 1);
+  assert.equal(await endAdminSession({ post: async () => { throw new ApiError(401, 'ADMIN_UNAUTHENTICATED', 'x', null); } }), false);
+  assert.equal(await endAdminSession({ post: async () => { throw new ApiError(0, 'NETWORK', 'x', null); } }), false);
+  assert.equal(await endAdminSession({ post: async () => { throw new ApiError(503, 'UNAVAILABLE', 'x', null); } }), false);
 });

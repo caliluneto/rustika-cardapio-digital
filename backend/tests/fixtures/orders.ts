@@ -46,14 +46,19 @@ export function mockOrderPrisma() {
   const addCredential = (token: string) => { validHashes.add(sha256(token)); };
   const sessionFind = vi.fn().mockImplementation(async ({ where }: { where: { credentialHash: string } }) => validHashes.has(where.credentialHash) ? session : null);
   const productFind = vi.fn().mockImplementation(async ({ where }: { where: { publicKey: { in: string[] } } }) => products.filter((item) => where.publicKey.in.includes(item.publicKey!)));
-  const orderFind = vi.fn().mockImplementation(async ({ where }: { where: { idempotencyKey: string } }) => committed.get(where.idempotencyKey) ?? null);
+  const orderFind = vi.fn().mockImplementation(async ({ where }: { where: { idempotencyKey?: string; id?: string } }) => {
+    if (where.idempotencyKey) return committed.get(where.idempotencyKey) ?? null;
+    if (where.id) return [...committed.values()].find((record) => record.id === where.id) ?? null;
+    return null;
+  });
   const orderCreate = vi.fn().mockImplementation(async ({ data }: { data: CreateData }) => {
     const record: OrderRecord = {
       id: '44444444-4444-4444-8444-000000000001', orderNumber: 42, status: 'RECEIVED',
-      customerName: data.customerName, totalAmount: data.totalAmount, createdAt: NOW,
+      customerName: data.customerName, totalAmount: data.totalAmount, createdAt: NOW, updatedAt: NOW,
       sessionId: data.sessionId, comandaId: data.comandaId, requestDigest: data.requestDigest,
       comanda: { number: session.comanda.number },
       items: data.items.create.map((item) => ({ ...item, notes: item.notes ?? null })),
+      statusHistory: [{ fromStatus: null, toStatus: 'RECEIVED', createdAt: NOW }],
     };
     staged.push({ key: data.idempotencyKey, record });
     return record;

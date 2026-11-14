@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, ApiError } from '../services/api';
 import { useCart } from '../contexts/CartContext';
 import type { ComandaSession } from '../contexts/CartContext';
+import { comandaSessionUsable } from '../services/orderSubmission';
 
 interface SessionPayload { comanda: { number: string }; expiresAt: string }
 
@@ -46,7 +47,7 @@ export default function ComandaRedeem() {
     }
   };
 
-  if (comandaSession) {
+  if (comandaSession && comandaSessionUsable(comandaSession)) {
     return (
       <div className="comanda-active-status" role="status" style={{ padding: '1rem', background: '#e6f4ea', borderRadius: '4px', marginBottom: '1rem' }}>
         <p style={{ margin: 0, color: '#137333' }}>

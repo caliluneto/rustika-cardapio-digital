@@ -3,6 +3,8 @@ import { useCart } from '../contexts/CartContext';
 import { selectItemSubtotal } from '../contexts/cart';
 import type { CartAction } from '../contexts/cart';
 import { canReviewOrder } from '../contexts/orderReview';
+import { comandaSessionUsable, orderSubmissionEnabled } from '../services/orderSubmission';
+import { cartNotice, comandaDisclaimer } from '../services/demoNotice';
 import ComandaRedeem from './ComandaRedeem';
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -26,7 +28,10 @@ export default function CartDrawer({ trigger, onClose, onReview, focusReview = f
   const backdropPressed = useRef(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [submittedAction, setSubmittedAction] = useState<CartAction | null>(null);
-  const { state, dispatch, result, totalInCents, itemCount, comanda, setComanda } = useCart();
+  const { state, dispatch, result, totalInCents, itemCount, comanda, setComanda, comandaSession } = useCart();
+  // RF004: avisos derivados da capacidade real do build e da sessão de comanda confirmada pelo backend.
+  const submissionEnabled = orderSubmissionEnabled();
+  const sessionNumber = comandaSessionUsable(comandaSession) ? comandaSession!.number : null;
   const [comandaInput, setComandaInput] = useState(comanda ?? '');
   const [editingComanda, setEditingComanda] = useState(comanda === null);
   const [invalidComanda, setInvalidComanda] = useState(false);
@@ -69,7 +74,7 @@ export default function CartDrawer({ trigger, onClose, onReview, focusReview = f
           <div><p className="product-modal-category">Rústika Estúdio Bar</p><h2 id="cart-drawer-title">Seu carrinho</h2></div>
           <button ref={closeRef} className="product-modal-close" type="button" autoFocus onClick={onClose}>Fechar <span aria-hidden="true">×</span></button>
         </div>
-        <p className="cart-reference-note">Valores de referência. Preço e estoque não são confirmados; esta demonstração não envia pedidos.</p>
+        <p className="cart-reference-note">{cartNotice(submissionEnabled)}</p>
         <ComandaRedeem />
         <section className="cart-comanda" aria-labelledby="cart-comanda-title">
           {editingComanda ? <>
@@ -98,7 +103,7 @@ export default function CartDrawer({ trigger, onClose, onReview, focusReview = f
             <h3 id="cart-comanda-title">Comanda nº {comanda}</h3>
             <button ref={editComandaRef} className="cart-secondary-button" type="button" onClick={() => { setComandaInput(comanda ?? ''); setEditingComanda(true); requestAnimationFrame(() => comandaInputRef.current?.focus()); }}>Alterar</button>
           </div>}
-          <p className="cart-comanda-disclaimer">{comanda === null ? 'O número não é validado pelo estabelecimento.' : 'Comanda informada — ainda não validada pelo estabelecimento.'}</p>
+          <p className="cart-comanda-disclaimer">{comandaDisclaimer(comanda, sessionNumber)}</p>
         </section>
         {state.items.length === 0 ? <p className="cart-empty">Seu carrinho está vazio. Explore o cardápio para adicionar produtos.</p> : <>
           <ul className="cart-items">

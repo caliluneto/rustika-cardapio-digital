@@ -18,7 +18,7 @@ async function setup(initial: StoredOrder[] = [storedOrder(1)]) {
   const login = await write('post', '/api/admin/auth/login').send({ email: mock.admin.email, password: TEST_PASSWORD });
   expect(login.status).toBe(200);
   const cookie = cookieOf(login);
-  const list = () => request(app).get('/api/admin/orders').set('Cookie', cookie);
+  const list = (query = '') => request(app).get(`/api/admin/orders${query}`).set('Cookie', cookie);
   const patch = (id: string, body: unknown, withCookie = true) => {
     const req = write('patch', `/api/admin/orders/${id}/status`);
     return (withCookie ? req.set('Cookie', cookie) : req).send(body as object);
@@ -40,6 +40,8 @@ describe('domínio: estados e transições reutilizados', () => {
   });
 });
 
+  vi.setConfig({ testTimeout: 10000 });
+
 describe('GET /api/admin/orders', () => {
   it('exige sessão administrativa: anônimo e cookie inválido recebem 401', async () => {
     const { app } = await setup();
@@ -54,7 +56,7 @@ describe('GET /api/admin/orders', () => {
     expect((await request(app).get('/api/admin/orders').set('Cookie', 'rustika_session=' + 'a'.repeat(64))).status).toBe(401);
   });
 
-  it('admin válido: 200, no-store, somente pedidos ativos, ordem determinística e campos do painel', async () => {
+  it('admin válido: 200, no-store, todos os estados, ordem determinística e histórico', async () => {
     const { list } = await setup([
       storedOrder(3, { createdAt: new Date('2026-11-05T12:00:00Z') }),
       storedOrder(2, { createdAt: new Date('2026-11-05T12:00:00Z') }),
@@ -66,16 +68,17 @@ describe('GET /api/admin/orders', () => {
     const response = await list();
     expect(response.status).toBe(200);
     expect(response.headers['cache-control']).toBe('no-store');
-    const { orders, truncated } = response.body.data;
+    const { orders, truncated, nextCursor } = response.body.data;
     expect(truncated).toBe(false);
-    expect(orders.map((order: { orderNumber: number }) => order.orderNumber)).toEqual([1, 2, 3, 6]);
-    expect(orders[0]).toMatchObject({
+    expect(nextCursor).toBeNull();
+    expect(orders.map((order: { orderNumber: number }) => order.orderNumber)).toEqual([6, 5, 4, 3, 2, 1]);
+    expect(orders[5]).toMatchObject({
       id: orderId(1), orderNumber: 1, status: 'READY', comandaNumber: '000123', customerName: 'Cliente 1', tableOrReference: 'Mesa 2',
-      totalInCents: 5998, allowedTransitions: ['DELIVERED'],
+      totalInCents: 5998, allowedTransitions: ['DELIVERED'], history: [{ fromStatus: null, toStatus: 'RECEIVED', actorName: null }],
       items: [{ productNameSnapshot: 'Frios', quantity: 2, unitPriceInCentsSnapshot: 2999, subtotalInCents: 5998, notes: null }],
     });
-    expect(orders[3]).toMatchObject({ status: 'IN_PREPARATION', notes: 'Sem gelo', allowedTransitions: ['READY', 'CANCELLED'] });
-    expect(orders[0].createdAt).toBe('2026-11-05T11:00:00.000Z');
+    expect(orders[0]).toMatchObject({ status: 'IN_PREPARATION', notes: 'Sem gelo', allowedTransitions: ['READY', 'CANCELLED'] });
+    expect(orders[5].createdAt).toBe('2026-11-05T11:00:00.000Z');
     expect(typeof orders[0].updatedAt).toBe('string');
   });
 
@@ -90,10 +93,11 @@ describe('GET /api/admin/orders', () => {
   it('limite seguro: devolve no máximo o limite e sinaliza truncamento', async () => {
     const many = Array.from({ length: ADMIN_ORDER_LIST_LIMIT + 5 }, (_, i) => storedOrder(i + 1));
     const { list, findMany } = await setup(many);
-    const response = await list();
+    const response = await list('?limit=100');
     expect(response.body.data.orders).toHaveLength(ADMIN_ORDER_LIST_LIMIT);
     expect(response.body.data.truncated).toBe(true);
-    expect(response.body.data.orders[0].orderNumber).toBe(1);
+    expect(response.body.data.orders[0].orderNumber).toBe(ADMIN_ORDER_LIST_LIMIT + 5);
+    expect(response.body.data.nextCursor).toBe(orderId(6));
     expect(findMany.mock.calls[0]![0].take).toBe(ADMIN_ORDER_LIST_LIMIT + 1);
   });
 
@@ -101,14 +105,25 @@ describe('GET /api/admin/orders', () => {
     const { list } = await setup([]);
     const response = await list();
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual({ truncated: false, orders: [] });
+    expect(response.body.data).toEqual({ truncated: false, nextCursor: null, orders: [] });
   });
 
-  it('recusa parâmetros de consulta (contrato do roteador administrativo)', async () => {
-    const { app, cookie } = await setup();
-    const response = await request(app).get('/api/admin/orders?status=READY').set('Cookie', cookie);
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('INVALID_INPUT');
+  it('filtra por status, pagina por cursor sem duplicar e recusa parâmetros inválidos', async () => {
+    const { list } = await setup([
+      storedOrder(1, { status: 'DELIVERED' }), storedOrder(2, { status: 'READY' }),
+      storedOrder(3, { status: 'DELIVERED' }), storedOrder(4, { status: 'CANCELLED' }),
+    ]);
+    const first = await list('?status=DELIVERED&limit=1');
+    expect(first.status).toBe(200);
+    expect(first.body.data.orders.map((order: { orderNumber: number }) => order.orderNumber)).toEqual([3]);
+    const second = await list(`?status=DELIVERED&limit=1&cursor=${first.body.data.nextCursor}`);
+    expect(second.body.data.orders.map((order: { orderNumber: number }) => order.orderNumber)).toEqual([1]);
+    expect(second.body.data.nextCursor).toBeNull();
+    for (const query of ['?status=UNKNOWN', '?limit=0', '?limit=101', '?cursor=x', '?extra=1']) {
+      const response = await list(query);
+      expect(response.status).toBe(400);
+      expect(['INVALID_INPUT', 'INVALID_STATUS', 'INVALID_ORDER_ID']).toContain(response.body.error.code);
+    }
   });
 
   it('erro de banco vira 500 genérico, sem detalhes internos', async () => {

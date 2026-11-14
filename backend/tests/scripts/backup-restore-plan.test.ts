@@ -62,4 +62,19 @@ describe('plano de restauração isolada do backup (estático; nada foi executad
     expect(commands.length).toBeGreaterThan(0);
     for (const line of commands) expect(line).not.toMatch(/--create\b/);
   });
+
+  it('RF006: prepara backup integral verificável do Dev sem executar backup ou restore', () => {
+    expect(doc).toContain('cardapio_digital_dev_pre-rf006_');
+    expect(doc).toContain('procedimento preparado; nenhum `pg_dump`, restore, migration ou SQL de');
+    expect(doc).toContain('--format=custom --compress=9 --serializable-deferrable');
+    expect(doc).toContain('Get-FileHash -LiteralPath $dump -Algorithm SHA256');
+    expect(doc).toContain('pg_restore --list');
+    expect(doc).toContain('migrations.Count -ne 7');
+    expect(doc).toContain('scripts/bootstrap/expectedMigrations.ts');
+    for (const table of ['admins', 'products', 'orders', 'order_items', '_prisma_migrations']) {
+      expect(doc).toContain(`TABLE DATA public ${table}`);
+    }
+    expect(doc).toContain('cardapio_restore_check_<AAAAMMDD>_<HHMMSS>');
+    expect(doc).toContain('Sem essa restauração isolada bem-sucedida');
+  });
 });

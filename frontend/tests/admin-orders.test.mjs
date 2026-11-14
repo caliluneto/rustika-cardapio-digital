@@ -16,6 +16,7 @@ const order = (n, overrides = {}) => ({
   id: id(n), orderNumber: n, status: 'RECEIVED', comandaNumber: '000123', customerName: `Cliente ${n}`, tableOrReference: 'Mesa 2', notes: null,
   totalInCents: 5998, createdAt: '2026-11-05T12:00:00.000Z', updatedAt: '2026-11-05T12:01:00.000Z', allowedTransitions: ['IN_PREPARATION', 'CANCELLED'],
   items: [{ productNameSnapshot: 'Frios', quantity: 2, unitPriceInCentsSnapshot: 2999, subtotalInCents: 5998, notes: null }],
+  history: [{ fromStatus: null, toStatus: 'RECEIVED', notes: null, createdAt: '2026-11-05T12:00:00.000Z', actorName: null }],
   ...overrides,
 });
 
@@ -29,7 +30,7 @@ const json = (status, body) => ({ ok: status >= 200 && status < 300, status, jso
 // ---------------------------------------------------------------- cliente HTTP
 
 test('lista: GET /admin/orders com cookie (credentials include), sem query string e sem corpo', async () => {
-  const { calls, fetcher } = fakeFetch(() => json(200, { success: true, data: { truncated: false, orders: [order(1)] } }));
+  const { calls, fetcher } = fakeFetch(() => json(200, { success: true, data: { truncated: false, nextCursor: null, orders: [order(1)] } }));
   const client = createAdminOrdersClient(createApiClient({ baseUrl: 'http://api.test/api', fetcher }));
   const snapshot = await client.list();
   assert.equal(snapshot.orders.length, 1);
@@ -40,12 +41,24 @@ test('lista: GET /admin/orders com cookie (credentials include), sem query strin
 });
 
 test('lista: resposta fora do contrato vira INVALID_RESPONSE (nada é renderizado às cegas)', async () => {
-  for (const data of [null, {}, { orders: 'x', truncated: false }, { orders: [], truncated: 'no' }, { orders: [order(1, { status: 'EM_PREPARO' })], truncated: false },
-    { orders: [order(1, { id: 'abc' })], truncated: false }, { orders: [order(1, { totalInCents: -1 })], truncated: false },
-    { orders: [order(1, { items: [{ productNameSnapshot: 1 }] })], truncated: false }]) {
+  for (const data of [null, {}, { orders: 'x', truncated: false, nextCursor: null }, { orders: [], truncated: 'no', nextCursor: null },
+    { orders: [], truncated: false, nextCursor: 'x' }, { orders: [order(1, { status: 'EM_PREPARO' })], truncated: false, nextCursor: null },
+    { orders: [order(1, { id: 'abc' })], truncated: false, nextCursor: null }, { orders: [order(1, { totalInCents: -1 })], truncated: false, nextCursor: null },
+    { orders: [order(1, { items: [{ productNameSnapshot: 1 }] })], truncated: false, nextCursor: null }]) {
     assert.throws(() => parseSnapshot(data), (err) => err instanceof ApiError && err.code === 'INVALID_RESPONSE');
   }
   assert.equal(parseAdminOrder(order(3)).orderNumber, 3);
+});
+
+test('lista envia filtro, limite e cursor e expõe próxima página', async () => {
+  const cursor = id(9);
+  const { calls, fetcher } = fakeFetch(() => json(200, { success: true, data: { truncated: true, nextCursor: cursor, orders: [order(10)] } }));
+  const client = createAdminOrdersClient(createApiClient({ baseUrl: 'http://api.test/api', fetcher }));
+  const snapshot = await client.list({ status: 'DELIVERED', limit: 20, cursor: id(11) });
+  assert.equal(snapshot.nextCursor, cursor);
+  assert.match(calls[0].url, /status=DELIVERED/);
+  assert.match(calls[0].url, /limit=20/);
+  assert.match(calls[0].url, /cursor=55555555/);
 });
 
 test('atualização: PATCH com expectedStatus/toStatus, cabeçalhos de escrita e cookie; notas vazias são omitidas', async () => {
@@ -199,17 +212,18 @@ test('erro de rede mantém o polling (nova tentativa); 401 encerra o polling', a
 
 const noop = () => {};
 const view = (overrides = {}) => renderToStaticMarkup(createElement(AdminOrdersView, {
-  loading: false, error: null, orders: [], truncated: false, updatedAt: null, busyId: null, notice: null, confirming: null, cancelNote: '',
-  onRequest: noop, onConfirm: noop, onAbort: noop, onCancelNote: noop, onRefresh: noop, ...overrides,
+  loading: false, error: null, orders: [], truncated: false, nextCursor: null, filter: '', loadingMore: false,
+  updatedAt: null, busyId: null, notice: null, confirming: null, cancelNote: '',
+  onRequest: noop, onConfirm: noop, onAbort: noop, onCancelNote: noop, onRefresh: noop, onFilter: noop, onLoadMore: noop, ...overrides,
 }));
 
 test('estados de carregamento, vazio e erro', () => {
   assert.match(view({ loading: true }), /Carregando pedidos/);
-  assert.match(view(), /Nenhum pedido ativo no momento/);
+  assert.match(view(), /Nenhum pedido encontrado/);
   const failed = view({ error: 'Falha de comunicação com o servidor. Tentaremos novamente.' });
   assert.match(failed, /role="alert"/);
   assert.match(failed, /Falha de comunicação/);
-  assert.doesNotMatch(failed, /Nenhum pedido ativo/);
+  assert.doesNotMatch(failed, /Nenhum pedido encontrado/);
 });
 
 test('pedido recebido: comanda, cliente, itens, quantidades, total, status e horários', () => {
@@ -218,6 +232,7 @@ test('pedido recebido: comanda, cliente, itens, quantidades, total, status e hor
     assert.ok(html.includes(expected), expected);
   }
   assert.match(html, /R\$\s?59,98/);
+  assert.match(html, /Histórico \(1\)/);
 });
 
 test('botões refletem exatamente allowedTransitions; pedido final não tem ação', () => {
@@ -244,10 +259,10 @@ test('confirmação explícita antes de enviar; cancelar mostra aviso e campo de
   assert.match(busy, /<button[^>]*disabled[^>]*>Voltar/);
 });
 
-test('avisos: conflito 409 aparece como alerta; sucesso como status; lista truncada é sinalizada', () => {
+test('avisos: conflito 409 aparece como alerta; sucesso como status; lista paginada oferece carregar mais', () => {
   assert.match(view({ orders: [order(1)], notice: { kind: 'conflict', text: 'O pedido foi alterado por outra pessoa.' } }), /role="alert"[^>]*>O pedido foi alterado/);
   assert.match(view({ orders: [order(1)], notice: { kind: 'success', text: 'Pedido #1 ok.' } }), /role="status"[^>]*>Pedido #1 ok/);
-  assert.match(view({ orders: [order(1)], truncated: true }), /apenas os pedidos ativos mais antigos/);
+  assert.match(view({ orders: [order(1)], truncated: true, nextCursor: id(1) }), /Carregar pedidos anteriores/);
 });
 
 // ---------------------------------------------------------------- estrutura
@@ -261,7 +276,9 @@ test('painel: sem WebSocket/Socket.IO/EventSource, polling parado na desmontagem
   const dashboard = read('../src/pages/AdminDashboard.tsx');
   assert.match(dashboard, /\{!loggingOut && <AdminOrders onUnauthorized=\{onLogout\} \/>\}/);
   // O logout desmonta o painel (e, portanto, para o polling) ANTES de enviar o POST de logout.
-  assert.ok(dashboard.indexOf('setLoggingOut(true)') < dashboard.indexOf("api.post('/admin/auth/logout'"));
+  const handleLogout = dashboard.slice(dashboard.indexOf('const handleLogout'), dashboard.indexOf('const handleIssueInvite'));
+  assert.ok(handleLogout.indexOf('setLoggingOut(true)') < handleLogout.indexOf('endAdminSession(api)'));
+  assert.match(dashboard, /await client\.post\('\/admin\/auth\/logout', \{\}\)/);
   const wrapper = read('../src/AppWrapper.tsx');
   assert.match(wrapper, /adminData \? \(\s*<AdminDashboard/); // o painel só monta com sessão administrativa válida
 });

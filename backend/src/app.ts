@@ -12,6 +12,7 @@ import { createReadyRouter } from './routes/ready.routes';
 import { createAccessRouters } from './routes/access.routes';
 import { createCatalogRouter } from './routes/catalog.routes';
 import { createOrderRouter } from './routes/order.routes';
+import { docsRouter } from './routes/docs.routes';
 import type { OrderRouterOptions } from './routes/order.routes';
 
 export interface AppDependencies {
@@ -36,6 +37,7 @@ export function createApp(dependencies: AppDependencies = {}): express.Express {
 
   app.use('/api/health', healthRouter);
   app.use('/api/ready', createReadyRouter(dependencies.prisma));
+  if (env.nodeEnv !== 'production') app.use('/api', docsRouter);
   app.use('/api', createCatalogRouter(dependencies.prisma));
   const access = createAccessRouters(dependencies.prisma, {
     origin: env.corsOrigin,

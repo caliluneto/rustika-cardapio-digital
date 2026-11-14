@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 
 /**
- * 3D.5.2-A — prova ESTÁTICA de que o replay histórico + renomeação é seguro: toda referência a nome de banco/role nas sete
+ * 3D.5.2-A — prova ESTÁTICA de que o replay histórico + renomeação é seguro: toda referência a nome de banco/role nas oito
  * migrations está em (a) guarda/seleção de role no momento da execução, (b) REVOKE/ALTER DEFAULT PRIVILEGES no momento da
  * execução. Nenhuma migration grava um nome de role/banco em objeto persistente (função, view, trigger, política, comentário,
  * dono explícito). O PostgreSQL guarda ACLs, privilégios padrão e donos por OID, portanto a renomeação posterior preserva tudo.

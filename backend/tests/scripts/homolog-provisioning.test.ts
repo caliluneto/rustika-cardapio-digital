@@ -11,9 +11,15 @@ const stripComments = (sql: string) => sql.split('\n').filter((line) => !line.tr
 const withoutStrings = (sql: string) => sql.replace(/'[^']*'/g, "''");
 
 describe('scripts SQL de provisionamento da homologação (validação estática, nada é executado)', () => {
-  it('existem exatamente os nove scripts previstos', () => {
-    expect(fs.readdirSync(sqlDir).sort()).toEqual([...HOMOLOG_SQL_FILES].sort());
+  it('existem exatamente os nove scripts previstos (mais o subdiretório neon/, específico do provedor, 3D.5.3-C.5)', () => {
+    const entries = fs.readdirSync(sqlDir, { withFileTypes: true });
+    expect(entries.filter((e) => e.isFile()).map((e) => e.name).sort()).toEqual([...HOMOLOG_SQL_FILES].sort());
     expect(HOMOLOG_SQL_FILES).toHaveLength(9);
+    expect(entries.filter((e) => e.isDirectory()).map((e) => e.name)).toEqual(['neon']);
+    expect(fs.readdirSync(path.join(sqlDir, 'neon')).sort()).toEqual([
+      '01-grant-set-true-migrator.sql', '01b-elevate-inherit-for-rename.sql', '02-revoke-set-true-migrator.sql',
+      '03-verify-ownership.sql', 'README.md',
+    ]);
   });
 
   it('todos abortam no primeiro erro e são marcados como não executados', () => {
@@ -111,6 +117,15 @@ describe('proteção da renomeação (3D.5.2-C, verificação estática)', () =>
     for (const needle of ['datdba', 'relowner', 'nspowner', 'typowner', 'pg_auth_members', 'pg_db_role_setting', 'pg_policy', 'pg_event_trigger', 'pg_proc', 'has_table_privilege', 'has_column_privilege']) {
       expect(code, needle).toContain(needle);
     }
+  });
+
+  it('C.6/Neon: o 03 tolera somente a linha ADMIN-only automática do criador (PostgreSQL >= 16) e continua recusando SET/INHERIT', () => {
+    const code = stripComments(read('03-verify-replay.sql'));
+    expect(code).toContain('grantor_role.rolsuper');
+    expect(code).toContain('m.admin_option');
+    expect(code).toContain('NOT m.set_option');
+    expect(code).toContain('NOT m.inherit_option');
+    expect(code).toContain("member_role.rolname NOT LIKE 'cardapio\\_%'");
   });
 
   it('o script de CI mantém as pastas TLS atravessáveis pelo uid 999 do container (senão o PostgreSQL não lê a chave)', () => {

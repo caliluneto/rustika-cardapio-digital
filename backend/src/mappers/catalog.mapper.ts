@@ -67,6 +67,7 @@ export function mapProduct(record: ProductRecord): Product {
  */
 export const adminProductSelect = {
   publicKey: true, sourceCode: true, name: true, price: true, availabilityState: true, updatedAt: true,
+  description: true, ingredients: true, imageUrl: true, imageAlt: true,
   isActive: true, sourceName: true, sourceGroup: true,
   category: { select: { publicKey: true, name: true, displayOrder: true, isActive: true } },
 } satisfies Prisma.ProductSelect;
@@ -78,5 +79,9 @@ export function mapAdminProduct(record: AdminProductRecord) {
     categoryId: record.category.publicKey as string, categoryName: record.category.name,
     priceInCents: priceToCents(record.price), availabilityState: record.availabilityState,
     updatedAt: record.updatedAt.toISOString(),
+    ...(record.description === null ? {} : { description: record.description }),
+    ...(record.ingredients === null ? {} : { ingredients: record.ingredients }),
+    ...(record.imageUrl === null ? {} : { imageUrl: record.imageUrl }),
+    ...(record.imageAlt === null ? {} : { imageAlt: record.imageAlt }),
   };
 }

@@ -124,3 +124,45 @@ describe('POST /api/orders', () => {
     expect(response.status).toBe(503);
   });
 });
+
+describe('GET /api/orders/:orderId', () => {
+  async function created() {
+    const mock = setup();
+    const response = await mock.post().send(body());
+    expect(response.status).toBe(201);
+    return { mock, order: response.body.data };
+  }
+
+  it('a própria sessão acompanha status e histórico sem receber dados internos', async () => {
+    const { mock, order } = await created();
+    const response = await request(mock.app).get(`/api/orders/${order.id}`).set('Cookie', `rustika_session=${TOKEN}`);
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.body.data).toMatchObject({
+      id: order.id, orderNumber: 42, status: 'RECEIVED', comandaNumber: '000123',
+      history: [{ fromStatus: null, toStatus: 'RECEIVED' }],
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(/credential|requestDigest|idempotencyKey|sessionId|comandaId|changedByAdmin/i);
+  });
+
+  it('UUID não autoriza sozinho: cookie ausente/inválido recebe 401 e outra sessão recebe 404', async () => {
+    const { mock, order } = await created();
+    expect((await request(mock.app).get(`/api/orders/${order.id}`)).status).toBe(401);
+    expect((await request(mock.app).get(`/api/orders/${order.id}`).set('Cookie', `rustika_session=${'b'.repeat(64)}`)).status).toBe(401);
+    const stored = [...mock.committed.values()][0]!;
+    stored.sessionId = '99999999-9999-4999-8999-999999999999';
+    const forbidden = await request(mock.app).get(`/api/orders/${order.id}`).set('Cookie', `rustika_session=${TOKEN}`);
+    expect(forbidden.status).toBe(404);
+    expect(forbidden.body.error.code).toBe('ORDER_NOT_FOUND');
+  });
+
+  it('valida identificador e recusa query string', async () => {
+    const mock = setup();
+    const invalid = await request(mock.app).get('/api/orders/not-a-uuid').set('Cookie', `rustika_session=${TOKEN}`);
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.error.code).toBe('INVALID_ORDER_ID');
+    const queried = await request(mock.app).get('/api/orders/44444444-4444-4444-8444-000000000001?token=x')
+      .set('Cookie', `rustika_session=${TOKEN}`);
+    expect(queried.status).toBe(400);
+  });
+});

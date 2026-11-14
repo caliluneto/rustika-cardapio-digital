@@ -4,7 +4,9 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 
 export type ProfilePurpose = 'runtime' | 'migration' | 'bootstrap';
-export type HomologEnvironment = 'homolog' | 'homolog-replay';
+/** 3D.5.3-C.5: 'homolog-neon' é o ambiente de homologação hospedado no Neon Free (ver docs/neon-homolog.md); banco e role
+ * definitivos são os MESMOS de 'homolog' (o objetivo da C.5 é que o estado final seja idêntico, provedor à parte). */
+export type HomologEnvironment = 'homolog' | 'homolog-replay' | 'homolog-neon';
 export type RequestedPurpose = ProfilePurpose | 'any';
 
 export interface ProfileDefinition {
@@ -28,6 +30,8 @@ export interface DatabaseSecrets {
   environment?: HomologEnvironment;
   host?: string;
   clusterId?: string;
+  /** 3D.5.3-C.5: só presente quando environment === 'homolog-neon'. */
+  projectId?: string;
   describe: () => string;
 }
 
@@ -43,6 +47,8 @@ export const ENV_SECRET_VARIABLES = {
   DATABASE_URL: 'RUSTIKA_HOMOLOG_DATABASE_URL',
   EXPECTED_DATABASE_HOST: 'RUSTIKA_HOMOLOG_EXPECTED_DATABASE_HOST',
   EXPECTED_CLUSTER_ID: 'RUSTIKA_HOMOLOG_EXPECTED_CLUSTER_ID',
+  /** 3D.5.3-C.5: só lido/exigido para o perfil app-homolog-neon (environment homolog-neon). */
+  EXPECTED_PROJECT_ID: 'RUSTIKA_HOMOLOG_EXPECTED_PROJECT_ID',
 } as const;
 export const ENV_SECRETS_ORIGIN = '(variáveis de ambiente)';
 
@@ -54,8 +60,10 @@ export class SecretsConfigError extends Error {
 }
 
 const ALLOWED_KEYS = new Set(['DATABASE_URL', 'SHADOW_DATABASE_URL']);
-const HOMOLOG_EXTRA_KEYS = new Set(['EXPECTED_DATABASE_HOST', 'EXPECTED_CLUSTER_ID']);
+const HOMOLOG_EXTRA_KEYS = new Set(['EXPECTED_DATABASE_HOST', 'EXPECTED_CLUSTER_ID', 'EXPECTED_PROJECT_ID']);
 const CLUSTER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** 3D.5.3-C.5: formato observado dos project id do Neon (ex.: aged-scene-47291697). Documentado, não garantido pelo provedor. */
+const NEON_PROJECT_ID_PATTERN = /^[a-z]+-[a-z]+-[0-9]{6,10}$/;
 
 /**
  * 3D.5.2-A: identidade do ambiente de homologação.
@@ -82,8 +90,10 @@ const HOMOLOG_PROFILE_IDENTITY: Record<string, { environment: HomologEnvironment
   'migrate-homolog': { environment: 'homolog', purpose: 'migration', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.migrator },
   'bootstrap-homolog': { environment: 'homolog', purpose: 'bootstrap', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.bootstrap },
   'migrate-homolog-replay': { environment: 'homolog-replay', purpose: 'migration', database: HOMOLOG_REPLAY_DATABASE, user: REPLAY_ROLES.migrator },
+  // 3D.5.3-C.5: mesmo banco/role definitivos de 'app-homolog' — só o provedor (Neon) e a verificação de identidade mudam.
+  'app-homolog-neon': { environment: 'homolog-neon', purpose: 'runtime', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.runtime },
 };
-const HOMOLOG_QUERY_KEYS = new Set(['sslmode', 'sslaccept', 'sslcert', 'schema', 'connect_timeout', 'connection_limit', 'pool_timeout']);
+const HOMOLOG_QUERY_KEYS = new Set(['sslmode', 'sslaccept', 'sslcert', 'schema', 'connect_timeout', 'connection_limit', 'pool_timeout', 'channel_binding']);
 const HOMOLOG_TLS_MODES = new Set(['require', 'verify-ca', 'verify-full']);
 const PLACEHOLDER_PATTERN = /(SUBSTITUA|SENHA_URLENCODED|SENHA_EXEMPLO)/i;
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost']);
@@ -222,7 +232,7 @@ function withEnvironment(name: string, raw: unknown, definition: ProfileDefiniti
   }
 
   const identity = HOMOLOG_PROFILE_IDENTITY[name];
-  if ((environment !== 'homolog' && environment !== 'homolog-replay') || !identity) {
+  if ((environment !== 'homolog' && environment !== 'homolog-replay' && environment !== 'homolog-neon') || !identity) {
     throw new SecretsConfigError(`Ambiente ou perfil de homologação inválido: ${name}.`);
   }
   if (definition.requiresShadow) {
@@ -305,9 +315,9 @@ function parsePostgresUrl(
     );
   }
 
-  if (url.protocol !== 'postgresql:') {
+  if (url.protocol !== 'postgresql:' && url.protocol !== 'postgres:') {
     throw new SecretsConfigError(
-      `${key} do perfil ${profileName} deve usar o esquema postgresql://.`,
+      `${key} do perfil ${profileName} deve usar o esquema postgresql:// ou postgres://.`,
     );
   }
 
@@ -398,7 +408,7 @@ export function isForbiddenHomologHost(hostname: string): boolean {
   return false;
 }
 
-function parseHomologUrl(raw: string, profileName: string, key: string, expectedHost: string): ParsedPostgresUrl {
+function parseHomologUrl(raw: string, profileName: string, key: string, expectedHost: string, requireDirectEndpoint = false): ParsedPostgresUrl {
   const base = parsePostgresUrl(raw, profileName, key, true);
   const host = base.url.hostname.toLowerCase();
   const label = `${key} do perfil ${profileName}`;
@@ -408,6 +418,10 @@ function parseHomologUrl(raw: string, profileName: string, key: string, expected
   }
   if (host !== expectedHost.trim().toLowerCase()) {
     throw new SecretsConfigError(`${label} não corresponde a EXPECTED_DATABASE_HOST.`);
+  }
+  // 3D.5.3-C.5: só para o perfil Neon — migrations e identidade do servidor exigem o endpoint DIRETO (o pooler mascara pg_backend_pid/SET).
+  if (requireDirectEndpoint && host.split('.')[0]?.includes('-pooler')) {
+    throw new SecretsConfigError(`${label} usa um endpoint com pooler (-pooler): use o endpoint direto do Neon.`);
   }
   const port = base.url.port === '' ? 5432 : Number(base.url.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -426,6 +440,10 @@ function parseHomologUrl(raw: string, profileName: string, key: string, expected
   const accept = params.get('sslaccept');
   if (accept !== null && accept !== 'strict') {
     throw new SecretsConfigError(`${label} não pode relaxar a validação do certificado TLS.`);
+  }
+  const channelBinding = params.get('channel_binding');
+  if (channelBinding !== null && channelBinding !== 'require' && channelBinding !== 'prefer') {
+    throw new SecretsConfigError(`${label} não pode desativar channel_binding.`);
   }
   const schema = params.get('schema');
   if (schema !== null && schema !== 'public') {
@@ -528,9 +546,14 @@ export function loadDatabaseProfile(
     }
   }
 
+  // ponytail: migrate-homolog-replay adopts Neon validation when EXPECTED_PROJECT_ID or *.neon.tech host is configured
+  const isNeon =
+    profile.environment === 'homolog-neon' ||
+    (profileName === 'migrate-homolog-replay' &&
+      Boolean(values.EXPECTED_PROJECT_ID !== undefined || values.EXPECTED_DATABASE_HOST?.toLowerCase().endsWith('.neon.tech')));
   const databaseUrl = requireSecret(values, 'DATABASE_URL', profileName);
   const parsed = homolog
-    ? parseHomologUrl(databaseUrl, profileName, 'DATABASE_URL', requireSecret(values, 'EXPECTED_DATABASE_HOST', profileName))
+    ? parseHomologUrl(databaseUrl, profileName, 'DATABASE_URL', requireSecret(values, 'EXPECTED_DATABASE_HOST', profileName), isNeon)
     : parsePostgresUrl(databaseUrl, profileName, 'DATABASE_URL');
   assertMatchesProfile(parsed, profile, profileName, 'DATABASE_URL');
 
@@ -583,6 +606,15 @@ export function loadDatabaseProfile(
       throw new SecretsConfigError(`EXPECTED_CLUSTER_ID do perfil ${profileName} deve ser um UUID.`);
     }
   }
+  let projectId: string | undefined;
+  if (isNeon) {
+    projectId = requireSecret(values, 'EXPECTED_PROJECT_ID', profileName).toLowerCase();
+    if (!NEON_PROJECT_ID_PATTERN.test(projectId)) {
+      throw new SecretsConfigError(`EXPECTED_PROJECT_ID do perfil ${profileName} não tem o formato esperado de project id do Neon.`);
+    }
+  } else if (values.EXPECTED_PROJECT_ID !== undefined) {
+    throw new SecretsConfigError(`Chave não permitida no perfil ${profileName}: EXPECTED_PROJECT_ID.`);
+  }
 
   return {
     profile: profileName,
@@ -593,6 +625,7 @@ export function loadDatabaseProfile(
     user: parsed.user,
     secretsFilePath,
     ...(homolog ? { environment: profile.environment, host: parsed.url.hostname.toLowerCase(), clusterId } : {}),
+    ...(isNeon ? { projectId } : {}),
     describe: () =>
       `perfil=${profileName} banco=${parsed.database} role=${parsed.user}`,
   };

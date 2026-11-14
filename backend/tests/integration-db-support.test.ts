@@ -51,26 +51,26 @@ describe('preflight de identidade do banco (decide antes de qualquer escrita)', 
     expect(evaluatePreflight(healthy())).toEqual([]);
   });
 
-  it('estado registrado do Test (1 aplicada, agora 6 pendentes) aborta', () => {
+  it('estado registrado do Test (1 aplicada, agora 7 pendentes) aborta', () => {
     const facts = healthy(); facts.migrations = facts.migrations.slice(0, 1);
     const reasons = evaluatePreflight(facts);
     expect(reasons.some((r) => /pendentes/.test(r))).toBe(true);
-    expect(reasons.filter((r) => /não aplicada/.test(r))).toHaveLength(6);
+    expect(reasons.filter((r) => /não aplicada/.test(r))).toHaveLength(7);
   });
 
-  it('sete migrations exatas passam; a sétima pendente, uma desconhecida extra ou uma trocada abortam', () => {
-    expect(EXPECTED_MIGRATIONS).toHaveLength(7);
+  it('oito migrations exatas passam; a oitava pendente, uma desconhecida extra ou uma trocada abortam', () => {
+    expect(EXPECTED_MIGRATIONS).toHaveLength(8);
     expect(evaluatePreflight(healthy())).toEqual([]);
-    const pending = healthy(); pending.migrations = pending.migrations.slice(0, 6);
-    expect(evaluatePreflight(pending).join(' ')).toMatch(/7.*(pendentes|esperadas)|20261106000000_product_availability_update_privilege não aplicada/);
+    const pending = healthy(); pending.migrations = pending.migrations.slice(0, 7);
+    expect(evaluatePreflight(pending).join(' ')).toMatch(/8.*(pendentes|esperadas)|20261110000000_rf006_product_crud_privilege não aplicada/);
     const extra = healthy(); extra.migrations.push({ name: '20261107000000_desconhecida', checksum: 'f'.repeat(64), finished: true, rolledBack: false });
-    expect(evaluatePreflight(extra).join(' ')).toMatch(/8 linhas, esperadas 7/);
-    const swapped = healthy(); swapped.migrations[6] = { ...swapped.migrations[6]!, name: '20261106000000_outra' };
-    expect(evaluatePreflight(swapped).join(' ')).toMatch(/product_availability_update_privilege não aplicada/);
-    const sixthDisk = healthy(); sixthDisk.diskChecksums[EXPECTED_MIGRATIONS[6]!.name] = 'x';
-    expect(evaluatePreflight(sixthDisk).join(' ')).toMatch(/arquivo de 20261106000000_product_availability_update_privilege no disco/);
-    const sixthRow = healthy(); sixthRow.migrations[6]!.checksum = '0'.repeat(64);
-    expect(evaluatePreflight(sixthRow).join(' ')).toMatch(/checksum gravado de 20261106000000/);
+    expect(evaluatePreflight(extra).join(' ')).toMatch(/9 linhas, esperadas 8/);
+    const swapped = healthy(); swapped.migrations[7] = { ...swapped.migrations[7]!, name: '20261110000000_outra' };
+    expect(evaluatePreflight(swapped).join(' ')).toMatch(/rf006_product_crud_privilege não aplicada/);
+    const seventhDisk = healthy(); seventhDisk.diskChecksums[EXPECTED_MIGRATIONS[7]!.name] = 'x';
+    expect(evaluatePreflight(seventhDisk).join(' ')).toMatch(/arquivo de 20261110000000_rf006_product_crud_privilege no disco/);
+    const seventhRow = healthy(); seventhRow.migrations[7]!.checksum = '0'.repeat(64);
+    expect(evaluatePreflight(seventhRow).join(' ')).toMatch(/checksum gravado de 20261110000000/);
   });
 
   it.each<[string, (f: PreflightFacts) => void, RegExp]>([

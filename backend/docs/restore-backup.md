@@ -7,7 +7,7 @@
 A 3D.3.10 registrou o dump como ausente porque procurou o nome errado
 (`cardapio_test_pre3d38_…`). Os dois arquivos existem, fora do OneDrive e do repositório:
 
-| Uso | Arquivo em `C:\Users\<USUARIO>\AppData\Local\RustikaBackups\` | SHA-256 |
+| Uso | Arquivo em `%LOCALAPPDATA%\RustikaBackups\` | SHA-256 |
 | --- | --- | --- |
 | **Prova de restauração (usar este)** | `cardapio_digital_test_pre-migrations-3d311_20261104-102650Z_1a9636.dump` | `f2304f0ac150218ef6dc36a1cbdc517402180daa8ed73bd949c6d2f05306cadf` |
 | Histórico (3D.3.8) | `cardapio_digital_test_pre3d38_20261104-012137.dump` | `1be946052157a2c54b7af979c9c174e0d41d70cfaab9abc9b5de90663f925265` |
@@ -179,3 +179,151 @@ limpeza deve ser igual ao arquivo `_antes.txt` do passo 1. O banco
 - Não cria role, não altera ACL e não aplica migration.
 - Não declara o dump restaurável antes da execução completa dos passos 0 a 5.
 - Não substitui a Operação B da 3D.3.9; ele a corrige e a torna executável quando houver dump.
+
+## RF006 — backup integral do Dev antes de `migrate deploy`
+
+**Atualização em 14/11/2026:** a RF006 foi aplicada e validada no Dev. O backup real gerado antes da
+migration é `cardapio_digital_dev_pre-rf006_20261114-021344Z.dump`, com 47.535 bytes, SHA-256
+`12b97471552173e3bd6291585dd93d497393c700e63c2ef5222cb4ef75c8ee96` e TOC de 7.220 bytes, em
+`%LOCALAPPDATA%\RustikaBackups`. Checksum e TOC foram verificados; a restauração integral ainda **não** foi
+comprovada. As seções abaixo permanecem como procedimento e registro histórico do estado de 12/11/2026; o arquivo
+de 0 byte citado não foi usado.
+
+**Estado em 12/11/2026 (histórico): procedimento preparado; nenhum `pg_dump`, restore, migration ou SQL de
+escrita foi executado por esta preparação.** O backup é uma condição de parada obrigatória para
+uma futura execução autorizada da RF006. Ele deve preservar o banco inteiro, incluindo
+`admins`, `categories`, `products`, `orders`, `order_items`, o histórico de status, comandas,
+sequências, constraints e `_prisma_migrations`.
+
+Na inspeção somente leitura desta preparação, o Dev continha 1 administrador, 168 produtos,
+1 pedido e 1 item de pedido. Esses números são apenas evidência datada: o manifesto do backup
+deve registrar novamente as contagens no momento da janela, sem substituir dados atuais por
+esses valores.
+
+**Estado real verificado em 12/11/2026 (superado em 14/11/2026):** identidade confirmada em
+`cardapio_digital_dev` / `cardapio_migrator` / `127.0.0.1:5432` / PostgreSQL 18.6, sem SSL e sem
+sinal de Neon/pooler; **4 das 7 migrations históricas aplicadas**. Faltam
+`20261104000000_runtime_least_privilege`, `20261105000000_order_status_update_privilege` e
+`20261106000000_product_availability_update_privilege`; a RF006 estava pendente. O wrapper
+`migrate-dev` exige as sete antes do deploy, portanto a RF006 não podia ser aplicada no estado daquele dia.
+Na FK `order_items.product_id -> products.id` há 1 item vinculado, 0 órfãos e
+`ON DELETE RESTRICT` confirmado. O arquivo `backup_cardapio_digital_dev_pre_migration.backup`
+encontrado na raiz tem **0 byte** e não é um backup válido; não use esse arquivo como ponto de
+retorno.
+
+### 0. Pré-requisito de baseline
+
+Este procedimento pressupõe as sete migrations históricas aplicadas. No estado de 12/11/2026 (4/7), era
+necessário primeiro aplicar as três pendentes com autorização e gerar um novo backup; sem isso o
+passo 2 falha por desenho e o `migrate deploy` da RF006 permanecia bloqueado.
+
+### Condições de parada
+
+- origem diferente de `cardapio_digital_dev` / `cardapio_migrator` / `127.0.0.1:5432`;
+- aplicação ainda escrevendo, sessão inesperada ou lock aguardando;
+- histórico diferente das sete migrations anteriores, concluídas, não revertidas e com os
+  checksums de `scripts/bootstrap/expectedMigrations.ts`;
+- RF006 já aplicada, migration desconhecida ou checksum do disco divergente;
+- `pg_dump` com código diferente de zero, dump vazio, SHA-256 ausente ou TOC sem qualquer uma
+  das tabelas de dados obrigatórias;
+- tentativa de usar `--create` ou de restaurar sobre Dev, Test ou Shadow.
+
+### 1. Preparar destino e credencial fora do repositório
+
+Usar um `PGPASSFILE` protegido fora do OneDrive. Não colocar senha em argumento, variável
+persistente, log ou documentação.
+
+```powershell
+$stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmssZ')
+$backupRoot = Join-Path $env:LOCALAPPDATA 'RustikaBackups'
+$dump = Join-Path $backupRoot "cardapio_digital_dev_pre-rf006_$stamp.dump"
+$hashFile = "$dump.sha256"
+$tocFile = "$dump.toc.txt"
+$manifestFile = "$dump.manifest.json"
+$logFile = "$dump.pg_dump.log"
+$pgBin = 'C:\Program Files\PostgreSQL\18\bin'
+
+if (-not (Test-Path -LiteralPath $backupRoot -PathType Container)) { throw 'Diretório de backup ausente.' }
+if (-not $env:PGPASSFILE -or -not (Test-Path -LiteralPath $env:PGPASSFILE -PathType Leaf)) { throw 'PGPASSFILE protegido ausente.' }
+if (Test-Path -LiteralPath $dump) { throw 'Destino do dump já existe; não sobrescrever.' }
+```
+
+### 2. Registrar identidade, histórico e contagens em modo somente leitura
+
+Parar a aplicação antes da janela. As consultas abaixo não alteram o banco. O resultado deve
+ser guardado fora do repositório e incorporado ao manifesto junto do hash do dump.
+
+```powershell
+$psql = Join-Path $pgBin 'psql.exe'
+$identity = & $psql -X -w -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev `
+  -v ON_ERROR_STOP=1 -At -F '|' -c "SELECT current_database(), current_user, session_user, host(inet_server_addr()), inet_server_port(), host(inet_client_addr());"
+if ($LASTEXITCODE -ne 0 -or $identity -ne 'cardapio_digital_dev|cardapio_migrator|cardapio_migrator|127.0.0.1|5432|127.0.0.1') { throw 'Identidade PostgreSQL recusada.' }
+
+$migrations = & $psql -X -w -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev `
+  -v ON_ERROR_STOP=1 -At -F '|' -c "SELECT migration_name, checksum, finished_at IS NOT NULL, rolled_back_at IS NOT NULL FROM public._prisma_migrations ORDER BY started_at, migration_name;"
+if ($LASTEXITCODE -ne 0 -or $migrations.Count -ne 7) { throw 'Histórico não contém exatamente as sete migrations anteriores.' }
+
+$countsJson = & $psql -X -w -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev `
+  -v ON_ERROR_STOP=1 -At -c "SELECT json_build_object('admins',(SELECT count(*) FROM public.admins),'categories',(SELECT count(*) FROM public.categories),'products',(SELECT count(*) FROM public.products),'orders',(SELECT count(*) FROM public.orders),'order_items',(SELECT count(*) FROM public.order_items),'order_status_history',(SELECT count(*) FROM public.order_status_history),'comandas',(SELECT count(*) FROM public.comandas));"
+if ($LASTEXITCODE -ne 0 -or -not $countsJson) { throw 'Não foi possível registrar as contagens.' }
+
+$activity = & $psql -X -w -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev `
+  -v ON_ERROR_STOP=1 -At -c "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid(); SELECT count(*) FROM pg_locks WHERE NOT granted;"
+if ($LASTEXITCODE -ne 0 -or ($activity | Where-Object { $_ -ne '0' })) { throw 'Sessão concorrente ou lock aguardando; parar.' }
+```
+
+Antes de continuar, comparar cada linha de `$migrations` com
+`scripts/bootstrap/expectedMigrations.ts`; nome, ordem e SHA-256 precisam ser idênticos. O teste
+`tests/scripts/migration-integrity.test.ts` valida os mesmos sete checksums no disco e fixa
+separadamente o checksum da RF006 pendente.
+
+### 3. Gerar o dump integral e verificá-lo sem restaurar
+
+Não usar filtros `--table` ou `--data-only`: o objetivo é preservar schema e todos os dados.
+`--serializable-deferrable` obtém um snapshot consistente e deve falhar, não ser removido, se a
+janela não puder fornecer uma fotografia segura.
+
+```powershell
+$pgDump = Join-Path $pgBin 'pg_dump.exe'
+$pgRestore = Join-Path $pgBin 'pg_restore.exe'
+& $pgDump -w -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev `
+  --format=custom --compress=9 --serializable-deferrable --lock-wait-timeout=10s `
+  --verbose --file=$dump 2> $logFile
+if ($LASTEXITCODE -ne 0) { throw "pg_dump falhou; consultar $logFile" }
+if (-not (Test-Path -LiteralPath $dump -PathType Leaf) -or (Get-Item -LiteralPath $dump).Length -le 0) { throw 'Dump ausente ou vazio.' }
+
+$hash = (Get-FileHash -LiteralPath $dump -Algorithm SHA256).Hash.ToLowerInvariant()
+"$hash  $([IO.Path]::GetFileName($dump))" | Set-Content -LiteralPath $hashFile -Encoding ascii
+$toc = & $pgRestore --list $dump
+if ($LASTEXITCODE -ne 0 -or -not $toc) { throw 'pg_restore --list falhou.' }
+$toc | Set-Content -LiteralPath $tocFile -Encoding utf8
+foreach ($required in @('TABLE DATA public admins','TABLE DATA public products','TABLE DATA public orders','TABLE DATA public order_items','TABLE DATA public _prisma_migrations')) {
+  if (-not ($toc | Select-String -SimpleMatch $required)) { throw "TOC não preserva $required" }
+}
+
+[ordered]@{
+  source = 'cardapio_digital_dev@127.0.0.1:5432'
+  role = 'cardapio_migrator'
+  createdAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+  dump = [IO.Path]::GetFileName($dump)
+  sha256 = $hash
+  migrations = @($migrations)
+  counts = ($countsJson | ConvertFrom-Json)
+} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestFile -Encoding utf8
+```
+
+### 4. Prova de restauração antes da migration
+
+Hash e TOC provam integridade de arquivo e presença lógica, mas não a restauração. Antes de
+autorizar a RF006, restaurar esse dump em `cardapio_restore_check_<AAAAMMDD>_<HHMMSS>` seguindo
+os passos 1 a 5 deste documento, sempre com `--no-owner --no-privileges`, sem `--create` e
+nunca sobre Dev/Test/Shadow. No banco descartável:
+
+- repetir as contagens do manifesto para `admins`, `products`, `orders`, `order_items` e tabelas
+  relacionadas; todas devem ser idênticas;
+- comparar as sete linhas completas de `_prisma_migrations` com o manifesto;
+- executar `docs/sql/verify-restore.sql` e registrar o resultado;
+- manter dump, `.sha256`, TOC, manifesto e logs juntos fora do repositório.
+
+Sem essa restauração isolada bem-sucedida, o backup continua **não comprovado** e `migrate
+deploy` permanece bloqueado.

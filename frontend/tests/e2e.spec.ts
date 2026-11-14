@@ -92,6 +92,7 @@ test.describe('E2E Real Journey', () => {
     // Estado de sucesso e ausencia de erro visivel
     await expect(page.locator('.admin-error')).toHaveCount(0);
     await expect(page.locator('#checkout-title')).toContainText('Pedido recebido', { timeout: 15000 });
+    await expect(page.locator('dialog.order-review [role="status"]')).toContainText(`Pedido nº ${created.data.orderNumber}`);
 
     // 6. Idempotencia: o MESMO POST (mesma chave, mesmo corpo) devolve o mesmo pedido, sem criar outro.
     const replay = await page.request.post(request.url(), {
@@ -105,7 +106,24 @@ test.describe('E2E Real Journey', () => {
     const replayed = (await replay.json()) as { data: { orderNumber: number } };
     expect(replayed.data.orderNumber).toBe(created.data.orderNumber);
 
-    // 7. 3D.4.1 (PREPARADO, NAO EXECUTADO): operacao administrativa do pedido recem-criado.
+    // RF004/RF005: o pedido recém-gravado deve aparecer no painel, independentemente da
+    // etapa opcional de mudança de status. Logout deve revogar a sessão e proteger a rota.
+    await page.goto('/#admin');
+    const createdCard = page.locator('.admin-order', { hasText: `Pedido #${created.data.orderNumber}` });
+    await expect(createdCard).toBeVisible({ timeout: 25000 });
+    await expect(createdCard).toContainText(`Comanda ${comanda}`);
+    await expect(createdCard).toContainText(productName);
+    await expect(createdCard.locator('.admin-order-status')).toHaveText('Recebido');
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page.locator('.admin-login-container')).toHaveAttribute('data-session-state', 'anonymous');
+    const denied = await page.request.get(new URL('/api/admin/orders', request.url()).toString());
+    expect(denied.status()).toBe(401);
+    await page.fill('input[type="email"]', adminEmail);
+    await page.fill('input[type="password"]', adminPassword);
+    await page.click('button[type="submit"]');
+    await expect(createdCard).toBeVisible({ timeout: 25000 });
+
+    // 7. 3D.4.1 (PREPARADO, NAO EXECUTADO): mudanca opcional de status do pedido recem-criado.
     // So roda quando o setup foi iniciado com RUSTIKA_E2E_ORDER_OPS=enabled; o teardown entao espera
     // IN_PREPARATION e exatamente duas linhas de historico (verifyJourney). Sem atalhos: so a interface
     // para a transicao valida; as tentativas invalidas usam a API com a sessao do navegador e NAO gravam nada.

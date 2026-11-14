@@ -12,4 +12,16 @@ export const EXPECTED_MIGRATIONS: ReadonlyArray<{ name: string; checksum: string
   { name: '20261104000000_runtime_least_privilege', checksum: '24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e' },
   { name: '20261105000000_order_status_update_privilege', checksum: '3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84' },
   { name: '20261106000000_product_availability_update_privilege', checksum: '3665ed812c4033527d17c6de3a7c66a623d659d676c719fc1b6f6477f7e69308' },
+  { name: '20261110000000_rf006_product_crud_privilege', checksum: 'b3feb0dfca618498219161ec91f11b4edff9700de5386e452edf67eadf41561e' },
+];
+
+/**
+ * Migrations conhecidas no disco, mas ainda NÃO aplicadas no baseline de oito.
+ * A migration de identidade é exclusiva de Dev/Test (a guarda SQL rejeita homologação), por isso não
+ * entra em `EXPECTED_MIGRATIONS` antes de ser aplicada e validada. O checksum fica fixado aqui para
+ * que qualquer alteração de bytes durante a revisão seja detectada; ao promover a migration, mova-a
+ * para `EXPECTED_MIGRATIONS` (e para a lista equivalente da suíte de integração).
+ */
+export const PENDING_MIGRATIONS: ReadonlyArray<{ name: string; checksum: string }> = [
+  { name: '20261114000000_product_insert_identity_columns', checksum: '6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9' },
 ];

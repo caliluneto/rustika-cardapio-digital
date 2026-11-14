@@ -13,7 +13,7 @@ test('Simulação de fluxo completo: Login, Convite, Resgate e Pedido', async ()
     requestLog.push({ method, path, body: parsedBody });
     
     if (path === '/admin/auth/login' && method === 'POST') {
-      if (parsedBody?.email === 'admin@example.com' && parsedBody?.password === 'Synthetic-Admin-Pw-1') {
+      if (parsedBody?.email === 'admin@example.com' && parsedBody?.password === '123456') {
         return { ok: true, status: 200, json: async () => ({ success: true, data: { admin: { id: '1', name: 'Admin', email: 'admin@example.com' }, expiresAt: new Date().toISOString() } }) };
       }
       return { ok: false, status: 401, json: async () => ({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Credenciais inválidas' } }) };
@@ -51,7 +51,7 @@ test('Simulação de fluxo completo: Login, Convite, Resgate e Pedido', async ()
   );
 
   // 2. Login Válido
-  const loginRes = await api.post('/admin/auth/login', { email: 'admin@example.com', password: 'Synthetic-Admin-Pw-1' });
+  const loginRes = await api.post('/admin/auth/login', { email: 'admin@example.com', password: '123456' });
   assert.strictEqual(loginRes.admin.name, 'Admin');
 
   // 3. Emissão de Convite

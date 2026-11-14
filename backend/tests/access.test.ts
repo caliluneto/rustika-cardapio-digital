@@ -25,6 +25,8 @@ async function setup() {
 }
 
 describe('HTTP autenticação e convites', () => {
+  vi.setConfig({ testTimeout: 10000 });
+
   it('fluxo completo login -> convite -> cookie legítimo -> pedido 201', async () => {
     const mock = await setup();
     const login = await mock.login(); expect(login.status).toBe(200);

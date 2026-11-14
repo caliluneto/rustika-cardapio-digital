@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXPECTED_MIGRATIONS } from '../integration-db/support/preflight';
+import { PENDING_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 
 const root = path.join(process.cwd(), 'prisma/migrations');
 const name = '20261104000000_runtime_least_privilege';
+const rf006Name = '20261110000000_rf006_product_crud_privilege';
 const bytes = fs.readFileSync(path.join(root, name, 'migration.sql'));
 const sql = bytes.toString('utf8').replace(/--[^\n]*/g, '');
 
@@ -17,11 +19,16 @@ describe('3D.3.10 least privilege (static, not an ACL proof)', () => {
     expect(createHash('sha256').update(fs.readFileSync(path.join(root, 'migration_lock.toml'))).digest('hex'))
       .toBe('99836963713b4f5b269ad49af0ed3d7b0b2e336115c2f92dc9ac683d139d0900');
   });
-  it('is the fifth migration, after all dependencies, and only the reviewed 3D.4.1 and 3D.4.2 migrations follow it', () => {
+  it('is the fifth migration, followed only by the reviewed 3D.4.1, 3D.4.2, RF006 and pending identity migrations', () => {
     const names = fs.readdirSync(root).filter((p) => fs.statSync(path.join(root, p)).isDirectory()).sort();
-    expect(names).toEqual(EXPECTED_MIGRATIONS.map((m) => m.name));
+    expect(names).toEqual([...EXPECTED_MIGRATIONS, ...PENDING_MIGRATIONS].map((m) => m.name));
     expect(names.indexOf(name)).toBe(4);
-    expect(names.slice(5)).toEqual(['20261105000000_order_status_update_privilege', '20261106000000_product_availability_update_privilege']);
+    expect(names.slice(5)).toEqual([
+      '20261105000000_order_status_update_privilege',
+      '20261106000000_product_availability_update_privilege',
+      rf006Name,
+      ...PENDING_MIGRATIONS.map((m) => m.name),
+    ]);
   });
   it('uses a transaction and LF with Git byte-preservation', () => {
     expect(sql.trim()).toMatch(/^BEGIN;[\s\S]*COMMIT;$/);

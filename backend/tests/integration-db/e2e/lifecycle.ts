@@ -14,7 +14,7 @@ import type { RunManifest } from './manifest';
  *
  * Rules enforced here:
  * - the only writer is the dedicated fixtures role through the approved harness (full preflight:
- *   database identity, 7 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
+ *   database identity, 8 migrations + checksums, effective ACL, pg_hba probe, advisory lock);
  * - nothing global: no TRUNCATE, no unscoped DELETE, no sequence changes, no pre-existing row is touched;
  * - a manifest is written BEFORE provisioning; any manifest left behind blocks the next run;
  * - teardown deletes only what the run identity + manifest describe, and ABORTS (deleting nothing) when

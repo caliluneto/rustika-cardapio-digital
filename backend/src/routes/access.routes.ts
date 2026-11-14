@@ -6,6 +6,7 @@ import { createAdminAuth, accessBody } from '../services/adminAuth.service';
 import { createComandaAccess } from '../services/comandaAccess.service';
 import { createOrderOperations } from '../services/orderOperations.service';
 import { createProductAvailability } from '../services/productAvailability.service';
+import { createProductCrud } from '../services/productCrud.service';
 import { ADMIN_COOKIE, readOpaqueCookie } from '../security/adminSessions';
 import { accessLimit } from '../security/accessLimits';
 import { assertWriteRequest } from '../security/writeGuard';
@@ -30,7 +31,8 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   const adminRouter = Router(); const sessionRouter = Router();
   const noStore: RequestHandler = (req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    if (Object.keys(req.query).length) return next(new AppError(400, 'INVALID_INPUT', 'Não envie tokens ou parâmetros na URL.'));
+    const paginatedOrders = req.method === 'GET' && req.path === '/orders';
+    if (!paginatedOrders && Object.keys(req.query).length) return next(new AppError(400, 'INVALID_INPUT', 'Não envie tokens ou parâmetros na URL.'));
     next();
   };
   const writeGuard: RequestHandler = (req, _res, next) => {
@@ -59,7 +61,7 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   }));
   // 3D.4.1: operação de pedidos. GET sem parâmetros (o `noStore` do roteador já recusa query string).
   adminRouter.get('/orders', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
-    res.json({ success: true, data: await services().orders.listActive(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+    res.json({ success: true, data: await services().orders.list(req.query, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
   adminRouter.patch('/orders/:orderId/status', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().orders.updateStatus(req.params.orderId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
@@ -79,5 +81,32 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   sessionRouter.get('/current', asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().access.current(readOpaqueCookie(req.get('Cookie'), SESSION_COOKIE)) });
   }));
+
+  // RF006: CRUD administrativo de produtos
+  const productCrud = prisma && auth ? createProductCrud(prisma, auth) : undefined;
+  adminRouter.post('/products', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const result = await productCrud.create(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    res.status(201).json({ success: true, data: result });
+  }));
+  adminRouter.patch('/products/:productId', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const productId = req.params.productId;
+    if (!productId) return next(new AppError(400, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.'));
+    const result = await productCrud.update(productId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    res.json({ success: true, data: result });
+  }));
+  adminRouter.delete('/products/:productId', writeGuard, accessLimit(30, 60000, now), asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const productId = req.params.productId;
+    if (!productId) return next(new AppError(400, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.'));
+    const result = await productCrud.delete(productId, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    if (result.reason === 'PRODUCT_REFERENCED') {
+      res.status(409).json({ success: false, error: { code: 'PRODUCT_REFERENCED', message: result.message } });
+      return;
+    }
+    res.json({ success: true, data: result });
+  }));
+
   return { adminRouter, sessionRouter };
 }

@@ -10,8 +10,9 @@ export interface StoredOrder {
   items: { id: string; productNameSnapshot: string; unitPriceSnapshot: Prisma.Decimal; quantity: number; subtotal: Prisma.Decimal; notes: string | null }[];
   // Campos que NUNCA podem chegar ao painel (verificados pelos testes de vazamento).
   customerPhone: string; requestDigest: string; idempotencyKey: string; trackingTokenHash: string | null;
+  statusHistory: { id: string; fromStatus: OrderStatus | null; toStatus: OrderStatus; notes: string | null; createdAt: Date; changedByAdmin: { name: string } | null }[];
 }
-export interface StoredHistory { id: string; orderId: string; fromStatus: OrderStatus | null; toStatus: OrderStatus; changedByAdminId: string | null; notes: string | null }
+export interface StoredHistory { id: string; orderId: string; fromStatus: OrderStatus | null; toStatus: OrderStatus; changedByAdminId: string | null; notes: string | null; createdAt: Date }
 
 const serializationConflict = () => new Prisma.PrismaClientKnownRequestError('simulated serialization conflict', { code: 'P2034', clientVersion: '6.19.3' });
 
@@ -34,6 +35,8 @@ export function storedOrder(n: number, overrides: Partial<StoredOrder> = {}): St
     comanda: { number: '000123' },
     items: [{ id: randomUUID(), productNameSnapshot: 'Frios', unitPriceSnapshot: new Prisma.Decimal('29.99'), quantity: 2, subtotal: new Prisma.Decimal('59.98'), notes: null }],
     customerPhone: '(16) 99999-0000', requestDigest: 'd'.repeat(64), idempotencyKey: 'k'.repeat(64), trackingTokenHash: null,
+    statusHistory: [{ id: randomUUID(), fromStatus: null, toStatus: 'RECEIVED', notes: null,
+      createdAt: new Date(Date.UTC(2026, 10, 5, 12, 0, n)), changedByAdmin: null }],
     ...overrides,
   };
 }
@@ -54,12 +57,14 @@ export async function mockOpsPrisma(initial: StoredOrder[] = []) {
   let release: (() => void) | undefined;
   const gate = new Promise<void>((resolve) => { release = resolve; });
 
-  const findMany = vi.fn(async (args: { where: { status: { in: OrderStatus[] } }; orderBy: unknown; take: number }) => {
+  const findMany = vi.fn(async (args: { where?: { status: OrderStatus }; cursor?: { id: string }; skip?: number; orderBy: unknown; take: number }) => {
     if (control.listError) throw new Error('private simulated driver failure: relation "orders" at 10.0.0.5');
-    return clone(orders)
-      .filter((order) => args.where.status.in.includes(order.status))
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.orderNumber - b.orderNumber)
-      .slice(0, args.take);
+    const sorted = clone(orders)
+      .filter((order) => args.where === undefined || order.status === args.where.status)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.orderNumber - a.orderNumber);
+    const cursorIndex = args.cursor ? sorted.findIndex((order) => order.id === args.cursor?.id) : -1;
+    const start = cursorIndex >= 0 ? cursorIndex + (args.skip ?? 0) : 0;
+    return sorted.slice(start, start + args.take);
   });
 
   const transaction = vi.fn(async (callback: (tx: Prisma.TransactionClient) => Promise<unknown>, options?: { isolationLevel?: unknown }) => {
@@ -78,7 +83,14 @@ export async function mockOpsPrisma(initial: StoredOrder[] = []) {
         },
       },
       orderStatusHistory: {
-        create: async ({ data }: { data: Omit<StoredHistory, 'id'> }) => { const row = { id: randomUUID(), ...data }; draftHistory.push(row); return row; },
+        create: async ({ data }: { data: Omit<StoredHistory, 'id' | 'createdAt'> }) => {
+          const row = { id: randomUUID(), createdAt: new Date(), ...data };
+          draftHistory.push(row);
+          const order = draftOrders.find((candidate) => candidate.id === data.orderId);
+          order?.statusHistory.push({ id: row.id, fromStatus: row.fromStatus, toStatus: row.toStatus, notes: row.notes,
+            createdAt: row.createdAt, changedByAdmin: row.changedByAdminId ? { name: 'Admin Teste' } : null });
+          return row;
+        },
       },
     } as unknown as Prisma.TransactionClient;
     expect(options?.isolationLevel).toBe(Prisma.TransactionIsolationLevel.Serializable);

@@ -3,7 +3,7 @@
  * (CA sintética) e host NÃO-loopback, exercitando os mesmos gates dos wrappers reais (`prisma-run`, identidade do servidor,
  * núcleo do bootstrap). Pensado para o workflow manual `homolog-ephemeral` (.github/workflows/homolog-ephemeral.yml).
  *
- * Fluxo: identidade do servidor → 01 roles+marca → 02 banco de replay → wrapper `migrate-homolog-replay` (sete migrations ORIGINAIS)
+ * Fluxo: identidade do servidor → 01 roles+marca → 02 banco de replay → wrapper `migrate-homolog-replay` (oito migrations ORIGINAIS)
  * → histórico/ACL/ownership → 03 → 04 rename → equivalência (snapshots A×B, renomeações classificadas, matriz de privilégios,
  * `_prisma_migrations` idêntica) → wrapper final → recusas de identidade → bootstrap → login/ready → oitava migration sintética
  * (cópia temporária do backend; o repositório não é tocado) → drift → descarte total.
@@ -232,8 +232,8 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(await canLogin('cardapio_homolog_bootstrap', pw.cardapio_homolog_bootstrap!, REPLAY_DB)).toBe(false);
   });
 
-  it('3) wrapper do replay: recusa sem confirmação e com marca de cluster errada; aplica as sete migrations ORIGINAIS com a confirmação certa', async () => {
-    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'sete migrations íntegras no disco').toEqual([]);
+  it('3) wrapper do replay: recusa sem confirmação e com marca de cluster errada; aplica as oito migrations ORIGINAIS com a confirmação certa', async () => {
+    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'oito migrations íntegras no disco').toEqual([]);
     const noConfirm = wrapper(secrets, 'migrate-homolog-replay', 'deploy');
     expect(noConfirm.status).not.toBe(0);
     const wrongDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-secrets-wrong-')); temps.push(wrongDir);
@@ -435,10 +435,10 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(unknown.status, 'migration fora da lista revisada é recusada').not.toBe(0);
     expect(unknown.output).toMatch(/desconhecida/);
     await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, async (prisma) => {
-      expect((await migrationRows(prisma)).length, 'a recusa não aplicou nada').toBe(7);
+      expect((await migrationRows(prisma)).length, 'a recusa não aplicou nada').toBe(8);
     });
 
-    // Atualização REVISADA da lista (simulada somente na cópia): o repositório real continua com sete migrations.
+    // Atualização REVISADA da lista (simulada somente na cópia): o repositório real continua com oito migrations.
     const listFile = path.join(copy, 'scripts', 'bootstrap', 'expectedMigrations.ts');
     const list = fs.readFileSync(listFile, 'utf8');
     fs.writeFileSync(listFile, list.replace(/\n\];\s*$/, `\n  { name: '${name}', checksum: '${checksum}' },\n];\n`));
@@ -446,9 +446,9 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(applied.status, applied.output).toBe(0);
     await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, async (prisma) => {
       const rows = await migrationRows(prisma);
-      expect(rows).toHaveLength(8);
+      expect(rows).toHaveLength(9);
       expect(rows.find((row) => row.migration_name === name)).toMatchObject({ checksum, applied_steps_count: 1, rolled_back_at: null });
-      expect(rows.filter((row) => row.migration_name !== name), 'as sete originais permanecem idênticas').toEqual(rowsBefore);
+      expect(rows.filter((row) => row.migration_name !== name), 'as oito originais permanecem idênticas').toEqual(rowsBefore);
       const again = wrapper(secrets, 'migrate-homolog', 'deploy', FINAL_CONFIRM, copy);
       expect(again.status, again.output).toBe(0);
       expect(again.output).toMatch(/No pending migrations/);
@@ -465,6 +465,6 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     const diverged = wrapper(secrets, 'migrate-homolog', 'status', {}, copy);
     expect(diverged.status, 'checksum divergente no disco é recusado').not.toBe(0);
     expect(diverged.output).toMatch(/checksum divergente/);
-    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'o repositório real continua com as sete originais').toEqual([]);
+    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'o repositório real continua com as oito originais').toEqual([]);
   });
 });

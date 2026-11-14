@@ -17,8 +17,8 @@ import { accessBody } from './adminAuth.service';
  * Concorrência: compare-and-set (`updateMany ... WHERE id AND status = expectedStatus`) dentro de transação
  * Serializable; o histórico só é inserido quando o CAS atualizou exatamente uma linha, na mesma transação.
  */
-export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = ['RECEIVED', 'IN_PREPARATION', 'READY'];
 export const ADMIN_ORDER_LIST_LIMIT = 100;
+export const ADMIN_ORDER_DEFAULT_LIMIT = 30;
 export const ORDER_STATUS_NOTE_MAX = 300;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -26,12 +26,29 @@ type OrderOpsDb = Pick<PrismaClient, 'order' | '$transaction'>;
 type AdminAuth = ReturnType<typeof createAdminAuth>;
 
 export interface StatusUpdate { toStatus: OrderStatus; expectedStatus: OrderStatus; notes?: string }
+export interface AdminOrderQuery { status?: OrderStatus; cursor?: string; limit: number }
 
 const invalid = (message = 'Dados da requisição inválidos.') => new AppError(400, 'INVALID_INPUT', message);
 
 export function parseOrderId(raw: unknown): string {
   if (typeof raw !== 'string' || !UUID.test(raw)) throw new AppError(400, 'INVALID_ORDER_ID', 'Identificador de pedido inválido.');
   return raw.toLowerCase();
+}
+
+/** Filtros estritos e paginação por cursor; nenhuma chave desconhecida é aceita. */
+export function parseAdminOrderQuery(raw: unknown): AdminOrderQuery {
+  const query = accessBody(raw, ['status', 'cursor', 'limit']);
+  const parsed: AdminOrderQuery = { limit: ADMIN_ORDER_DEFAULT_LIMIT };
+  if (query.status !== undefined) parsed.status = asStatus(query.status);
+  if (query.cursor !== undefined) parsed.cursor = parseOrderId(query.cursor);
+  if (query.limit !== undefined) {
+    const value = Array.isArray(query.limit) ? undefined : query.limit;
+    if (typeof value !== 'string' || !/^[1-9][0-9]{0,2}$/.test(value)) throw invalid('Limite inválido.');
+    const limit = Number(value);
+    if (limit > ADMIN_ORDER_LIST_LIMIT) throw invalid(`O limite máximo é ${ADMIN_ORDER_LIST_LIMIT}.`);
+    parsed.limit = limit;
+  }
+  return parsed;
 }
 
 const asStatus = (value: unknown): OrderStatus => {
@@ -61,17 +78,22 @@ function retryable(error: unknown): boolean {
 
 export function createOrderOperations(prisma: OrderOpsDb, auth: AdminAuth) {
   return {
-    /** Pedidos ativos, mais antigos primeiro (desempate por número), no máximo `ADMIN_ORDER_LIST_LIMIT`. */
-    async listActive(token: string | undefined) {
+    /** Todos os pedidos, mais recentes primeiro, com filtro opcional e paginação por cursor. */
+    async list(rawQuery: unknown, token: string | undefined) {
       await auth.authenticate(token);
+      const query = parseAdminOrderQuery(rawQuery);
       const records = await prisma.order.findMany({
-        where: { status: { in: [...ACTIVE_ORDER_STATUSES] } }, select: adminOrderSelect,
-        orderBy: [{ createdAt: 'asc' }, { orderNumber: 'asc' }], take: ADMIN_ORDER_LIST_LIMIT + 1,
+        ...(query.status ? { where: { status: query.status } } : {}),
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+        select: adminOrderSelect,
+        orderBy: [{ createdAt: 'desc' }, { orderNumber: 'desc' }], take: query.limit + 1,
       });
-      const truncated = records.length > ADMIN_ORDER_LIST_LIMIT;
+      const hasNextPage = records.length > query.limit;
+      const page = records.slice(0, query.limit);
       return {
-        truncated,
-        orders: records.slice(0, ADMIN_ORDER_LIST_LIMIT).map((order) => mapAdminOrder(order, nextOrderStatuses(order.status))),
+        truncated: hasNextPage,
+        nextCursor: hasNextPage ? page.at(-1)?.id ?? null : null,
+        orders: page.map((order) => mapAdminOrder(order, nextOrderStatuses(order.status))),
       };
     },
 

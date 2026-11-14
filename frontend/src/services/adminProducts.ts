@@ -23,6 +23,10 @@ export interface AdminProduct {
   priceInCents: number;
   availabilityState: AvailabilityState;
   updatedAt: string;
+  description?: string;
+  ingredients?: string;
+  imageUrl?: string;
+  imageAlt?: string;
 }
 export interface AdminProductsSnapshot { products: AdminProduct[]; truncated: boolean }
 
@@ -33,6 +37,7 @@ const PRODUCT_ID = /^rustika-[0-9A-Z]{1,64}$/;
 const bad = () => new ApiError(200, 'INVALID_RESPONSE', 'A API respondeu em um formato inesperado.', null);
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown): string => { if (typeof value !== 'string') throw bad(); return value; };
+const optionalText = (value: unknown): string | undefined => value === null || value === undefined ? undefined : text(value);
 const cents = (value: unknown): number => { if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) throw bad(); return value; };
 const state = (value: unknown): AvailabilityState => { if (typeof value !== 'string' || !STATES.includes(value as AvailabilityState)) throw bad(); return value as AvailabilityState; };
 
@@ -43,6 +48,31 @@ export function parseAdminProduct(value: unknown): AdminProduct {
   return {
     id, sourceCode: text(value.sourceCode), name: text(value.name), categoryId: text(value.categoryId), categoryName: text(value.categoryName),
     priceInCents: cents(value.priceInCents), availabilityState: state(value.availabilityState), updatedAt: text(value.updatedAt),
+    description: optionalText(value.description), ingredients: optionalText(value.ingredients),
+    imageUrl: optionalText(value.imageUrl), imageAlt: optionalText(value.imageAlt),
+  };
+}
+
+export interface ProductCrudResult {
+  id: string;
+  publicKey: string;
+  sourceCode: string;
+  sourceName: string;
+  sourceGroup: string;
+  name: string;
+  priceInCents: number;
+  categoryId: string;
+  categoryName: string;
+}
+
+function parseProductCrudResult(value: unknown): ProductCrudResult {
+  if (!isRecord(value)) throw bad();
+  const publicKey = text(value.publicKey);
+  if (!PRODUCT_ID.test(publicKey)) throw bad();
+  return {
+    id: text(value.id), publicKey, sourceCode: text(value.sourceCode), sourceName: text(value.sourceName),
+    sourceGroup: text(value.sourceGroup), name: text(value.name), priceInCents: cents(value.priceInCents),
+    categoryId: text(value.categoryId), categoryName: text(value.categoryName),
   };
 }
 
@@ -53,7 +83,9 @@ export function parseProductsSnapshot(value: unknown): AdminProductsSnapshot {
 
 interface AdminProductsTransport {
   getWithAuth<T>(path: string, signal?: AbortSignal): Promise<T>;
+  post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T>;
   patch<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T>;
+  httpDelete<T>(path: string, signal?: AbortSignal): Promise<T>;
 }
 
 export function createAdminProductsClient(transport: AdminProductsTransport) {
@@ -61,12 +93,54 @@ export function createAdminProductsClient(transport: AdminProductsTransport) {
     async list(signal?: AbortSignal): Promise<AdminProductsSnapshot> {
       return parseProductsSnapshot(await transport.getWithAuth<unknown>('/admin/products', signal));
     },
+    async create(body: {
+      name: string;
+      description?: string;
+      ingredients?: string;
+      priceInCents: number;
+      categoryId: string;
+      imageUrl?: string;
+      imageAlt?: string;
+    }, signal?: AbortSignal): Promise<ProductCrudResult> {
+      if (body.priceInCents < 1 || body.priceInCents > 99_999_999) throw new ApiError(0, 'INVALID_PRICE', 'Preço em centavos deve estar entre 1 e 99.999.999.', null);
+
+      const data = await transport.post<unknown>('/admin/products', body, signal);
+      return parseProductCrudResult(data);
+    },
     async updateAvailability(productId: string, change: { expectedState: AvailabilityState; toState: SettableAvailability }, signal?: AbortSignal): Promise<AdminProduct> {
       if (!PRODUCT_ID.test(productId)) throw new ApiError(0, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.', null);
       const body = { expectedState: change.expectedState, toState: change.toState };
       const data = await transport.patch<unknown>(`/admin/products/${productId}/availability`, body, signal);
       if (!isRecord(data)) throw bad();
       return parseAdminProduct(data.product);
+    },
+    async update(productId: string, body: {
+      name?: string;
+      description?: string;
+      ingredients?: string;
+      priceInCents?: number;
+      categoryId?: string;
+      imageUrl?: string;
+      imageAlt?: string;
+    }, signal?: AbortSignal): Promise<ProductCrudResult> {
+      if (!PRODUCT_ID.test(productId)) throw new ApiError(0, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.', null);
+      if (body.priceInCents !== undefined && (body.priceInCents < 1 || body.priceInCents > 99_999_999)) {
+        throw new ApiError(0, 'INVALID_PRICE', 'Preço em centavos deve estar entre 1 e 99.999.999.', null);
+      }
+      const data = await transport.patch<unknown>(`/admin/products/${productId}`, body, signal);
+      return parseProductCrudResult(data);
+    },
+    async httpDelete(productId: string, signal?: AbortSignal): Promise<{ deleted: boolean; reason?: string; message?: string }> {
+      if (!PRODUCT_ID.test(productId)) throw new ApiError(0, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.', null);
+      const data = await transport.httpDelete<unknown>(`/admin/products/${productId}`, signal);
+      if (!isRecord(data) || typeof data.deleted !== 'boolean' ||
+          (data.reason !== undefined && typeof data.reason !== 'string') ||
+          (data.message !== undefined && typeof data.message !== 'string')) throw bad();
+      return {
+        deleted: data.deleted,
+        ...(typeof data.reason === 'string' ? { reason: data.reason } : {}),
+        ...(typeof data.message === 'string' ? { message: data.message } : {}),
+      };
     },
   };
 }

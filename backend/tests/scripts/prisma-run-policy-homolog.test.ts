@@ -4,8 +4,8 @@ import {
   HOMOLOG_DEPLOY_CONFIRMATION_ENV, HOMOLOG_DEPLOY_CONFIRMATION_VALUE, parsePrismaInvocation, REPLAY_CONFIRMATION_ENV, REPLAY_CONFIRMATION_VALUE,
 } from '../../scripts/prisma-run-policy';
 
-const homologDb = { profile: 'migrate-homolog', purpose: 'migration' as const, database: 'cardapio_digital_homolog', environment: 'homolog' as const };
-const replayDb = { profile: 'migrate-homolog-replay', purpose: 'migration' as const, database: 'cardapio_digital_test', environment: 'homolog-replay' as const };
+const homologDb = { profile: 'migrate-homolog', purpose: 'migration' as const, database: 'cardapio_digital_homolog', user: 'cardapio_homolog_migrator', environment: 'homolog' as const };
+const replayDb = { profile: 'migrate-homolog-replay', purpose: 'migration' as const, database: 'cardapio_digital_test', user: 'cardapio_migrator', environment: 'homolog-replay' as const };
 const inv = (profile: string, sub: string) => { const r = parsePrismaInvocation([profile, 'migrate', sub]); if (!r.ok) throw new Error(r.error); return r.value; };
 const HOMOLOG_OK = { [HOMOLOG_DEPLOY_CONFIRMATION_ENV]: HOMOLOG_DEPLOY_CONFIRMATION_VALUE };
 const REPLAY_OK = { [REPLAY_CONFIRMATION_ENV]: REPLAY_CONFIRMATION_VALUE };
@@ -54,6 +54,6 @@ describe('política Prisma da homologação (3D.5.2-A)', () => {
   it('o perfil de migração local não pode ser autorizado como homologação nem o contrário', () => {
     expect(authorizePrismaInvocation(inv('migrate-test', 'status'), homologDb, {}).ok).toBe(false);
     expect(authorizePrismaInvocation(inv('migrate-test', 'status'), replayDb, {}).ok).toBe(false);
-    expect(authorizePrismaInvocation(inv('migrate-homolog', 'status'), { profile: 'migrate-test', purpose: 'migration', database: 'cardapio_digital_test' }, {}).ok).toBe(false);
+    expect(authorizePrismaInvocation(inv('migrate-homolog', 'status'), { profile: 'migrate-test', purpose: 'migration', database: 'cardapio_digital_test', user: 'cardapio_migrator' }, {}).ok).toBe(false);
   });
 });

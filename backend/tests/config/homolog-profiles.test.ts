@@ -42,7 +42,9 @@ describe('identidade de homologação (3D.5.2-A)', () => {
   it('o mapa versionado: três perfis definitivos em cardapio_digital_homolog + um replay transitório, nenhum perfil local marcado', () => {
     const profiles = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'config', 'database-profiles.json'), 'utf8')) as Record<string, { environment?: string; database: string; user: string; purpose: string }>;
     const marked = Object.keys(profiles).filter((name) => profiles[name]!.environment !== undefined).sort();
-    expect(marked).toEqual(['app-homolog', 'bootstrap-homolog', 'migrate-homolog', 'migrate-homolog-replay']);
+    // 3D.5.3-C.5: app-homolog-neon somou-se à lista (mesmo banco/role de app-homolog; só muda o provedor e a verificação de identidade).
+    expect(marked).toEqual(['app-homolog', 'app-homolog-neon', 'bootstrap-homolog', 'migrate-homolog', 'migrate-homolog-replay']);
+    expect(profiles['app-homolog-neon']).toMatchObject({ environment: 'homolog-neon', purpose: 'runtime', database: DEF, user: HOMOLOG_ROLES.runtime });
     for (const name of ['app-homolog', 'bootstrap-homolog', 'migrate-homolog']) {
       expect(profiles[name]!.environment).toBe('homolog');
       expect(profiles[name]!.database).toBe(DEF);
