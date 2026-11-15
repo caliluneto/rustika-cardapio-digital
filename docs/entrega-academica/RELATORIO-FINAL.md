@@ -105,7 +105,7 @@ mudou para `CANCELLED`. Nenhuma restauração foi executada. O registro técnico
 ### 2.7 Testes automatizados e segurança
 
 Resultados comprovados em 14/11/2026, no snapshot de publicação: backend **1.237 testes aprovados, 9 ignorados**, 70
-arquivos aprovados e 1 ignorado, exit 0 (`npm test`); frontend **174/174**, exit 0; typecheck e build aprovados em
+arquivos aprovados e 1 ignorado, exit 0 (`npm run test:ci`); frontend **174/174**, exit 0; typecheck e build aprovados em
 backend e frontend. O E2E real em runner efêmero do GitHub Actions está registrado em
 `backend/docs/github-actions-e2e.md`; o E2E local não foi executado nesta sprint. Em 14/11/2026 foram executados 77
 testes direcionados de RF006. A auditoria de segredos terminou com **`POLICY_OK`, exit 0, 7 segredos conformes**,
