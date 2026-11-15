@@ -76,6 +76,28 @@ O CRUD de produtos foi validado no Dev com PostgreSQL real:
 Para repetir a validação, usar um produto fictício novo e repetir os passos 3–5 pelo painel, sem `db push`, reset
 ou SQL avulso.
 
+## Validação final em 14/11/2026
+
+- **Serviços**: `/api/health`, `/api/ready`, `/api/products`, `/api/openapi.json`, `/api/docs` e o frontend
+  responderam HTTP 200 no snapshot de publicação.
+- **Testes**: backend **1.237 aprovados / 9 ignorados** (70 arquivos aprovados, 1 ignorado, exit 0); frontend
+  **174/174**, exit 0. Typecheck e build aprovados em backend e frontend.
+- **RF004**: pedido **#5** na comanda `000126`, cliente `Cliente RF008`, `TESTE_RF004_PEDIDO` ×1, total R$ 1,00,
+  `DELIVERED`, quatro entradas de histórico. Os pedidos #1–#4 foram preservados.
+- **RF007**: a lista administrativa atualizou sozinha, com carimbo de horário; o filtro por `ENTREGUE` foi capturado
+  em `evidencias/rf007-01-filtro-entregue.png`.
+- **RF008**: as quatro transições foram observadas na janela do cliente, sem F5, com a URL fixa em
+  `http://localhost:5173/`. A captura final e o registro de horários estão em
+  `evidencias/rf008-01-tracking-final.png` e `evidencias/README-RF008.md`. As capturas intermediárias não
+  enquadraram o componente e não são usadas como prova de estado.
+- **Produto fictício**: `TESTE_RF004_PEDIDO` está `UNAVAILABLE`; o catálogo público não o exibe e o detalhe retorna
+  `isAvailable: false`. Nome, preço, categoria, `sourceCode`/`publicKey` e vínculos foram preservados.
+- **Segurança**: `secrets:audit` terminou em `POLICY_OK`, exit 0, 7 segredos conformes, fora do repositório e do
+  OneDrive.
+- **OpenAPI**: `/api/openapi.json` serve OpenAPI 3.1; `/api/docs` é um índice HTML próprio que consome o contrato,
+  **não o Swagger UI clássico**. Se a rubrica exigir Swagger UI, registrar a adaptação.
+- **Não executados**: migrations, acesso ao Neon, deploy público e novo pedido para regravar o RF008.
+
 Contrato REST mínimo:
 
 | Operação | Rota | Resultado esperado |

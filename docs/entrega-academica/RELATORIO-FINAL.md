@@ -25,12 +25,14 @@ revisão e acompanhamento automático do próprio pedido. O backend foi constru�
 e o frontend em React e Vite. A segurança faz parte do recorte: cookies HttpOnly, validação estrita, origem permitida,
 cabeçalho anti-CSRF, limites de taxa, idempotência e privilégios de banco reduzidos. A validação funcional foi concluída em **14/11/2026** no ambiente Dev (`cardapio_digital_dev`, PostgreSQL 18.6, com
 **9/9 migrations aplicadas**). O RF006 foi exercitado com criação, edição e exclusão reais de um produto fictício; o
-RF004 gerou o pedido #2 na comanda `000123`; o RF007 percorreu os quatro estados com histórico atômico; e o RF009
-respondeu em `/api/openapi.json` e `/api/docs`. A sequência do RF008 foi confirmada no banco, mas a atualização
-automática no navegador ainda depende de confirmação visual. O ambiente Neon não foi acessado. O pedido histórico #1
-foi cancelado acidentalmente durante os testes e seu estado foi preservado, sem reescrever o histórico; o incidente está
+RF004 gerou o pedido **#5** na comanda `000126`, após convite emitido pelo painel e resgatado na janela do cliente; o
+RF007 teve lista atualizada por polling e filtro por status capturado; o RF008 percorreu os quatro estados na tela do
+cliente **sem recarregar a página**; e o RF009 respondeu em `/api/openapi.json` e `/api/docs`. O produto fictício foi
+marcado `UNAVAILABLE` pelo painel e deixou o catálogo público. A suíte final registrou **1.237 testes aprovados e 9
+ignorados** no backend e **174/174** no frontend, com typecheck e builds aprovados. O ambiente Neon não foi acessado.
+Os pedidos #1–#4 foram preservados; o #1 foi cancelado acidentalmente em rodada anterior e seu estado permanece
 registrado em `backend/docs/incidente-pedido-1-dev.md`. O documento distingue o que foi efetivamente demonstrado do
-que ainda depende de evidência visual, materiais humanos e publicação autorizada.
+que ainda depende de materiais humanos, gravação e publicação autorizada.
 
 ## 2. Resultado do desenvolvimento
 
@@ -54,39 +56,61 @@ banco. O banco ficou com 169 produtos — 168 reais mais o fictício `TESTE_RF00
 alterado. A correção de schema que fez o Prisma omitir
 `is_available` e `created_at` no `INSERT` manteve os privilégios mínimos da role de runtime.
 
-### 2.3 RF004, RF005, RF007 e RF009 — jornada real
+### 2.3 RF004, RF005, RF007, RF008 e RF009 — jornada real
 
-- **RF004**: pedido #2 criado na comanda `000123`, cliente `Cliente RF004`, item `TESTE_RF004_PEDIDO` ×1, total R$ 1,00
-  confirmado pelo servidor e snapshots persistidos.
-- **RF005**: login administrativo e rotas protegidas usados em todas as escritas reais (CRUD e transições).
-- **RF007**: o pedido #2 percorreu `RECEIVED → IN_PREPARATION → READY → DELIVERED`, com quatro entradas de histórico
-  atômicas e listagem por polling no painel.
-- **RF009**: `GET /api/openapi.json` 200 (25.920 bytes) e `GET /api/docs` 200.
-- **RF001–RF003**: catálogo, detalhes e carrinho foram usados na própria jornada que originou o pedido #2.
+- **RF004**: pedido **#5** criado na comanda `000126`, cliente `Cliente RF008`, item `TESTE_RF004_PEDIDO` ×1, total
+  R$ 1,00 confirmado pelo servidor e snapshots persistidos. O pedido #2 (comanda `000123`) foi preservado.
+- **RF005**: login administrativo e rotas protegidas usados na emissão do convite, nas três transições de status e na
+  mudança de disponibilidade do produto.
+- **RF007**: a lista administrativa atualizou sozinha, com carimbo “Atualizado às …”; o pedido #5 apareceu sem
+  recarga manual. O filtro por `ENTREGUE` foi aplicado e capturado em
+  `evidencias/rf007-01-filtro-entregue.png`.
+- **RF008**: o pedido #5 percorreu `RECEIVED → IN_PREPARATION → READY → DELIVERED` na janela do cliente, com polling
+  de 5 segundos, sem F5 e com a URL fixa em `http://localhost:5173/`. O histórico visível contém as quatro entradas.
+- **RF009**: `GET /api/openapi.json` 200 (OpenAPI 3.1, 25.920 bytes) e `GET /api/docs` 200. A página `/api/docs` é um
+  índice HTML próprio que consome o contrato, não o Swagger UI clássico.
+- **RF001–RF003**: catálogo, modal de detalhes e carrinho foram usados na própria jornada que originou o pedido #5.
 
-### 2.4 RF008 e limites da validação
+### 2.4 RF008 — acompanhamento automático
 
-A sequência de status do pedido #2 foi confirmada no banco. A atualização automática da tela do cliente (polling de
-5 segundos) **ainda depende de confirmação visual do usuário** e não é declarada aprovada. O filtro por status e o
-aviso de novo pedido (RF007) também precisam de evidência visual. O modal de detalhes do produto (RF002) não foi
-conferido nesta rodada.
+O pedido #5 foi criado às **20:38:03** (horário local; `23:38:03Z`) e passou para `IN_PREPARATION` às **20:38:54**,
+`READY` às **20:38:59** e `DELIVERED` às **20:39:04**. Em cada transição, o DOM da janela CLIENTE foi lido com o
+componente `#order-tracking-title` montado, `location.href` inalterado e o texto “Status atual” atualizado; não houve
+F5, remontagem do React ou edição manual do DOM. As transições foram feitas exclusivamente pelo painel administrativo,
+com confirmação.
 
-### 2.5 Incidente operacional
+A captura `evidencias/rf008-01-tracking-final.png` mostra o estado final e o histórico completo; a captura
+`evidencias/rf008-02-admin-delivered.png` mostra o painel com o #5 entregue. O registro detalhado está em
+`evidencias/README-RF008.md`. **Limitação**: as capturas intermediárias foram feitas com a página no topo do catálogo
+e não enquadraram o componente; o registro de DOM comprova os horários, mas não há quatro imagens enquadradas dos
+estados. Reexecutar a sequência exigiria um novo pedido, não autorizado nesta etapa. O estado do acompanhamento vive
+em memória: após F5 ou desmontagem da página, ele é perdido, comportamento já documentado e fora do escopo desta
+entrega corrigir com persistência nova.
+
+### 2.5 Encerramento dos dados demonstrativos
+
+O produto `TESTE_RF004_PEDIDO` foi marcado `UNAVAILABLE` pelo fluxo administrativo, sem excluir o registro e sem
+alterar nome, preço, categoria, `sourceCode` ou `publicKey`. O catálogo público passou a não exibi-lo; o detalhe
+retorna `isAvailable: false`. Permanecem 169 produtos no banco (168 reais + 1 fictício), e o catálogo público é
+paginado. Os pedidos #1–#5 e seus históricos foram preservados: #1 `CANCELLED`, #2–#5 `DELIVERED`. Nenhum SQL de
+escrita foi usado para status ou disponibilidade.
+
+### 2.6 Incidente operacional
 
 O pedido histórico #1 (comanda `5`, total R$ 7,00, item `ÁGUA SEM GÁS`) foi cancelado acidentalmente às 16:02:30 UTC de
 14/11/2026, antes da criação do pedido #2. Itens, valores e histórico original permanecem íntegros; apenas o status
 mudou para `CANCELLED`. Nenhuma restauração foi executada. O registro técnico está em
 `backend/docs/incidente-pedido-1-dev.md`.
 
-### 2.6 Testes automatizados e segurança
+### 2.7 Testes automatizados e segurança
 
-Resultados comprovados em 14/11/2026, no snapshot de publicação: backend 1.238 testes aprovados, 8 ignorados, 0
-falhas (`npm run test:ci`), typecheck e build aprovados. Frontend: 174/174 aprovados (reaproveitado da última
-execução; nenhum arquivo relevante mudou), typecheck e build aprovados. O E2E real em runner efêmero do GitHub Actions está registrado em
+Resultados comprovados em 14/11/2026, no snapshot de publicação: backend **1.237 testes aprovados, 9 ignorados**, 70
+arquivos aprovados e 1 ignorado, exit 0 (`npm test`); frontend **174/174**, exit 0; typecheck e build aprovados em
+backend e frontend. O E2E real em runner efêmero do GitHub Actions está registrado em
 `backend/docs/github-actions-e2e.md`; o E2E local não foi executado nesta sprint. Em 14/11/2026 foram executados 77
-testes direcionados de RF006. A auditoria de segredos continua com
-`FAIL` para as senhas locais fracas/reutilizadas: a rotação é obrigatória antes de publicação. Nenhuma credencial real
-foi encontrada em arquivo rastreado nem no histórico de `main`.
+testes direcionados de RF006. A auditoria de segredos terminou com **`POLICY_OK`, exit 0, 7 segredos conformes**,
+fora do repositório e do OneDrive. Nenhuma credencial real foi encontrada em arquivo rastreado nem no histórico de
+`main`.
 
 ## 3. Termo de consentimento
 
@@ -105,9 +129,9 @@ Assinatura: ________________________________________
 
 ## 4. Links da entrega
 
-- Repositório GitHub: `https://github.com/caliluneto/rustika-cardapio-digital` — URL configurada como `origin` no
-  snapshot de publicação em `%USERPROFILE%\RustikaPublish\cardapio-digital-snapshot` (branch `main`). O checkout
-  original de desenvolvimento **não** possui remote. **PENDENTE: confirmar acesso, visibilidade e link final.**
+- Repositório GitHub: `https://github.com/caliluneto/rustika-cardapio-digital` — branch `main`, commit
+  `7b487c3` publicado (99 arquivos). Visibilidade **privada**, não alterada; o acesso do avaliador depende de
+  autorização para tornar o repositório público ou conceder acesso individual. **PENDENTE: definir a forma de acesso.**
 - Vídeo demonstrativo: **[PENDENTE — inserir link após gravação e upload autorizados]**.
 
 ## 5. Foto do cardápio físico
@@ -134,30 +158,39 @@ Data: __________________________________  Assinatura: __________________________
 
 O que ainda impede declarar a entrega completa, sem omitir pendências reais:
 
-**Validação funcional**
+**Validação funcional — ressalvas**
 
-- **RF008**: confirmar, no navegador e sem recarregar, que a tela do cliente reflete a mudança de status. A sequência
-  já está comprovada no banco; a evidência visual ainda é do usuário.
-- **RF007**: evidenciar o filtro por status e o aviso de novo pedido no painel (o restante já foi exercitado).
-- **RF002**: conferir o modal de detalhes e as fotos reais antes da gravação.
+- **RF008**: aprovado com ressalva de evidência. As quatro transições foram observadas na janela do cliente sem F5,
+  com URL fixa e histórico completo; a captura final está em `evidencias/rf008-01-tracking-final.png` e o registro de
+  horários em `evidencias/README-RF008.md`. As capturas intermediárias não enquadraram o componente e não são usadas
+  como prova de estado. Reexecutar a sequência exigiria um novo pedido, não autorizado nesta etapa.
+- **RF007**: aprovado. O filtro por `ENTREGUE` está em `evidencias/rf007-01-filtro-entregue.png` e a lista atualizou
+  sozinha com carimbo de horário. O painel não possui alerta destacado de “novo pedido”; se a rubrica exigir toast,
+  registrar adaptação.
+- **RF002**: o modal foi aberto e usado na jornada do #5, com descrição, ingredientes e preço; não há captura dedicada.
+  O produto está `UNAVAILABLE` desde o encerramento.
+- **RF009**: o contrato OpenAPI 3.1 responde em `/api/openapi.json` e a página `/api/docs` é um índice HTML próprio,
+  não o Swagger UI clássico. Se a rubrica exigir Swagger UI, registrar adaptação.
 
 **Materiais humanos**
 
 - Nomes completos e códigos acadêmicos dos integrantes; docente responsável.
 - Termo de consentimento e questionário do proprietário preenchidos, assinados e conferidos com o modelo oficial.
 - Foto autorizada do cardápio físico.
-- Vídeo MP4 de até cinco minutos e link público com acesso testado.
-- URL definitiva do repositório GitHub e branch; o checkout original está em `main`, **sem remote configurado**, e o
-  snapshot de publicação usa `origin` = `https://github.com/caliluneto/rustika-cardapio-digital.git`.
+- Vídeo MP4 de até cinco minutos e link público com acesso testado. **PENDENTE.** A sequência dinâmica do RF008 já
+  foi executada no pedido #5; refazê-la exigiria um novo pedido. O vídeo deve usar as capturas reais com rótulo
+  “captura real de 14/11/2026” ou obter nova autorização, sem simular atualização ao vivo.
+- Repositório em `https://github.com/caliluneto/rustika-cardapio-digital` (branch `main`, commit de referência
+  `7b487c3` e commits desta rodada), com visibilidade **privada**; falta definir como o avaliador terá acesso.
 
 **Publicação segura**
 
-- Rotacionar as senhas locais reprovadas por `secrets:audit` (`cardapio_dev_app`, `cardapio_test_app`,
-  `cardapio_migrator`, `cardapio_test_fixtures`), conforme `backend/docs/secrets-rotation.md`, e repetir a auditoria
-  até não haver `FAIL`.
-- Selecionar os arquivos do commit por inventário; nunca `git add .`. Excluir `.env`, dumps, logs, dados reais de
-  catálogo e scripts locais com credenciais.
-- Commit, push, publicação do repositório e deploy dependem de autorização explícita e não foram executados.
+- Senhas locais rotacionadas (4/4) e auditoria repetida: `secrets:audit` = `POLICY_OK`, exit 0, 7 segredos
+  conformes. Nenhum segredo real entrou nos commits.
+- Commits seletivos, por inventário; `.env`, dumps, logs, `_not-for-publication/`, scripts locais com credenciais e
+  artefatos privados ficaram fora. Os caminhos locais não publicados permanecem apenas na máquina.
+- Push exclusivamente para `main`, sem force, sem deploy e sem alterar a visibilidade do repositório. O hash final
+  desta rodada é registrado no relatório de conclusão.
 
 **Backup e ambientes**
 
