@@ -27,9 +27,10 @@ cabeçalho anti-CSRF, limites de taxa, idempotência e privilégios de banco red
 **9/9 migrations aplicadas**). O RF006 foi exercitado com criação, edição e exclusão reais de um produto fictício; o
 RF004 gerou o pedido **#5** na comanda `000126`, após convite emitido pelo painel e resgatado na janela do cliente; o
 RF007 teve lista atualizada por polling e filtro por status capturado; o RF008 percorreu os quatro estados na tela do
-cliente **sem recarregar a página**; e o RF009 respondeu em `/api/openapi.json` e `/api/docs`. O produto fictício foi
-marcado `UNAVAILABLE` pelo painel e deixou o catálogo público. A suíte final registrou **1.237 testes aprovados e 9
-ignorados** no backend e **174/174** no frontend, com typecheck e builds aprovados. O ambiente Neon não foi acessado.
+cliente **sem recarregar a página**; e o RF009 respondeu em `/api/openapi.json` e no Swagger UI em `/api/docs`. O produto
+fictício foi marcado `UNAVAILABLE` pelo painel e deixou o catálogo público. A suíte final registrou **1.237 testes
+aprovados e 9 ignorados** no backend e **174/174** no frontend, com typecheck e builds aprovados; após as correções da
+auditoria de 15/11/2026, a mesma suíte passou com **1.239/9** e **176/176**. O ambiente Neon não foi acessado.
 Os pedidos #1–#4 foram preservados; o #1 foi cancelado acidentalmente em rodada anterior e seu estado permanece
 registrado em `backend/docs/incidente-pedido-1-dev.md`. O documento distingue o que foi efetivamente demonstrado do
 que ainda depende de materiais humanos, gravação e publicação autorizada.
@@ -67,8 +68,9 @@ alterado. A correção de schema que fez o Prisma omitir
   `evidencias/rf007-01-filtro-entregue.png`.
 - **RF008**: o pedido #5 percorreu `RECEIVED → IN_PREPARATION → READY → DELIVERED` na janela do cliente, com polling
   de 5 segundos, sem F5 e com a URL fixa em `http://localhost:5173/`. O histórico visível contém as quatro entradas.
-- **RF009**: `GET /api/openapi.json` 200 (OpenAPI 3.1, 25.920 bytes) e `GET /api/docs` 200. A página `/api/docs` é um
-  índice HTML próprio que consome o contrato, não o Swagger UI clássico.
+- **RF009**: `GET /api/openapi.json` 200 (OpenAPI 3.1) e `GET /api/docs` 200. Em 15/11/2026 o índice HTML próprio foi
+  substituído por **Swagger UI 5.17.14**, com assets servidos localmente, sem CDN e sob CSP restritiva; a página lista as
+  18 operações e oferece “Try it out”/“Execute”.
 - **RF001–RF003**: catálogo, modal de detalhes e carrinho foram usados na própria jornada que originou o pedido #5.
 
 ### 2.4 RF008 — acompanhamento automático
@@ -111,6 +113,19 @@ backend e frontend. O E2E real em runner efêmero do GitHub Actions está regist
 testes direcionados de RF006. A auditoria de segredos terminou com **`POLICY_OK`, exit 0, 7 segredos conformes**,
 fora do repositório e do OneDrive. Nenhuma credencial real foi encontrada em arquivo rastreado nem no histórico de
 `main`.
+
+### 2.8 Correções da auditoria de 15/11/2026
+
+A auditoria de conformidade com a rubrica corrigiu três divergências comprovadas, sem alterar banco, migrations ou dados:
+o RF009 passou a usar **Swagger UI** com assets locais; o RF007 ganhou **notificação visual de novos pedidos**
+independente do filtro, com primeira carga silenciosa; e o RF008 teve a cobertura de teste ampliada para exigir o nome do
+administrador (`actorName`) em cada transição. O contrato OpenAPI recebeu exemplos de produto, criação de pedido, criação
+de produto e erro. A suíte passou com **1.239 testes aprovados e 9 ignorados** no backend, **176/176** no frontend,
+typecheck e builds aprovados; o Swagger UI foi validado em navegador real com 18 operações e zero erros de CSP.
+
+A inspeção RF001/RF002 foi refeita no Dev local apenas com `SELECT`, em transação `READ ONLY`: os **144 produtos reais
+públicos** têm nome, preço e disponibilidade, mas nenhum possui descrição, ingredientes ou imagem. Não existe, portanto,
+produto real suficiente para demonstrar RF002 completo. Nenhum dado comercial foi inventado ou alterado.
 
 ## 3. Termo de consentimento
 
@@ -167,13 +182,14 @@ O que ainda impede declarar a entrega completa, sem omitir pendências reais:
   com URL fixa e histórico completo; a captura final está em `evidencias/rf008-01-tracking-final.png` e o registro de
   horários em `evidencias/README-RF008.md`. As capturas intermediárias não enquadraram o componente e não são usadas
   como prova de estado. Reexecutar a sequência exigiria um novo pedido, não autorizado nesta etapa.
-- **RF007**: aprovado. O filtro por `ENTREGUE` está em `evidencias/rf007-01-filtro-entregue.png` e a lista atualizou
-  sozinha com carimbo de horário. O painel não possui alerta destacado de “novo pedido”; se a rubrica exigir toast,
-  registrar adaptação.
+- **RF007**: aprovado após correção. O filtro por `ENTREGUE` está em `evidencias/rf007-01-filtro-entregue.png` e a lista
+  atualizou sozinha com carimbo de horário. Em 15/11/2026 foi acrescentado um alerta visual (`role="alert"`) para novos
+  pedidos, alimentado por um polling independente do filtro, com linha de base silenciosa e aviso único por pedido.
 - **RF002**: o modal foi aberto e usado na jornada do #5, com descrição, ingredientes e preço; não há captura dedicada.
   O produto está `UNAVAILABLE` desde o encerramento.
-- **RF009**: o contrato OpenAPI 3.1 responde em `/api/openapi.json` e a página `/api/docs` é um índice HTML próprio,
-  não o Swagger UI clássico. Se a rubrica exigir Swagger UI, registrar adaptação.
+- **RF009**: o contrato OpenAPI 3.1 responde em `/api/openapi.json` e a página `/api/docs` entrega **Swagger UI** desde
+  15/11/2026, com 18 operações, exemplos e teste interativo. A captura real está em
+  `evidencias/rf009-02-swagger-ui.png`.
 
 **Materiais humanos**
 

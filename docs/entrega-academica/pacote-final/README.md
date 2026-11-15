@@ -17,8 +17,8 @@ Este pacote organiza a entrega acadêmica sem alterar código, banco, pedidos, p
 | Pedido #5 | `DELIVERED`, comanda `000126`, histórico com 4 entradas |
 | Pedidos #1–#4 | Preservados; #1 `CANCELLED`; #2–#4 `DELIVERED` |
 | Produto `TESTE_RF004_PEDIDO` | `UNAVAILABLE`, fora do catálogo público |
-| Testes backend | 1.237 aprovados / 9 ignorados |
-| Testes frontend | 174/174 |
+| Testes backend | 1.239 aprovados / 9 ignorados |
+| Testes frontend | 176/176 |
 | Typecheck e builds | Aprovados |
 | Documentação | Atualizada em `docs/entrega-academica/` |
 | GitHub | `origin/main` sincronizado; repositório privado |
@@ -53,9 +53,9 @@ A lista detalhada está em [`CHECKLIST-FINAL.md`](CHECKLIST-FINAL.md) e [`DADOS-
 
 ## Evidências e limitações
 
-- **RF007:** [`../evidencias/rf007-01-filtro-entregue.png`](../evidencias/rf007-01-filtro-entregue.png) mostra o filtro `ENTREGUE` e a lista; o polling foi observado com carimbo de atualização. O painel não possui toast destacado de “novo pedido”.
+- **RF007:** [`../evidencias/rf007-01-filtro-entregue.png`](../evidencias/rf007-01-filtro-entregue.png) mostra o filtro `ENTREGUE` e a lista; o polling foi observado com carimbo de atualização. Em 15/11/2026 foi acrescentado um alerta visual (`role="alert"`) para novos pedidos, independente do filtro; a captura do alerta exigiria um pedido novo real.
 - **RF008:** [`../evidencias/rf008-01-tracking-final.png`](../evidencias/rf008-01-tracking-final.png) mostra o estado final e o histórico; [`../evidencias/README-RF008.md`](../evidencias/README-RF008.md) registra os horários. As capturas intermediárias não enquadraram o componente e estão em `evidencias/nao-utilizadas/`. Não há novo pedido autorizado para regravar a sequência.
-- **RF009:** [`../evidencias/rf009-01-docs.png`](../evidencias/rf009-01-docs.png) mostra o índice `/api/docs`. Ele consome o OpenAPI 3.1, mas **não é o Swagger UI clássico**.
+- **RF009:** [`../evidencias/rf009-02-swagger-ui.png`](../evidencias/rf009-02-swagger-ui.png) mostra o **Swagger UI** servido em `/api/docs`, com 18 operações, exemplos e teste interativo. [`rf009-01-docs.png`](../evidencias/rf009-01-docs.png) permanece como registro histórico do índice anterior.
 
 ## Segurança
 

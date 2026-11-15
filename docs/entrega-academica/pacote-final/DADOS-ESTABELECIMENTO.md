@@ -63,7 +63,7 @@ fictícias, rubricas simuladas ou datas inventadas.
 - [ ] Forma de acesso do avaliador ao repositório: tornar público ou conceder acesso nominal. **Não alterar a
       visibilidade sem autorização específica.**
 - [ ] Formato final do relatório: PDF, DOCX ou ambos, conforme a rubrica.
-- [ ] Necessidade de Swagger UI clássico ou aceitação do índice `/api/docs`.
+- [ ] Necessidade de nova captura do alerta de novo pedido no RF007; exigiria um pedido real autorizado.
 - [ ] Necessidade de nova captura do modal do RF002 e de novas capturas intermediárias do RF008. Qualquer nova
       captura do RF008 exige um novo pedido autorizado.
 - [ ] Necessidade de prova de restauração do backup e de execução de integração/E2E no banco de teste.

@@ -91,7 +91,8 @@ Não incluir token, senha, cookie ou convite de repositório no arquivo.
 | `rf007-01-filtro-entregue.png` | filtro `ENTREGUE` e lista de pedidos | “Captura real de 14/11/2026” |
 | `rf008-01-tracking-final.png` | estado final `Entregue` e histórico do #5 | “Captura real de 14/11/2026; transições observadas sem F5” |
 | `rf008-02-admin-delivered.png` | painel com o #5 entregue | “Captura real de 14/11/2026” |
-| `rf009-01-docs.png` | índice `/api/docs` | “Índice próprio sobre OpenAPI 3.1, não Swagger UI” |
+| `rf009-01-docs.png` | índice `/api/docs` anterior | “Registro histórico; substituído pelo Swagger UI em 15/11/2026” |
+| `rf009-02-swagger-ui.png` | Swagger UI em `/api/docs` | “Swagger UI real com 18 operações e teste interativo” |
 | `nao-utilizadas/*.png` | capturas fora de enquadramento | Não usar como prova; identificar como descartadas |
 
 ## 5. Checklist de empacotamento

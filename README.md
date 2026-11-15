@@ -51,7 +51,7 @@ frontend/
 | Administração | Transições de status com compare-and-set e histórico atômico | IMPLEMENTADO, VALIDADO no Dev (`RECEIVED → IN_PREPARATION → READY → DELIVERED`) |
 | Administração | Disponibilidade e CRUD de produtos; exclusão bloqueada quando há item de pedido referenciando o produto | IMPLEMENTADO, VALIDADO no Dev com criar, editar e excluir reais |
 | Cliente | Acompanhamento automático do próprio pedido, autenticado pela sessão de comanda | IMPLEMENTADO, VALIDADO no Dev; quatro transições observadas na janela do cliente sem recarregar (evidência em `docs/entrega-academica/evidencias/`) |
-| API | Contrato OpenAPI 3.1 em `/api/openapi.json` e visualizador local em `/api/docs` (fora de produção) | IMPLEMENTADO, TESTADO |
+| API | Contrato OpenAPI 3.1 em `/api/openapi.json` e Swagger UI local em `/api/docs` (fora de produção, assets locais e CSP restritiva) | IMPLEMENTADO, TESTADO |
 | Operação | Pagamento online, nota fiscal, delivery, upload de imagens, tempo real (Socket.IO) | PENDENTE, fora do escopo atual |
 
 ## Qualidade e CI confirmados
@@ -60,7 +60,7 @@ Resultados observados na validação final de 14/11/2026 e em execução manual 
 
 | Execução | Resultado |
 | --- | --- |
-| Validação local final | Backend: **1.237 testes aprovados e 9 ignorados** (planilha privada); frontend: **174/174**; typecheck e builds aprovados |
+| Validação local final | Backend: **1.239 testes aprovados e 9 ignorados** (planilha privada); frontend: **176/176**; typecheck e builds aprovados |
 | CI #5 (E2E manual) | PostgreSQL 18 efêmero iniciado, migrations aplicadas, Playwright/Chromium: **1 teste aprovado (8,6 s)** cobrindo login do admin → convite → resgate → pedido → verificação; teardown e prova de resíduo zero aprovados; banco e segredos descartados |
 
 O E2E atual cobre **uma jornada** (caminho feliz). Isso não equivale a cobertura de todos os fluxos nem a prontidão para

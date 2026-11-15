@@ -19,20 +19,20 @@ Este checklist consolida o estado real. Itens marcados como concluídos têm evi
 
 | RF | Situação | Evidência | Limitação registrada |
 | --- | --- | --- | --- |
-| RF001 | ✅ | Catálogo paginado pela API; 168 produtos reais | Nenhuma |
-| RF002 | ✅ com ressalva | Modal usado no pedido #5; descrição/ingredientes conferidos | Sem captura dedicada do modal; produto indisponível |
+| RF001 | 🟡 | Catálogo paginado pela API; 144 produtos reais públicos consultados em modo somente leitura | 0/144 com descrição e 0/144 com imagem |
+| RF002 | 🟡 | Modal suporta os campos e adição ao carrinho | Nenhum produto real possui descrição, ingredientes e imagem; sem demonstração real completa |
 | RF003 | ✅ | Carrinho, quantidade e total revisados no #5 | Estado em memória |
 | RF004 | ✅ | Pedido #5, comanda `000126`, snapshots e total | Envio ao vivo não pode ser repetido sem novo pedido |
 | RF005 | ✅ | Painel autenticado usado em convite, status e disponibilidade | Logout/negativos não capturados |
 | RF006 | ✅ | CRUD real do produto `test` validado anteriormente | Nenhuma |
-| RF007 | ✅ | Filtro `ENTREGUE`, carimbo de polling e histórico | Sem toast de “novo pedido” |
-| RF008 | ✅ com ressalva | Quatro transições observadas; captura final e histórico | Capturas intermediárias não enquadradas; sem novo pedido |
-| RF009 | ✅ | OpenAPI 3.1 e `/api/docs` 200 | Índice próprio, não Swagger UI |
+| RF007 | ✅ | Filtro `ENTREGUE`, carimbo de polling e histórico | Alerta de novo pedido sem captura (exige pedido novo) |
+| RF008 | ✅ com ressalva | Quatro transições observadas; captura final, histórico e `actorName` coberto por teste | Capturas intermediárias não enquadradas; sem novo pedido |
+| RF009 | ✅ | OpenAPI 3.1 e Swagger UI em `/api/docs`; “Execute” validado com GET 200 | Atualizar a gravação acadêmica |
 
 ### Testes e qualidade
 
-- [x] Backend: **1.237 aprovados / 9 ignorados**, 70 arquivos aprovados, 1 ignorado, exit 0.
-- [x] Frontend: **174/174**, 0 falhas, exit 0.
+- [x] Backend: **1.239 aprovados / 9 ignorados**, 70 arquivos aprovados, 1 ignorado, exit 0.
+- [x] Frontend: **176/176**, 0 falhas, exit 0.
 - [x] Typecheck backend e frontend: exit 0.
 - [x] Build backend: exit 0.
 - [x] Build frontend: exit 0; Vite 6.4.5, 63 módulos.
@@ -65,7 +65,6 @@ Este checklist consolida o estado real. Itens marcados como concluídos têm evi
 
 - [ ] Captura dedicada do modal do RF002 com imagem, descrição e ingredientes.
 - [ ] Capturas intermediárias do RF008 com os quatro estados enquadrados; exigiria novo pedido autorizado.
-- [ ] Swagger UI clássico, caso a rubrica não aceite o índice `/api/docs`.
 - [ ] Prova de restauração integral do backup pré-RF006 em banco descartável.
 - [ ] Integração/E2E no banco de teste autorizado.
 - [ ] Login/logout e negativos 401/429 capturados no navegador.

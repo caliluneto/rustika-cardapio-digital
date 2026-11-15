@@ -39,13 +39,13 @@ Os trechos abaixo foram verificados em 14/11/2026 e devem ser mantidos, salvo no
   entradas.
 - Pedidos **#1–#4** preservados: #1 `CANCELLED`; #2–#4 `DELIVERED`.
 - Produto **`TESTE_RF004_PEDIDO`**: `UNAVAILABLE`, fora do catálogo público, identidade preservada.
-- Testes: backend **1.237 aprovados / 9 ignorados**; frontend **174/174**; typecheck e builds aprovados.
+- Testes: backend **1.239 aprovados / 9 ignorados**; frontend **176/176**; typecheck e builds aprovados.
 - `secrets:audit`: **`POLICY_OK`**, exit 0, 7 segredos conformes.
 - Banco: `cardapio_digital_dev`, PostgreSQL 18.6, **9/9 migrations** na validação documentada.
 - Commits publicados: `435c3d4`, `902c3b9`, `1d71979` e `1e49371` (organização final); `origin/main` sincronizado.
 - RF008: quatro transições observadas sem F5, com captura final e registro de horários; capturas intermediárias
   fora de enquadramento não são prova de estado.
-- RF009: OpenAPI 3.1 em `/api/openapi.json`; `/api/docs` é índice próprio, não Swagger UI clássico.
+- RF009: OpenAPI 3.1 em `/api/openapi.json`; `/api/docs` entrega Swagger UI com assets locais e teste interativo.
 
 ## 4. Dados humanos a inserir
 

@@ -13,14 +13,15 @@
 ## Código e execução
 
 - [x] RF001–RF009 implementados; RF004, RF005, RF006, RF007, RF008 e RF009 exercitados com PostgreSQL Dev real.
-- [x] Backend: **1.237 aprovados e 9 ignorados** (70 arquivos aprovados, 1 ignorado, exit 0); frontend: **174/174**.
+- [x] Backend: **1.239 aprovados e 9 ignorados** (70 arquivos aprovados, 1 ignorado, exit 0); frontend: **176/176**.
 - [x] Typecheck e build aprovados em backend e frontend.
 - [x] Identidade PostgreSQL validada: `cardapio_digital_dev`, PostgreSQL 18.6, **9/9 migrations aplicadas**.
 - [x] RF006 validado em banco real: criar, editar e excluir produto fictício `test`, com persistência confirmada.
 - [x] RF004 validado com o **pedido #5** (comanda `000126`, convite resgatado, total R$ 1,00); pedido #2 preservado.
-- [x] RF007 validado: lista atualizada sozinha, filtro por `ENTREGUE` capturado e histórico visível.
-- [x] RF002: modal do produto fictício usado na jornada do #5, com descrição e ingredientes; preço conferido no
-      carrinho e na revisão; sem captura dedicada do modal.
+- [x] RF007 validado: lista atualizada sozinha, filtro por `ENTREGUE` capturado, histórico visível e alerta visual de
+      novos pedidos independente do filtro (15/11/2026).
+- [ ] RF002: o modal suporta descrição, ingredientes, imagem e adição ao carrinho, mas a leitura real em modo somente
+      leitura encontrou 0/144 produtos públicos com esses conteúdos; não há demonstração real completa.
 - [x] RF008: quatro transições observadas na janela do cliente, sem F5; captura final e registro de DOM em
       `evidencias/README-RF008.md`.
 - [x] Produto `TESTE_RF004_PEDIDO` marcado `UNAVAILABLE` pelo painel; catálogo público não o exibe e o detalhe retorna
@@ -58,7 +59,7 @@
 - [ ] Mostrar cliente, modal do produto, admin, status automático, histórico, filtros, OpenAPI, código e testes.
 - [ ] No RF008, usar as capturas reais com rótulo “captura real de 14/11/2026” ou obter nova autorização para um
       pedido adicional. Não simular a atualização ao vivo.
-- [ ] No RF002, se o produto fictício for reativado apenas para a gravação, devolvê-lo a `UNAVAILABLE` ao final.
+- [ ] No RF002, obter autorização e conteúdo real do estabelecimento; não reativar produto fictício como substituto de evidência real.
 - [ ] Não mostrar credenciais, tokens, cookies, o pedido #1 cancelado em destaque ou resultados não executados.
 - [ ] Fazer upload autorizado, testar o link e inserir no relatório.
 

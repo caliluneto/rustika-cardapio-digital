@@ -18,7 +18,7 @@ Com os serviços já em execução:
 | --- | --- | --- |
 | **A — CLIENTE** | `http://localhost:5173/` | catálogo no topo; se o acompanhamento do #5 estiver montado, **não pressionar F5** |
 | **B — ADMIN** | `http://localhost:5173/#admin` | já autenticado; seção **Pedidos** visível |
-| **C — DOCS** | `http://localhost:4000/api/docs` | página de operações carregada |
+| **C — DOCS** | `http://localhost:4000/api/docs` | Swagger UI carregado com as operações |
 | **D — OPENAPI** | `http://localhost:4000/api/openapi.json` | JSON carregado |
 | **E — APOIO** | `../CHECKLIST-ENTREGA.md` ou uma slide | resultados reais dos testes, sem executar a suíte de novo |
 
@@ -164,14 +164,14 @@ nem excluir nada, para preservar os dados.”
 
 **Tela C (DOCS) e Tela D (OPENAPI).**
 
-1. Mostrar `/api/docs` com as operações.
+1. Mostrar `/api/docs` com as 18 operações no Swagger UI.
 2. Abrir `/api/openapi.json` e mostrar `openapi: 3.1.0`, paths e schemas.
-3. Explicar que a página é um índice próprio que consome o contrato.
+3. Expandir uma operação e mostrar “Try it out” e os exemplos de requisição/resposta.
 
-**Dizer:** “O contrato OpenAPI 3.1 está disponível em `/api/openapi.json`; `/api/docs` é um índice HTML próprio, não
-o Swagger UI clássico.”
+**Dizer:** “O contrato OpenAPI 3.1 está disponível em `/api/openapi.json`; `/api/docs` entrega o Swagger UI com assets
+locais, sem CDN, permitindo testar as operações interativamente.”
 
-**Evidência:** [`../evidencias/rf009-01-docs.png`](../evidencias/rf009-01-docs.png).
+**Evidência:** [`../evidencias/rf009-02-swagger-ui.png`](../evidencias/rf009-02-swagger-ui.png).
 
 ### 4:20–4:40 — Testes e builds
 
@@ -179,8 +179,8 @@ o Swagger UI clássico.”
 
 Mostrar o resumo já registrado:
 
-- backend: 1.237 aprovados / 9 ignorados;
-- frontend: 174/174;
+- backend: 1.239 aprovados / 9 ignorados;
+- frontend: 176/176;
 - typecheck e builds aprovados;
 - smoke tests HTTP 200.
 

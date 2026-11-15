@@ -16,15 +16,14 @@
   completo. **Não pressionar F5** nessa janela.
 - **Admin**: `http://localhost:5173/#admin`, autenticado, com a seção **Pedidos** disponível.
 - **Evidências reais**: `evidencias/rf008-01-tracking-final.png`, `evidencias/rf008-02-admin-delivered.png`,
-  `evidencias/rf007-01-filtro-entregue.png`, `evidencias/rf009-01-docs.png` e `evidencias/README-RF008.md`.
-- **Testes**: backend 1.237 aprovados / 9 ignorados; frontend 174/174; typecheck e build aprovados.
+  `evidencias/rf007-01-filtro-entregue.png`, `evidencias/rf009-02-swagger-ui.png` e `evidencias/README-RF008.md`.
+- **Testes**: backend 1.239 aprovados / 9 ignorados; frontend 176/176; typecheck e build aprovados.
 
 ## 1. Decisões humanas antes do play
 
-1. **RF002 — modal completo**: o produto fictício está indisponível. Para mostrar imagem, descrição e ingredientes ao
-   vivo, o responsável pode autorizar a reativação temporária pelo painel, gravá-la e devolvê-la a `UNAVAILABLE` ao
-   final. Sem essa autorização, mostrar o modal de um produto real (mais pobre em descrição) ou usar o registro da
-   validação, sempre identificando a limitação.
+1. **RF002 — modal completo**: a leitura real encontrou 0/144 produtos públicos com descrição, ingredientes e imagem.
+   Não usar o produto fictício como substituto de evidência real. Antes da gravação, o estabelecimento deve autorizar
+   e fornecer conteúdo de um produto real; sem isso, mostrar o modal e declarar explicitamente a lacuna dos dados.
 2. **RF004 — envio ao vivo**: exigiria um novo pedido, não autorizado. Mostrar o **pedido #5 já existente** no painel
    e o acompanhamento real, com o rótulo “pedido real de 14/11/2026”. Não encenar um checkout.
 3. **RF006 — CRUD ao vivo**: a validação real já foi feita. Se o grupo quiser gravar uma nova criação/exclusão, usar
@@ -40,7 +39,7 @@
 - Gravar em 1920×1080, fonte do navegador em 100–125%, mouse lento e áudio testado por 10 s.
 - Deixar o **CLIENTE** com o acompanhamento do #5 visível e o **ADMIN** na seção **Pedidos**.
 - Abrir uma aba com `http://localhost:4000/api/docs` e outra com `http://localhost:4000/api/openapi.json`.
-- Ter à mão a saída real dos testes (`1.237/9` e `174/174`) e os arquivos de evidência.
+- Ter à mão a saída real dos testes (`1.239/9` e `176/176`) e os arquivos de evidência.
 - Não abrir DevTools, não exibir tokens, cookies, senhas ou connection strings.
 
 ## 3. Sequência de gravação (300 s)
@@ -53,11 +52,11 @@
 | 1:05–1:30 | **RF003** | Adicionar ao carrinho, alterar quantidade e remover | Contador, subtotal e total em centavos; estado em memória |
 | 1:30–1:45 | **RF005** | Painel administrativo; opcionalmente, logout/login | Rota protegida e sessão; nunca mostrar a senha |
 | 1:45–2:20 | **RF004** | Mostrar o **pedido #5** no ADMIN: comanda `000126`, item, total e histórico | Rótulo “pedido real de 14/11/2026”; não encenar envio |
-| 2:20–2:50 | **RF007** | Aplicar o filtro `ENTREGUE`; mostrar o carimbo “Atualizado às …”, itens e histórico | Filtro funcionando e polling de 10 s; não inventar toast de novo pedido |
+| 2:20–2:50 | **RF007** | Aplicar o filtro `ENTREGUE`; mostrar o carimbo “Atualizado às …”, itens e histórico | Filtro funcionando e polling de 10 s; o alerta de novo pedido só deve aparecer se um pedido real for criado, sem simular a notificação |
 | 2:50–3:30 | **RF008** | Exibir a captura final do acompanhamento e o registro de horários; opcionalmente, a janela CLIENTE ainda aberta | Rótulo “captura real de 14/11/2026”; estados Recebido → Em preparação → Pronto → Entregue; **não simular atualização ao vivo** |
 | 3:30–4:00 | **RF006** | Seção **Produtos**: mostrar o formulário e o produto fictício; CRUD ao vivo só se autorizado | Cadastro/edição/exclusão reais; não alterar produtos reais |
-| 4:00–4:20 | **RF009** | Abrir `/api/docs` e `/api/openapi.json`, expandir uma operação | OpenAPI 3.1, schemas e cabeçalhos; a página é um índice próprio, não Swagger UI |
-| 4:20–4:40 | — | Mostrar a saída real dos testes e os builds | `1.237/9`, `174/174`, typecheck/build aprovados |
+| 4:00–4:20 | **RF009** | Abrir `/api/docs` e `/api/openapi.json`; expandir uma operação e mostrar “Try it out” | Swagger UI com OpenAPI 3.1, schemas, exemplos, respostas de erro e teste interativo |
+| 4:20–4:40 | — | Mostrar a saída real dos testes e os builds | `1.239/9`, `176/176`, typecheck/build aprovados |
 | 4:40–5:00 | — | Encerramento | O que foi demonstrado e o que segue pendente; não alegar deploy |
 
 ## 4. O que não pode aparecer
