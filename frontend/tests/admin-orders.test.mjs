@@ -5,8 +5,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ApiError, createApiClient } from '../src/services/api.ts';
 import {
-  ORDERS_POLL_INTERVAL_MS, canOfferTransition, confirmationMessage, createAdminOrdersClient, describeListError,
-  describeStatusError, parseAdminOrder, parseSnapshot,
+  ORDERS_POLL_INTERVAL_MS, canOfferTransition, confirmationMessage, createAdminOrdersClient, createNewOrderTracker,
+  describeListError, describeNewOrders, describeStatusError, parseAdminOrder, parseSnapshot,
 } from '../src/services/adminOrders.ts';
 import { createOrdersPoller } from '../src/services/adminOrdersPolling.ts';
 import { AdminOrdersView } from '../src/pages/AdminOrders.tsx';
@@ -213,8 +213,9 @@ test('erro de rede mantém o polling (nova tentativa); 401 encerra o polling', a
 const noop = () => {};
 const view = (overrides = {}) => renderToStaticMarkup(createElement(AdminOrdersView, {
   loading: false, error: null, orders: [], truncated: false, nextCursor: null, filter: '', loadingMore: false,
-  updatedAt: null, busyId: null, notice: null, confirming: null, cancelNote: '',
-  onRequest: noop, onConfirm: noop, onAbort: noop, onCancelNote: noop, onRefresh: noop, onFilter: noop, onLoadMore: noop, ...overrides,
+  updatedAt: null, newOrderCount: 0, busyId: null, notice: null, confirming: null, cancelNote: '',
+  onRequest: noop, onConfirm: noop, onAbort: noop, onCancelNote: noop, onRefresh: noop, onFilter: noop,
+  onShowNewOrders: noop, onLoadMore: noop, ...overrides,
 }));
 
 test('estados de carregamento, vazio e erro', () => {
@@ -265,6 +266,28 @@ test('avisos: conflito 409 aparece como alerta; sucesso como status; lista pagin
   assert.match(view({ orders: [order(1)], truncated: true, nextCursor: id(1) }), /Carregar pedidos anteriores/);
 });
 
+// ---------------------------------------------------------------- novos pedidos
+
+test('novos pedidos: primeira carga é silenciosa; cada pedido é avisado uma única vez', () => {
+  const tracker = createNewOrderTracker();
+  assert.deepEqual(tracker.observe([order(1), order(2)]), []);
+  assert.deepEqual(tracker.observe([order(1), order(2)]), []);
+  assert.deepEqual(tracker.observe([order(3), order(1), order(2)]).map((entry) => entry.orderNumber), [3]);
+  assert.deepEqual(tracker.observe([order(3), order(4), order(1), order(2)]).map((entry) => entry.orderNumber), [4]);
+  assert.deepEqual(tracker.observe([order(3), order(4)]), []);
+  tracker.reset();
+  assert.deepEqual(tracker.observe([order(3), order(4), order(5)]), []);
+});
+
+test('novos pedidos: mensagem no singular/plural e alerta visual com ação para limpar o filtro', () => {
+  assert.equal(describeNewOrders(1), '1 novo pedido recebido.');
+  assert.equal(describeNewOrders(3), '3 novos pedidos recebidos.');
+  const html = view({ orders: [order(1)], filter: 'DELIVERED', newOrderCount: 2 });
+  assert.match(html, /class="admin-orders-new" role="alert"/);
+  assert.match(html, /2 novos pedidos recebidos\./);
+  assert.match(html, /Ver novos pedidos/);
+});
+
 // ---------------------------------------------------------------- estrutura
 
 test('painel: sem WebSocket/Socket.IO/EventSource, polling parado na desmontagem e protegido por sessão administrativa', () => {
@@ -273,6 +296,11 @@ test('painel: sem WebSocket/Socket.IO/EventSource, polling parado na desmontagem
   const sources = ['../src/pages/AdminOrders.tsx', '../src/services/adminOrders.ts', '../src/services/adminOrdersPolling.ts'].map(code).join('\n');
   assert.doesNotMatch(sources, /WebSocket|socket\.io|EventSource|localStorage|sessionStorage/i);
   assert.match(read('../src/pages/AdminOrders.tsx'), /return \(\) => \{ poller\.stop\(\); pollerRef\.current = null; \};/);
+  // O vigia de novos pedidos não depende do filtro e usa a lista mais recente; o aviso não é o carimbo do polling.
+  assert.match(read('../src/pages/AdminOrders.tsx'), /ordersClient\.list\(\{ limit: 20 \}, signal\)/);
+  assert.match(read('../src/pages/AdminOrders.tsx'), /createNewOrderTracker\(\)/);
+  assert.match(read('../src/pages/AdminOrders.tsx'), /\}, \[ordersClient\]\);/);
+  assert.doesNotMatch(read('../src/pages/AdminOrders.tsx'), /knownOrderIds/);
   const dashboard = read('../src/pages/AdminDashboard.tsx');
   assert.match(dashboard, /\{!loggingOut && <AdminOrders onUnauthorized=\{onLogout\} \/>\}/);
   // O logout desmonta o painel (e, portanto, para o polling) ANTES de enviar o POST de logout.

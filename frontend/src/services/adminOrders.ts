@@ -172,4 +172,34 @@ export function describeListError(error: unknown): { message: string; unauthoriz
   return { message: 'Não foi possível carregar os pedidos. Tentaremos novamente.', unauthorized: false };
 }
 
+/**
+ * Acompanha a lista mais recente para avisar sobre pedidos novos independentemente do filtro ativo.
+ * A primeira observação apenas registra a linha de base (sem alerta), e cada pedido é avisado uma única vez.
+ */
+export interface NewOrderTracker {
+  observe(orders: readonly AdminOrder[]): AdminOrder[];
+  reset(): void;
+}
+
+export function createNewOrderTracker(): NewOrderTracker {
+  let known: Set<string> | null = null;
+  return {
+    observe(orders) {
+      if (known === null) {
+        known = new Set(orders.map((order) => order.id));
+        return [];
+      }
+      const seen = known;
+      const fresh = orders.filter((order) => !seen.has(order.id));
+      for (const order of orders) seen.add(order.id);
+      return fresh;
+    },
+    reset() { known = null; },
+  };
+}
+
+export function describeNewOrders(count: number): string {
+  return count === 1 ? '1 novo pedido recebido.' : `${count} novos pedidos recebidos.`;
+}
+
 export const formatBRL = (cents: number): string => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

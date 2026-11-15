@@ -162,7 +162,7 @@ export const openApiDocument = {
         success: { type: 'boolean', const: false }, error: { type: 'object', required: ['code', 'message'], properties: {
           code: { type: 'string' }, message: { type: 'string' },
         } },
-      } },
+      }, example: { success: false, error: { code: 'INVALID_INPUT', message: 'Dados da requisição inválidos.' } } },
       Category: { type: 'object', required: ['id', 'name', 'description', 'displayOrder'], properties: {
         id: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' }, displayOrder: { type: 'integer' },
       } },
@@ -171,6 +171,11 @@ export const openApiDocument = {
         categoryId: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' }, ingredients: { type: 'string' },
         priceInCents: { type: 'integer', minimum: 0 }, imageUrl: { type: 'string' }, imageAlt: { type: 'string' },
         isAvailable: { type: ['boolean', 'null'] },
+      }, example: {
+        id: 'rustika-001', sourceCode: '001', sourceName: 'Produto de exemplo', sourceGroup: 'DRINKS',
+        categoryId: 'drinks', name: 'Produto de exemplo', description: 'Descrição curta de exemplo.',
+        ingredients: 'Ingredientes de exemplo.', priceInCents: 1500,
+        imageUrl: '/produtos/produto-exemplo.jpg', imageAlt: 'Foto ilustrativa do produto de exemplo', isAvailable: true,
       } },
       ProductPage: { type: 'object', required: ['items', 'nextCursor'], properties: {
         items: { type: 'array', items: ref('Product') }, nextCursor: { type: ['string', 'null'] },
@@ -190,6 +195,9 @@ export const openApiDocument = {
           required: ['productId', 'quantity', 'expectedUnitPriceInCents'], properties: {
             productId: { type: 'string' }, quantity: { type: 'integer', minimum: 1 }, expectedUnitPriceInCents: { type: 'integer', minimum: 1 }, notes: { type: 'string' },
           } } },
+      }, example: {
+        customerName: 'Cliente de exemplo', tableOrReference: 'Mesa 1', notes: 'Observação de exemplo',
+        items: [{ productId: 'rustika-001', quantity: 2, expectedUnitPriceInCents: 1500, notes: 'Sem gelo' }],
       } },
       OrderItem: { type: 'object', required: ['productId', 'productNameSnapshot', 'unitPriceInCentsSnapshot', 'quantity', 'subtotalInCents'], properties: {
         productId: { type: 'string' }, productNameSnapshot: { type: 'string' }, unitPriceInCentsSnapshot: { type: 'integer' },
@@ -219,6 +227,9 @@ export const openApiDocument = {
       ProductCreateInput: { type: 'object', additionalProperties: false, required: ['name', 'priceInCents', 'categoryId'], properties: {
         name: { type: 'string', minLength: 1 }, description: { type: ['string', 'null'] }, ingredients: { type: ['string', 'null'] },
         priceInCents: { type: 'integer', minimum: 1, maximum: 99999999 }, categoryId: { type: 'string' }, imageUrl: { type: ['string', 'null'] }, imageAlt: { type: ['string', 'null'] },
+      }, example: {
+        name: 'Produto de exemplo', description: 'Descrição curta de exemplo.', ingredients: 'Ingredientes de exemplo.',
+        priceInCents: 1500, categoryId: 'drinks', imageUrl: '/produtos/produto-exemplo.jpg', imageAlt: 'Foto ilustrativa do produto de exemplo',
       } },
       ProductUpdateInput: { type: 'object', additionalProperties: false, properties: {
         name: { type: 'string', minLength: 1 }, description: { type: ['string', 'null'] }, ingredients: { type: ['string', 'null'] },

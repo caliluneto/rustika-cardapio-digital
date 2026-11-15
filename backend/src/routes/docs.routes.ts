@@ -1,19 +1,52 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
+import path from 'node:path';
 import { openApiDocument } from '../openapi/document';
 
+/**
+ * Swagger UI é servido a partir de `swagger-ui-dist` (assets locais, sem CDN). A política de conteúdo
+ * permite apenas scripts e estilos da própria origem; o inicializador é um arquivo servido por esta rota,
+ * portanto não há script inline. O JSON OpenAPI continua disponível em `/api/openapi.json`.
+ */
+const swaggerAssetsDir = path.dirname(require.resolve('swagger-ui-dist/package.json'));
+
+const initializer = `'use strict';
+window.addEventListener('load', function () {
+  window.ui = SwaggerUIBundle({
+    url: '/api/openapi.json',
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    displayRequestDuration: true,
+    tryItOutEnabled: true,
+    withCredentials: true,
+    requestInterceptor: function (request) {
+      var method = (request.method || 'GET').toUpperCase();
+      if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+        request.headers['X-Rustika-Request'] = '1';
+      }
+      return request;
+    }
+  });
+});`;
+
 const docsHtml = `<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RÚSTIKA API</title><style>
-body{font:16px system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:2rem;color:#241b16;background:#fffaf5}h1{margin-bottom:.25rem}
-.route{background:#fff;border:1px solid #decfc3;border-radius:8px;margin:.75rem 0;padding:1rem}.method{font-weight:700;color:#7c321c;margin-right:.75rem}
-code{background:#f2e8df;padding:.15rem .35rem;border-radius:4px}small{color:#65564d}</style></head>
-<body><h1>RÚSTIKA API</h1><p id="intro">Carregando contrato local...</p><main id="routes"></main>
-<script>'use strict';fetch('/api/openapi.json',{credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(spec){
-document.getElementById('intro').textContent=spec.info.description;var root=document.getElementById('routes');
-Object.keys(spec.paths).forEach(function(path){Object.keys(spec.paths[path]).forEach(function(method){var op=spec.paths[path][method];var article=document.createElement('article');article.className='route';
-var title=document.createElement('div');var verb=document.createElement('span');verb.className='method';verb.textContent=method.toUpperCase();title.appendChild(verb);var code=document.createElement('code');code.textContent='/api'+path;title.appendChild(code);article.appendChild(title);
-var summary=document.createElement('p');summary.textContent=op.summary||'';article.appendChild(summary);var tag=document.createElement('small');tag.textContent=(op.tags||[]).join(', ');article.appendChild(tag);root.appendChild(article)})})
-}).catch(function(){document.getElementById('intro').textContent='Não foi possível carregar o contrato.'});</script></body></html>`;
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RÚSTIKA API — Swagger UI</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/api/docs/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<noscript>Ative o JavaScript para usar o Swagger UI.</noscript>
+<script src="/api/docs/swagger-ui-bundle.js"></script>
+<script src="/api/docs/swagger-initializer.js"></script>
+</body>
+</html>`;
+
+const docsCsp = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 export const docsRouter = Router();
 
@@ -24,7 +57,21 @@ docsRouter.get('/openapi.json', (_request, response) => {
 docsRouter.get('/docs', (_request, response) => {
   response
     .set('Cache-Control', 'no-store')
-    .set('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+    .set('Content-Security-Policy', docsCsp)
     .type('html')
     .send(docsHtml);
 });
+
+docsRouter.get('/docs/swagger-initializer.js', (_request, response) => {
+  response
+    .set('Cache-Control', 'no-store')
+    .set('Content-Security-Policy', "default-src 'none'")
+    .type('application/javascript')
+    .send(initializer);
+});
+
+// Assets estáticos do Swagger UI: mesmos nomes de arquivo do pacote, servidos somente nesta rota.
+docsRouter.use('/docs', express.static(swaggerAssetsDir, {
+  index: false,
+  maxAge: '1h',
+}));

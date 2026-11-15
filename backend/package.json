@@ -44,6 +44,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "pg": "^8.23.1",
+    "swagger-ui-dist": "5.17.14",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {

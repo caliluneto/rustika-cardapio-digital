@@ -88,7 +88,7 @@ export async function mockOpsPrisma(initial: StoredOrder[] = []) {
           draftHistory.push(row);
           const order = draftOrders.find((candidate) => candidate.id === data.orderId);
           order?.statusHistory.push({ id: row.id, fromStatus: row.fromStatus, toStatus: row.toStatus, notes: row.notes,
-            createdAt: row.createdAt, changedByAdmin: row.changedByAdminId ? { name: 'Admin Teste' } : null });
+            createdAt: row.createdAt, changedByAdmin: row.changedByAdminId ? { name: access.admin.name } : null });
           return row;
         },
       },

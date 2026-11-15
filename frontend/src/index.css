@@ -298,6 +298,8 @@ button, a, section { scroll-margin-top: 9rem; }
 .admin-orders-filter select { width: 100%; }
 .admin-orders-empty { padding: 1rem; border: 1px dashed var(--line); }
 .admin-success { padding: .75rem; border: 1px solid #3f7d52; color: #1f5132; background: #e6f4ea; overflow-wrap: anywhere; }
+.admin-orders-new { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: .75rem 0; padding: .85rem 1rem; border: 2px solid #7c321c; border-radius: 8px; background: #fff4d6; color: #5b2a12; font-weight: 700; overflow-wrap: anywhere; }
+.admin-orders-new button { flex: 0 0 auto; }
 .admin-order-list, .admin-order-items { margin: 0; padding: 0; list-style: none; }
 .admin-order-list { display: grid; gap: 1rem; margin-top: 1rem; }
 .admin-order { padding: 1rem; border: 1px solid var(--line); background: #fff; display: grid; gap: .5rem; min-width: 0; }

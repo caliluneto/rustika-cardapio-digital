@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../services/api';
 import {
   ORDERS_POLL_INTERVAL_MS, ORDER_STATUS_LABEL, canOfferTransition, confirmationMessage, createAdminOrdersClient,
-  describeListError, describeStatusError, formatBRL,
+  createNewOrderTracker, describeListError, describeNewOrders, describeStatusError, formatBRL,
 } from '../services/adminOrders';
 import type { AdminOrder, AdminOrdersClient, AdminOrdersSnapshot, OrderStatus } from '../services/adminOrders';
 import { createOrdersPoller } from '../services/adminOrdersPolling';
@@ -19,6 +19,7 @@ export interface AdminOrdersViewProps {
   filter: OrderStatus | '';
   loadingMore: boolean;
   updatedAt: Date | null;
+  newOrderCount: number;
   busyId: string | null;
   notice: Notice | null;
   confirming: Confirming | null;
@@ -29,6 +30,7 @@ export interface AdminOrdersViewProps {
   onCancelNote(value: string): void;
   onRefresh(): void;
   onFilter(value: OrderStatus | ''): void;
+  onShowNewOrders(): void;
   onLoadMore(): void;
 }
 
@@ -43,7 +45,7 @@ const ACTION_LABEL: Record<OrderStatus, string> = {
 
 /** Apresentação pura (sem efeitos): testável por renderização estática. */
 export function AdminOrdersView(props: AdminOrdersViewProps) {
-  const { loading, error, orders, truncated, nextCursor, filter, loadingMore, updatedAt, busyId, notice, confirming, cancelNote } = props;
+  const { loading, error, orders, truncated, nextCursor, filter, loadingMore, updatedAt, newOrderCount, busyId, notice, confirming, cancelNote } = props;
   return (
     <section className="admin-section admin-orders" aria-labelledby="admin-orders-title">
       <div className="admin-orders-head">
@@ -60,6 +62,13 @@ export function AdminOrdersView(props: AdminOrdersViewProps) {
       <p className="admin-orders-meta" aria-live="off">
         {updatedAt ? `Atualizado às ${updatedAt.toLocaleTimeString('pt-BR')} (a lista atualiza sozinha).` : 'Aguardando a primeira atualização.'}
       </p>
+
+      {newOrderCount > 0 && (
+        <div className="admin-orders-new" role="alert">
+          <span>{describeNewOrders(newOrderCount)}</span>
+          <button type="button" className="cart-primary-button" onClick={props.onShowNewOrders}>Ver novos pedidos</button>
+        </div>
+      )}
 
       {notice && (
         <div className={notice.kind === 'success' ? 'admin-success' : 'admin-error'} role={notice.kind === 'success' ? 'status' : 'alert'}>{notice.text}</div>
@@ -160,18 +169,14 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
   const [cancelNote, setCancelNote] = useState('');
   const pollerRef = useRef<ReturnType<typeof createOrdersPoller<AdminOrdersSnapshot>> | null>(null);
   const unauthorized = useRef(onUnauthorized);
-  const knownOrderIds = useRef<Set<string>>(new Set());
+  const newOrderTracker = useRef(createNewOrderTracker());
+  const [newOrders, setNewOrders] = useState<AdminOrder[]>([]);
   unauthorized.current = onUnauthorized;
 
   useEffect(() => {
     const poller = createOrdersPoller<AdminOrdersSnapshot>({
       load: (signal) => ordersClient.list(filter ? { status: filter } : {}, signal),
       onData: (data) => {
-        const newOrders = knownOrderIds.current.size > 0
-          ? data.orders.filter((order) => order.status === 'RECEIVED' && !knownOrderIds.current.has(order.id))
-          : [];
-        knownOrderIds.current = new Set(data.orders.map((order) => order.id));
-        if (newOrders.length > 0) setNotice({ kind: 'success', text: `${newOrders.length} novo(s) pedido(s) recebido(s).` });
         setSnapshot(data); setError(null); setUpdatedAt(new Date()); setLoading(false);
       },
       onError: (failure) => {
@@ -188,12 +193,38 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
     return () => { poller.stop(); pollerRef.current = null; };
   }, [ordersClient, filter]);
 
+  // Vigia independente do filtro: consulta sempre os pedidos mais recentes e avisa uma única vez por pedido.
+  // A primeira carga apenas registra a linha de base; mudar o filtro não reinicia nem dispara o aviso.
+  useEffect(() => {
+    const watcher = createOrdersPoller<AdminOrdersSnapshot>({
+      load: (signal) => ordersClient.list({ limit: 20 }, signal),
+      onData: (data) => {
+        const fresh = newOrderTracker.current.observe(data.orders);
+        if (fresh.length === 0) return;
+        setNewOrders((current) => {
+          const known = new Set(current.map((order) => order.id));
+          return [...current, ...fresh.filter((order) => !known.has(order.id))];
+        });
+      },
+      onError: (failure) => { if (describeListError(failure).unauthorized) unauthorized.current(); },
+      shouldStop: (failure) => describeListError(failure).unauthorized,
+      intervalMs: ORDERS_POLL_INTERVAL_MS,
+    });
+    watcher.start();
+    return () => { watcher.stop(); };
+  }, [ordersClient]);
+
   const onFilter = useCallback((value: OrderStatus | '') => {
-    knownOrderIds.current = new Set();
     setSnapshot({ orders: [], truncated: false, nextCursor: null });
     setLoading(true);
     setFilter(value);
   }, []);
+
+  const onShowNewOrders = useCallback(() => {
+    setNewOrders([]);
+    if (filter !== '') setFilter('');
+    else pollerRef.current?.refresh();
+  }, [filter]);
 
   const onLoadMore = useCallback(async () => {
     if (!snapshot.nextCursor || loadingMore) return;
@@ -241,10 +272,11 @@ export default function AdminOrders({ onUnauthorized, client }: { onUnauthorized
   return (
     <AdminOrdersView
       loading={loading} error={error} orders={snapshot.orders} truncated={snapshot.truncated} nextCursor={snapshot.nextCursor}
-      filter={filter} loadingMore={loadingMore} updatedAt={updatedAt}
+      filter={filter} loadingMore={loadingMore} updatedAt={updatedAt} newOrderCount={newOrders.length}
       busyId={busyId} notice={notice} confirming={confirming} cancelNote={cancelNote}
       onRequest={onRequest} onConfirm={() => { void onConfirm(); }} onAbort={() => setConfirming(null)}
-      onCancelNote={setCancelNote} onRefresh={() => pollerRef.current?.refresh()} onFilter={onFilter} onLoadMore={() => { void onLoadMore(); }}
+      onCancelNote={setCancelNote} onRefresh={() => pollerRef.current?.refresh()} onFilter={onFilter}
+      onShowNewOrders={onShowNewOrders} onLoadMore={() => { void onLoadMore(); }}
     />
   );
 }

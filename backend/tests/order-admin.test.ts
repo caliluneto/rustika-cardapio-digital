@@ -242,6 +242,7 @@ describe('PATCH /api/admin/orders/:orderId/status', () => {
       const response = await patch(orderId(1), move(from, to));
       expect(response.status, `${from}->${to}`).toBe(200);
       expect(response.body.data.order).toMatchObject({ id: orderId(1), status: to, allowedTransitions: nextOrderStatuses(to as 'READY') });
+      expect(response.body.data.order.history.at(-1)).toMatchObject({ fromStatus: from, toStatus: to, actorName: admin.name });
       expect(JSON.stringify(response.body)).not.toMatch(/99999-0000|requestDigest|Hash/);
     }
     expect(orders()[0]!.status).toBe('DELIVERED');
