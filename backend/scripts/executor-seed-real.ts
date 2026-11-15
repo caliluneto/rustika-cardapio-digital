@@ -6,7 +6,7 @@ import { parsePrice, classifyProduct, validateAllPrices, defaultCatalogPath } fr
 import { createPrismaRuntime } from '../src/lib/prisma';
 
 /**
- * Cabecalhos da planilha de catalogo (3D.3.25-E). Antes, o executor lia as colunas "Codigo" e "Preco venda" com
+ * Cabecalhos da planilha de catalogo. Antes, o executor lia as colunas "Codigo" e "Preco venda" com
  * o caractere de substituicao U+FFFD no nome (texto corrompido), entao o codigo saia sempre vazio e o preco
  * sempre 0 sem nenhum erro. Os nomes abaixo sao os cabecalhos reais da planilha.
  */

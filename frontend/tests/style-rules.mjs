@@ -1,4 +1,4 @@
-// 3D.3.13 — verificação proporcional de estilos, sem navegador e sem dependência nova.
+// verificação proporcional de estilos, sem navegador e sem dependência nova.
 // Lê o CSS real, resolve @media por largura de viewport e devolve as declarações que se aplicam a
 // um seletor "sujeito" (ex.: `.product-grid`), na ordem da cascata (a última vence, como no browser
 // para seletores de mesma especificidade). Não substitui um teste visual completo: serve para que a

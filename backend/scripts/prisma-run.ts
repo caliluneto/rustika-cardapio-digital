@@ -205,7 +205,7 @@ async function main(): Promise<number> {
     }
 
     // Identidade do SERVIDOR (somente leitura): hostname não basta. Cluster marcado, TLS efetivo, sem bancos Dev/Shadow.
-    // ponytail: Neon replay profile uses evaluateNeonServerIdentity; dedicated profiles use evaluateServerIdentity.
+    // O replay da homologação usa evaluateNeonServerIdentity; os perfis dedicados usam evaluateServerIdentity.
     if (database.profile === 'migrate-homolog-replay' && database.projectId) {
       try {
         const facts = await readNeonServerFacts(database.databaseUrl, database.host ?? '');

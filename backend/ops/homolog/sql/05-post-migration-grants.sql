@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Via psql no banco DEFINITIVO cardapio_digital_homolog COMO cardapio_homolog_migrator, depois de 04.
+-- NAO EXECUTADO. Via psql no banco DEFINITIVO cardapio_digital_homolog COMO cardapio_homolog_migrator, depois de 04.
 -- Concede ao bootstrap somente o minimo e confere a identidade.
 \set ON_ERROR_STOP on
 BEGIN;

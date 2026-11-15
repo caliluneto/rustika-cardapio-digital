@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO (instancia dedicada, remota, TLS).
+-- NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO (instancia dedicada, remota, TLS).
 -- Prepara o cluster para o REPLAY das migrations historicas (imutaveis): roles legadas exigidas pelas guardas SQL, a role final do
 -- bootstrap e a MARCA de identidade do cluster. Recusa se o cluster nao estiver limpo. Nao define senhas: use \password (interativo).
 \set ON_ERROR_STOP on

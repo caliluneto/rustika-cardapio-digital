@@ -32,7 +32,7 @@ function env(opts: Opts = {}): string {
 
 afterEach(() => { while (created.length) fs.rmSync(created.pop()!, { recursive: true, force: true }); });
 
-describe('3D.5.3-C.5 (Parte B/C) — perfil app-homolog-neon em loadDatabaseProfile', () => {
+describe('perfil app-homolog-neon em loadDatabaseProfile', () => {
   it('carrega com a mesma identidade final de app-homolog, mais o project id', () => {
     const dir = dirWith({ 'app-homolog-neon.env': env() });
     const loaded = loadDatabaseProfile('app-homolog-neon', { purpose: 'runtime', secretsDir: dir });

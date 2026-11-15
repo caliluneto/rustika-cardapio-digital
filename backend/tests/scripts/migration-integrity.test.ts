@@ -21,7 +21,7 @@ function copyMigrations(): string {
 }
 const applied = () => EXPECTED_MIGRATIONS.map(({ name, checksum }) => ({ name, checksum, finished: true, rolledBack: false }));
 
-describe('integridade das oito migrations (3D.5.2)', () => {
+describe('integridade das oito migrations', () => {
   it('a lista esperada tem oito entradas, é idêntica à da suíte de integração e coincide com o disco real', () => {
     expect(EXPECTED_MIGRATIONS).toHaveLength(8);
     expect(EXPECTED_MIGRATIONS).toEqual([...INTEGRATION_EXPECTED]);

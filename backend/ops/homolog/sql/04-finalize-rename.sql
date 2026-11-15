@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO, conectado ao banco postgres, apos 03.
+-- NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO, conectado ao banco postgres, apos 03.
 -- Renomeia o banco de replay e as roles legadas para a identidade DEFINITIVA da homologacao. ACLs, privilegios padrao, dono do banco
 -- e historico do Prisma (_prisma_migrations, checksums) sao preservados: o PostgreSQL os referencia por OID, nao por nome.
 -- Nada e apagado. Renomear uma role apaga somente senhas MD5 (inexistentes com SCRAM): defina as senhas finais depois, com \password.
@@ -6,7 +6,7 @@
 BEGIN;
 DO $rename$
 BEGIN
-  -- 3D.5.2-B: a sessao do administrador nao pode ser a propria role renomeada nem estar no banco renomeado.
+  -- A sessao do administrador nao pode ser a propria role renomeada nem estar no banco renomeado.
   IF current_database() <> 'postgres' THEN RAISE EXCEPTION 'ABORT: conecte-se ao banco postgres, nao ao banco que sera renomeado'; END IF;
   IF current_user IN ('cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app') OR session_user IN ('cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app') THEN
     RAISE EXCEPTION 'ABORT: a role conectada nao pode ser uma das roles a renomear; use o administrador do cluster';

@@ -1,5 +1,5 @@
 /**
- * Polling sem sobreposição para o painel de pedidos (3D.4.1).
+ * Polling sem sobreposição para o painel de pedidos.
  * - Uma consulta por vez: o próximo ciclo só é agendado DEPOIS que a anterior termina (setTimeout encadeado).
  * - `refresh()` durante uma consulta em andamento não dispara outra: apenas marca uma nova rodada para depois.
  * - `stop()` cancela o timer e aborta a consulta em andamento; resultados tardios são descartados.

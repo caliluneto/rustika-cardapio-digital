@@ -121,7 +121,7 @@ chegou ao navegador, obter outro convite; não existe replay que revele o segred
 ## Compatibilidade com pedidos
 
 Nome/formato/hash do cookie correspondem exatamente a `orderSession.ts`.
-Desde a 3D.3.8, `POST /api/orders` segue o mesmo contrato de escrita destas rotas
+`POST /api/orders` segue o mesmo contrato de escrita destas rotas
 (`Origin` exato, `X-Rustika-Request: 1`, JSON; guarda única em
 `src/security/writeGuard.ts`), mais `Idempotency-Key` UUID v4 e
 `credentials: 'include'`, conforme [orders-api.md](orders-api.md). O corpo mantém
@@ -133,7 +133,7 @@ identificação do cliente e preços esperados para confirmação da revisão.
 - Resgate: 30 tentativas/IP/5 minutos. Emissão: 60 solicitações/IP/5 minutos.
 - Stores de limite têm capacidade de 10000 entradas com expiração; com a capacidade
   cheia, a entrada mais antiga é descartada e o cliente novo é atendido (até a
-  3D.3.7, toda chave nova recebia 429). Toda recusa traz `Retry-After`. Sessões
+  versão anterior, toda chave nova recebia 429). Toda recusa traz `Retry-After`. Sessões
   administrativas têm capacidade de 1000 entradas não expiradas. Limites são por
   processo e não substituem proteção de infraestrutura em implantação distribuída.
 - `trust proxy` não foi alterado; headers enviados pelo cliente não definem IP.
@@ -165,8 +165,8 @@ mensagem. Credenciais incorretas e conta inativa também usam mensagem genérica
    revoga acessos da aplicação nessas tabelas; aplicá-la sozinha não habilita isso.
 3. Catálogo disponível e permissões de persistência de pedidos da Entrega 2A.
 4. Configuração HTTPS/CORS/cookies de produção. As telas de login, emissão,
-   resgate e envio foram ligadas ao frontend na 3D.3.8 (`#admin` e carrinho), com
-   envio de pedido desligado por padrão; validação com banco real ainda pendente.
+   resgate e envio estão ligadas ao frontend (`#admin` e carrinho), com envio de
+   pedido desligado por padrão; o fluxo administrativo foi validado no Dev em 14/11/2026.
 
 Não houve acesso ao PostgreSQL nem alterações de permissões/contas. Testes com
 doubles, inclusive resgates concorrentes e falhas transacionais, não comprovam

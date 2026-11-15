@@ -1,12 +1,12 @@
 /**
- * Read-only snapshot of cardapio_digital_test for the E2E (3D.3.21-B). Replaces the loose
+ * Read-only snapshot of cardapio_digital_test for the E2E. Replaces the loose
  * check_*.js scripts that embedded credentials. Uses the existing `migrate-test` profile from the
  * secrets directory, inside a READ ONLY transaction, and prints no secret.
  *
  *   npm run e2e:inspect                              (JSON em stdout; uso interativo)
  *   npm run --silent e2e:inspect -- --out <abs.json> (JSON gravado direto no arquivo; uso no CI)
  *
- * 3D.3.29-FIX02: com `--out` o JSON nunca passa pelo stdout (que carrega o banner do npm); o contrato do
+ * Com `--out` o JSON nunca passa pelo stdout (que carrega o banner do npm); o contrato do
  * arquivo é validado por `scripts/e2e-state-contract.ts`. Qualquer erro de conexão/consulta termina com código 2
  * e NÃO cria o arquivo.
  */

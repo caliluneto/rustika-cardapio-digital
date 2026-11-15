@@ -6,7 +6,7 @@ import { adminLogin, openSession, ORIGIN, placeOrder, startHarness } from './sup
 import type { Harness } from './support/harness';
 
 /**
- * 3D.4.2 — executado só no CI (PostgreSQL efêmero) com as 8 migrations aplicadas, inclusive
+ * Executado só contra PostgreSQL real (CI efêmero ou Test autorizado) com as 8 migrations esperadas aplicadas, inclusive
  * 20261106000000_product_availability_update_privilege. Cobre o que o duplo em memória não prova:
  * ACL por coluna efetiva, compare-and-set real, concorrência (inclusive contra a criação de pedido),
  * rollback, integridade dos demais dados e coerência do catálogo público.

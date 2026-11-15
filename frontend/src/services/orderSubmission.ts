@@ -13,9 +13,9 @@ export interface SubmissionEnv { VITE_ORDER_SUBMISSION?: string }
 
 /**
  * Real order submission stays disabled unless the build sets VITE_ORDER_SUBMISSION=enabled.
- * Delivery 3D.3.8 prepares the flow; persisted orders only after the authorized Test integration.
+ * The backend persists orders; this flag only controls whether the interface performs the real POST.
  *
- * 3D.3.21-A: the default parameter MUST be the literal `import.meta.env`. Vite only injects the
+ * The default parameter MUST be the literal `import.meta.env`. Vite only injects the
  * variables into modules whose code contains that exact text; reading the env through a local
  * alias of the meta object leaves `env` undefined, so the flag could never be turned on.
  * There is no runtime override (no window flag): the switch is the build/dev-server environment only.

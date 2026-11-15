@@ -33,7 +33,7 @@ export function mapOrder(order: OrderRecord) {
 }
 
 /**
- * Visão do painel administrativo (3D.4.1). Só o que a operação precisa: sem hash de sessão, digest, chave de
+ * Visão do painel administrativo. Só o que a operação precisa: sem hash de sessão, digest, chave de
  * idempotência nem telefone do cliente.
  */
 export const adminOrderSelect = {

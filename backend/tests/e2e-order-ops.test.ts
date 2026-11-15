@@ -4,7 +4,7 @@ import { reservedComandaNumbers, validateManifest } from './integration-db/e2e/m
 import type { RunManifest } from './integration-db/e2e/manifest';
 import { createRunIdentity } from './integration-db/support/fixtures';
 
-/** 3D.4.1: verificação (somente leitura) do estado final da jornada E2E com operação administrativa de pedidos. */
+/** Verificação (somente leitura) do estado final da jornada E2E com operação administrativa de pedidos. */
 const RUN_ID = '0a1b2c3d';
 const ADMIN = '00000000-0000-4000-8000-000000000900';
 const OTHER_ADMIN = '00000000-0000-4000-8000-000000000901';

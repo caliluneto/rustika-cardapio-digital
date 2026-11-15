@@ -6,7 +6,7 @@ import { adminLogin, openSession, ORIGIN, placeOrder, startHarness } from './sup
 import type { Harness } from './support/harness';
 
 /**
- * 3D.4.1 — executado só no CI (PostgreSQL efêmero). Requer PostgreSQL efêmero (CI) com todas as migrations aplicadas,
+ * Executado só contra PostgreSQL real (CI efêmero ou Test autorizado), com as 8 migrations esperadas aplicadas,
  * inclusive 20261105000000_order_status_update_privilege. Cobre o que o duplo em memória não prova:
  * isolamento Serializable real, compare-and-set, rollback, histórico único e ACL por coluna.
  */

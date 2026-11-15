@@ -6,7 +6,7 @@ import { reservedComandaNumbers, validateManifest } from './integration-db/e2e/m
 import type { RunManifest } from './integration-db/e2e/manifest';
 import { createRunIdentity } from './integration-db/support/fixtures';
 
-/** 3D.4.2: verificação (somente leitura) do estado final da jornada E2E opt-in de disponibilidade de produtos. */
+/** Verificação (somente leitura) do estado final da jornada E2E opt-in de disponibilidade de produtos. */
 const RUN_ID = '0a1b2c3d';
 const identity = createRunIdentity(RUN_ID);
 const ADMIN = '00000000-0000-4000-8000-000000000900';

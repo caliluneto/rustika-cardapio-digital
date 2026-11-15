@@ -22,7 +22,7 @@ afterAll(() => { fs.rmSync(dist, { recursive: true, force: true }); });
 const gated = (extra: Record<string, unknown> = {}, clock?: () => Date) =>
   createApp({ authClock: clock, web: { frontendDir: dist, gate: GATE, noindex: true, ...extra } });
 
-describe('3D.5.3-B - portão HTTP Basic da homologação', () => {
+describe('portão HTTP Basic da homologação', () => {
   it('desativado por padrão: sem configuração nada pede credencial', async () => {
     const response = await request(createApp({ web: { frontendDir: dist } })).get('/');
     expect(response.status).toBe(200);
@@ -160,7 +160,7 @@ describe('3D.5.3-B - portão HTTP Basic da homologação', () => {
   });
 });
 
-describe('3D.5.3-B - proxy reverso e rate limiting', () => {
+describe('proxy reverso e rate limiting', () => {
   const echo = (hops: number) => {
     const app = express();
     if (hops > 0) app.set('trust proxy', hops);

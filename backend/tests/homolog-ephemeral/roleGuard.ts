@@ -1,5 +1,5 @@
 /**
- * 3D.5.2-C FIX02 - classificacao das roles do projeto no PostgreSQL efemero.
+ * Classificação das roles do projeto no PostgreSQL efêmero.
  *
  * O workflow cria, na inicializacao do container, UMA role administrativa temporaria (`rustika_eph_admin`, superusuario).
  * Ela casa com o padrao `rustika\_%`, mas e a identidade legitima do ensaio e DEVE existir enquanto o servidor estiver no ar.

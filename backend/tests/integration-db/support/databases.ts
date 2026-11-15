@@ -142,7 +142,7 @@ export async function openIntegrationDatabases(env: Record<string, string | unde
       }),
       diskChecksums: deps.checksums(),
       leftovers: allowLeftovers ? {} : await countLeftovers(fixtures),
-      // 3D.3.21-B: only the legacy-E2E cleanup utility opens with allowCollisions (the legacy residue IS a collision).
+      // only the legacy-E2E cleanup utility opens with allowCollisions (the legacy residue IS a collision).
       collisions: allowCollisions ? {} : await countCollisions(fixtures),
       lockAcquired,
       permissionViolations: await migrator.$transaction(async (tx) => {
@@ -150,7 +150,7 @@ export async function openIntegrationDatabases(env: Record<string, string | unde
         return (await tx.$queryRawUnsafe<{ violation: string }[]>(PERMISSIONS_SQL)).map((r) => r.violation);
       }),
     };
-    // 3D.3.11: CONNECT inherited from PUBLIC is neutralized by pg_hba; prove it by trying.
+    // CONNECT inherited from PUBLIC is neutralized by pg_hba; prove it by trying.
     const candidates = await migrator.$transaction(async (tx) => {
       await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
       return (await tx.$queryRawUnsafe<{ datname: string }[]>(FIXTURES_REACHABLE_SQL)).map((r) => r.datname);

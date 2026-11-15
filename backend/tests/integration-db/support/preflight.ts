@@ -1,5 +1,5 @@
 /**
- * Gate and identity checks for the PostgreSQL integration suite (3D.3.10).
+ * Gate and identity checks for the PostgreSQL integration suite.
  * Pure functions: they decide from collected facts, so they are unit-tested with mocks in
  * `npm test` (tests/integration-db-support.test.ts) without touching any database.
  */
@@ -14,7 +14,7 @@ export const MIN_SERVER_VERSION_NUM = 170000;
 /** Advisory lock key: one integration run at a time per database. */
 export const RUN_LOCK_KEY = 3_039_390_001;
 
-/** Migrations that must be applied, with the SHA-256 of the files as committed (3D.3.7 / 3D.3.8). */
+/** Migrations that must be applied, with the SHA-256 of the files as committed. */
 export const EXPECTED_MIGRATIONS: ReadonlyArray<{ name: string; checksum: string }> = [
   { name: '20261023000000_initial_schema', checksum: '1a9cd08b9d49fa9f70eabcceaa4a696f5aee07555f6a88562ec789340f0d3983' },
   { name: '20261027000000_rf004_comandas_catalogo_pedidos', checksum: '05f583e854a87b77612c2f7d10a0a178ef45ea099d3237808b5bf0bd7c698122' },
@@ -75,7 +75,7 @@ export interface PreflightFacts {
   permissionViolations: string[];
   /**
    * Databases (other than Test) where a real connection attempt with the fixtures credentials
-   * SUCCEEDED. Must be empty: pg_hba has to refuse the role everywhere except Test (3D.3.11).
+   * SUCCEEDED. Must be empty: pg_hba has to refuse the role everywhere except Test.
    * `undefined` means the probe did not run, which also aborts.
    */
   fixturesReachableDatabases?: string[];

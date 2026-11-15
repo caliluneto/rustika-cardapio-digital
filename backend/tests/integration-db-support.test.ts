@@ -195,7 +195,7 @@ describe('abertura das conexões antes de qualquer escrita', () => {
   });
 });
 
-describe('isolamento de conexão da role de fixtures (3D.3.11, pg_hba)', () => {
+describe('isolamento de conexão da role de fixtures', () => {
   it('sondagem não executada aborta', () => {
     const facts = healthy(); delete facts.fixturesReachableDatabases;
     expect(evaluatePreflight(facts).join('\n')).toMatch(/Isolamento de conexão .* não verificado/);

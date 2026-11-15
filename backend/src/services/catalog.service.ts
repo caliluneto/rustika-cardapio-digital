@@ -17,7 +17,7 @@ export interface ProductPage {
 
 const publicCategory = { isActive: true, publicKey: { not: null } } satisfies Prisma.CategoryWhereInput;
 
-/** Predicado ÚNICO de produto público/administrável (3D.4.2): o painel só gerencia o que o catálogo pode publicar. */
+/** Predicado ÚNICO de produto público/administrável: o painel só gerencia o que o catálogo pode publicar. */
 export function publicProductWhere(filters: Pick<ProductFilters, 'categoryId' | 'availability'> = {}): Prisma.ProductWhereInput {
   return {
     isActive: true, publicKey: { not: null },

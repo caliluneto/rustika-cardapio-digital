@@ -1,4 +1,4 @@
--- 3D.3.10 — PREPARADO, NÃO EXECUTADO.
+-- PREPARADO, NÃO EXECUTADO.
 -- Habilita LOGIN depois que a senha foi definida manualmente com \password.
 -- A senha NÃO fica neste arquivo, em variável, em argumento ou em histórico.
 -- Em um psql interativo, execute primeiro: \password cardapio_test_fixtures
@@ -41,7 +41,7 @@ BEGIN
 END
 $guard$;
 
--- 3D.3.11: isolamento de conexão por pg_hba.conf (primeira regra que casa vence).
+-- Isolamento de conexão por pg_hba.conf (primeira regra que casa vence).
 -- CONNECT herdado de PUBLIC (postgres, template1, bancos de outros projetos) não pode ser
 -- retirado só desta role; por isso o LOGIN só é habilitado se o pg_hba recusar a role em
 -- todo banco que não seja cardapio_digital_test. Ver pg_hba-test-fixtures.conf.example.

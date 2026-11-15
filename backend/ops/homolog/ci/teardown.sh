@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 3D.5.2-B - PREPARADO, NAO EXECUTADO. Descarte TOTAL do ambiente efemero (sempre executado, mesmo em falha): container, volume anonimo,
+# PREPARADO, NAO EXECUTADO. Descarte TOTAL do ambiente efemero (sempre executado, mesmo em falha): container, volume anonimo,
 # certificados, chaves e senhas temporarias. Falha o job se algo sobrar.
 set -uo pipefail
 : "${PG_CONTAINER:?PG_CONTAINER obrigatorio}"

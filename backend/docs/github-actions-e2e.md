@@ -1,10 +1,12 @@
-# E2E no GitHub Actions — 3D.3.25-A
+# E2E no GitHub Actions
 
-**Estado: preparado, NÃO executado.** Nada foi publicado, nenhum workflow foi disparado e o fluxo local continua válido (ver `e2e-real.md`).
+**Estado: executado e aprovado (CI #5).** O workflow foi disparado manualmente contra o PostgreSQL efêmero do
+runner; a jornada Playwright, o teardown e a prova de resíduo zero passaram. O fluxo local continua válido
+(ver `e2e-real.md`).
 
 ## 1. Por que CI
 
-O notebook tem 8 GB de RAM e o E2E real (backend + Vite + Chromium + Playwright) precisa de cerca de 1 GB livre além do uso normal. No GitHub Actions o E2E roda num runner descartável (`ubuntu-24.04`), contra um PostgreSQL 18 criado só para a execução. Nenhum banco local é tocado.
+O ambiente local tem 8 GB de RAM e o E2E real (backend + Vite + Chromium + Playwright) precisa de cerca de 1 GB livre além do uso normal. No GitHub Actions o E2E roda num runner descartável (`ubuntu-24.04`), contra um PostgreSQL 18 criado só para a execução. Nenhum banco local é tocado.
 
 ## 2. Arquitetura (`.github/workflows/ci.yml`)
 
@@ -31,7 +33,7 @@ Passos do job `e2e` (todos no runner):
 
 ## 4. Isolamento e gates
 
-Nenhum gate (`assertE2eGate`, `assertIntegrationGate`, preflight, `FIXTURES_REACHABLE_SQL`, `PERMISSIONS_SQL`) foi alterado. O CI satisfaz as verificações em vez de contorná-las: nomes exatos de banco e roles, host `127.0.0.1`, porta 5432, PostgreSQL ≥ 17, 5 migrations com checksums, ACL efetiva, `pg_hba` com recusa fora do banco Test, advisory lock. As variáveis `NODE_ENV=test`, `DB_PROFILE=app-test` e as três confirmações do projeto são as mesmas do uso local; `DATABASE_URL`, `SHADOW_DATABASE_URL` e `RUSTIKA_E2E_LEGACY_CLEANUP` não existem no job. `launch-env.ts` (3D.3.23-D) continua tratando o `.env` legado, que nem existe no runner.
+Nenhum gate (`assertE2eGate`, `assertIntegrationGate`, preflight, `FIXTURES_REACHABLE_SQL`, `PERMISSIONS_SQL`) foi alterado. O CI satisfaz as verificações em vez de contorná-las: nomes exatos de banco e roles, host `127.0.0.1`, porta 5432, PostgreSQL ≥ 17, 8 migrations com checksums (a execução #5, anterior ao RF006, validou 5), ACL efetiva, `pg_hba` com recusa fora do banco Test, advisory lock. As variáveis `NODE_ENV=test`, `DB_PROFILE=app-test` e as três confirmações do projeto são as mesmas do uso local; `DATABASE_URL`, `SHADOW_DATABASE_URL` e `RUSTIKA_E2E_LEGACY_CLEANUP` não existem no job. `launch-env.ts` continua tratando o `.env` legado, que nem existe no runner.
 
 O runner não alcança bancos locais, Supabase, PLATAFORMA_SITES_IA ou produção: não há credencial deles no job e a rede é a do runner.
 
@@ -47,7 +49,7 @@ Com a CLI: `gh workflow run ci.yml -f run_backend=false -f run_frontend=false -f
 
 - Logs: aba da execução, passo a passo. O reporter `line` mostra o teste, o resumo do teardown ("execução … limpa; pedido verificado: sim") e o `e2e:inspect` final.
 - Falha no preflight/gates: o setup aborta **antes de escrever**; a mensagem lista o motivo (nenhuma senha é impressa; o `redactSecrets` do projeto é usado).
-- Falha no bootstrap (primeira execução): é o ponto de maior risco da receita, pois ela só pode ser validada no runner. Qualquer divergência de ACL/`pg_hba` aborta antes de gravar fixtures. Corrija `.github/ci/*` ou o passo e rode de novo; não relaxe gates.
+- Falha no bootstrap: é o ponto de maior risco da receita, validada no runner. Qualquer divergência de ACL/`pg_hba` aborta antes de gravar fixtures. Corrija `.github/ci/*` ou o passo e rode de novo; não relaxe gates.
 - Falha do E2E: marque `upload_diagnostics`. O artefato é `playwright-diagnostics` (retenção 3 dias).
 
 ## 7. Artefatos e segredos
@@ -62,9 +64,11 @@ Estimativa (não medida): `backend` 3–5 min, `frontend` 2–4 min, `e2e` 8–1
 
 `e2e-real.md` continua válido para quem tiver memória livre ≥ 1,8 GB. O CI não substitui a regra de autorização: o banco do runner é descartável, mas o fluxo de produção/Dev/Test locais não muda.
 
-## 10. Antes do primeiro push (resumo)
+## 10. Histórico da primeira publicação
 
-Ver `RELATORIO-ENTREGA-3D.3.25-A.md` (seção 12) e `RELATORIO-ENTREGA-3D.3.25-B.md`. Na 3D.3.25-B o teste que continha uma senha real foi sanitizado (valores sintéticos), as Actions foram fixadas por SHA e os arquivos E2E foram listados para o primeiro commit. Continua valendo: nunca usar `git push --all/--mirror` (existem refs locais `refs/cline/*` e `refs/codex/*` com 231 commits que incluem scripts com credenciais; `main` está limpa).
+Antes do primeiro commit, o teste que continha uma senha real foi sanitizado (valores sintéticos), as Actions foram
+fixadas por SHA e os arquivos E2E foram listados explicitamente. Continua valendo: nunca usar
+`git push --all` ou `git push --mirror`; publique somente a `main` e confira o resultado com `git ls-remote`.
 
 ## 11. Actions fixadas por SHA de commit
 
@@ -96,14 +100,14 @@ Coberto pela suíte unitária/API (jobs `backend` e `frontend`): login, login in
 
 Coberto pelo E2E (quando executado): jornada catálogo → carrinho → convite/comanda → checkout → pedido persistido, e limpeza com prova de resíduo zero.
 
-Planilha privada (3D.3.25-D): `backend/data/Exportacao-produtos.xlsx` é dado comercial e **nunca vai ao GitHub** (`backend/data/` é ignorado). Os testes de importação e seed (`seed-real`, `seed-real-corrected`, `executor-seed-real`, `inspect-reconciliation`, `seed-dev`) agora leem uma **fixture sintética versionada**, `backend/tests/fixtures/catalog/synthetic-catalog.csv` (204 linhas fictícias com os mesmos quantitativos da planilha real: 174 ativos = 144 + 24 + 6, 30 inativos). Ela é gerada de forma determinística por `synthetic-catalog.ts` e conferida por `synthetic-catalog.test.ts`. As rotinas reais não mudaram: os parâmetros `filePath`/`catalogPath` têm como padrão a planilha real e só os testes os preenchem.
+Planilha privada: `backend/data/Exportacao-produtos.xlsx` é dado comercial e **nunca vai ao GitHub** (`backend/data/` é ignorado). Os testes de importação e seed (`seed-real`, `seed-real-corrected`, `executor-seed-real`, `inspect-reconciliation`, `seed-dev`) agora leem uma **fixture sintética versionada**, `backend/tests/fixtures/catalog/synthetic-catalog.csv` (204 linhas fictícias com os mesmos quantitativos da planilha real: 174 ativos = 144 + 24 + 6, 30 inativos). Ela é gerada de forma determinística por `synthetic-catalog.ts` e conferida por `synthetic-catalog.test.ts`. As rotinas reais não mudaram: os parâmetros `filePath`/`catalogPath` têm como padrão a planilha real e só os testes os preenchem.
 
 O que **só** a planilha real verifica está em `tests/scripts/private-catalog.test.ts` (6 testes: contagens reais, nomes e códigos reais conhecidos, código alfanumérico real, aparo de grupos, ausência de nomes reais na fixture). Esse arquivo se autoignora quando a planilha não existe; no CI aparece como *skipped*. A fixture passar **não** prova que o conteúdo real esteja correto. `npm run test:ci` força `RUSTIKA_IGNORE_PRIVATE_CATALOG=1` e reproduz localmente o que o CI enxerga; `RUSTIKA_REQUIRE_PRIVATE_CATALOG=1` transforma a ausência da planilha em erro.
 
-Dependência `xlsx` (3D.3.25-E): é instalada de **`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`**, a origem oficial da SheetJS (a versão publicada no registro npm é antiga, `0.18.x`, e tem vulnerabilidades conhecidas). O `package-lock.json` fixa a versão `0.20.3` e o hash `sha512` do tarball; `npm ci` recusa um arquivo cujo hash difira. Verificado em 05/11/2026: o hash do tarball baixado da CDN confere com o do lockfile, e `npm 10.9.10` (o do runner com Node 22) instala sem opções extras. Riscos: depende da disponibilidade de `cdn.sheetjs.com` (uma queda quebra o `npm ci`); o npm 12 recusa origens remotas por padrão (`allow-remote=none`), e nesse caso a instalação local exige `npm ci --allow-remote=root`, **sem** alterar a configuração global. `ci-config.test.ts` falha se o `xlsx` mudar de origem/versão, perder o hash, ou se surgir outro pacote fora do registro npm.
+Dependência `xlsx`: é instalada de **`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`**, a origem oficial da SheetJS (a versão publicada no registro npm é antiga, `0.18.x`, e tem vulnerabilidades conhecidas). O `package-lock.json` fixa a versão `0.20.3` e o hash `sha512` do tarball; `npm ci` recusa um arquivo cujo hash difira. Verificado em 05/11/2026: o hash do tarball baixado da CDN confere com o do lockfile, e `npm 10.9.10` (o do runner com Node 22) instala sem opções extras. Riscos: depende da disponibilidade de `cdn.sheetjs.com` (uma queda quebra o `npm ci`); o npm 12 recusa origens remotas por padrão (`allow-remote=none`), e nesse caso a instalação local exige `npm ci --allow-remote=root`, **sem** alterar a configuração global. `ci-config.test.ts` falha se o `xlsx` mudar de origem/versão, perder o hash, ou se surgir outro pacote fora do registro npm.
 
-Lacunas conhecidas, **não implementadas**:
-- Atualização de status de pedido e listagem administrativa: a API não tem essas rotas.
+Lacunas conhecidas do E2E automatizado:
+- Atualização de status de pedido e listagem administrativa: implementadas na API, mas a jornada correspondente é opt-in e não faz parte do teste padrão do CI.
 - Quantidades no carrinho e categorias no navegador: sem especificações Playwright. Não foram escritas porque os seletores não podem ser validados sem executar o E2E.
 
 ## 14. Operação
@@ -114,12 +118,12 @@ Lacunas conhecidas, **não implementadas**:
 4. Para anexar diagnósticos, marcar `upload_diagnostics` (podem conter dados sintéticos da página).
 5. Trocar versões de Node, Playwright ou PostgreSQL: editar `node-version`, `frontend/package.json` ou a imagem `postgres:18`; o provisionamento exige PostgreSQL ≥ 17.
 6. O consumo de minutos do Actions não foi medido.
-7. O bootstrap do banco efêmero (`.github/ci/bootstrap.sql`, `pg_hba.ci.conf`) **nunca foi executado**; a primeira execução manual é a validação real.
-8. OneDrive: pausar a sincronização durante operações Git evita novas cópias de conflito.
+7. O bootstrap do banco efêmero (`.github/ci/bootstrap.sql`, `pg_hba.ci.conf`) é validado a cada execução manual; o CI #5 aprovou o fluxo completo.
+8. Pausar a sincronização em nuvem durante operações Git evita cópias de conflito.
 
 ## 15. Publicar somente a `main`
 
-Não executar sem autorização. Quando autorizado, após criar o remoto privado:
+O remoto privado está configurado. O procedimento abaixo permanece como referência e exige autorização:
 
 ```bash
 git remote add origin <URL-do-repositorio-privado>
@@ -127,12 +131,13 @@ git push -u origin main:main
 git ls-remote --heads --tags origin
 ```
 
-A conferência final deve listar apenas `refs/heads/main`. Nunca usar `git push --all`, `--mirror` ou `refs/*`. Alternativa mais segura: clonar `main` com `git clone --single-branch --branch main` para uma pasta limpa fora do OneDrive e publicar a partir dela.
+A conferência final deve listar apenas `refs/heads/main`. Nunca usar `git push --all`, `--mirror` ou `refs/*`. Alternativa mais segura: clonar `main` com `git clone --single-branch --branch main` para uma pasta limpa e publicar a partir dela.
 
 ## 16. Reverter o CI
 
 Remover `.github/workflows/ci.yml` e `.github/ci/` em um commit próprio, ou desativar o workflow em Actions. Nenhum recurso externo é criado pelo CI (o banco e os segredos vivem só no runner).
 
-## 17. Relatório
+## 17. Registro da execução
 
-Detalhes, verificações e lista de arquivos do primeiro commit: `RELATORIO-ENTREGA-3D.3.25-B.md`.
+O CI #5 executou o job `e2e` manualmente e aprovou a jornada, o teardown e a prova de resíduo zero. Os logs
+permanecem disponíveis na aba Actions do repositório privado.

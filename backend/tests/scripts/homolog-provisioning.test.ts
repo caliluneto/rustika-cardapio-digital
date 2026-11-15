@@ -11,7 +11,7 @@ const stripComments = (sql: string) => sql.split('\n').filter((line) => !line.tr
 const withoutStrings = (sql: string) => sql.replace(/'[^']*'/g, "''");
 
 describe('scripts SQL de provisionamento da homologação (validação estática, nada é executado)', () => {
-  it('existem exatamente os nove scripts previstos (mais o subdiretório neon/, específico do provedor, 3D.5.3-C.5)', () => {
+  it('existem exatamente os nove scripts previstos (mais o subdiretório neon/, específico do provedor)', () => {
     const entries = fs.readdirSync(sqlDir, { withFileTypes: true });
     expect(entries.filter((e) => e.isFile()).map((e) => e.name).sort()).toEqual([...HOMOLOG_SQL_FILES].sort());
     expect(HOMOLOG_SQL_FILES).toHaveLength(9);
@@ -99,7 +99,7 @@ describe('scripts SQL de provisionamento da homologação (validação estática
   });
 });
 
-describe('proteção da renomeação (3D.5.2-C, verificação estática)', () => {
+describe('proteção da renomeação', () => {
   it('o 04 exige o banco postgres, recusa role conectada, sessões, transações preparadas e slots', () => {
     const code = stripComments(read('04-finalize-rename.sql'));
     expect(code).toMatch(/current_database\(\) <> 'postgres'/);
@@ -119,7 +119,7 @@ describe('proteção da renomeação (3D.5.2-C, verificação estática)', () =>
     }
   });
 
-  it('C.6/Neon: o 03 tolera somente a linha ADMIN-only automática do criador (PostgreSQL >= 16) e continua recusando SET/INHERIT', () => {
+  it('Neon: o 03 tolera somente a linha ADMIN-only automática do criador (PostgreSQL >= 16) e continua recusando SET/INHERIT', () => {
     const code = stripComments(read('03-verify-replay.sql'));
     expect(code).toContain('grantor_role.rolsuper');
     expect(code).toContain('m.admin_option');
@@ -133,7 +133,7 @@ describe('proteção da renomeação (3D.5.2-C, verificação estática)', () =>
     expect(start).toMatch(/chmod 755 "\$\{WORK\}" "\$\{WORK\}\/tls"/);
     expect(start).toMatch(/sudo chown "\$\{PG_UID\}:\$\{PG_UID\}" "\$\{WORK\}\/tls\/server\.key"/);
     expect(start).toMatch(/chmod 600 "\$\{WORK\}\/tls\/server\.key"/);
-    // FIX01: nenhum chmod do material TLS pode vir DEPOIS do chown (o runner deixa de ser dono e o chmod falha).
+    // Nenhum chmod do material TLS pode vir DEPOIS do chown (o runner deixa de ser dono e o chmod falha).
     const lines = start.split('\n');
     const chownAt = lines.findIndex((line) => /^\s*sudo chown /.test(line));
     expect(chownAt).toBeGreaterThan(-1);

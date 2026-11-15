@@ -10,7 +10,7 @@ const inv = (profile: string, sub: string) => { const r = parsePrismaInvocation(
 const HOMOLOG_OK = { [HOMOLOG_DEPLOY_CONFIRMATION_ENV]: HOMOLOG_DEPLOY_CONFIRMATION_VALUE };
 const REPLAY_OK = { [REPLAY_CONFIRMATION_ENV]: REPLAY_CONFIRMATION_VALUE };
 
-describe('política Prisma da homologação (3D.5.2-A)', () => {
+describe('política Prisma da homologação', () => {
   it('aceita migrate status/deploy dos perfis migrate-homolog e migrate-homolog-replay e bloqueia comandos destrutivos', () => {
     for (const profile of ['migrate-homolog', 'migrate-homolog-replay']) {
       expect(inv(profile, 'deploy')).toMatchObject({ profileName: profile, purpose: 'migration', migrationSubcommand: 'deploy' });

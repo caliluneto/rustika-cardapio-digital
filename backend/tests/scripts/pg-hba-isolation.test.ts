@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 3D.3.12 — modelo da avaliação do pg_hba.conf ("primeira linha que casa vence"), aplicado às
+ * Modelo da avaliação do pg_hba.conf ("primeira linha que casa vence"), aplicado às
  * regras REAIS lidas deste cluster em 04/11/2026 (copiadas abaixo; o arquivo de produção não é lido
  * pelos testes) e ao exemplo docs/sql/pg_hba-test-fixtures.conf.example.
  * Não substitui a pós-verificação real (psql -w deve ser recusado), mas prova a ordem e a cobertura.
@@ -59,14 +59,14 @@ const example = fs.readFileSync(path.join(process.cwd(), 'docs', 'sql', 'pg_hba-
 const exampleRules = parse(example);
 const cluster = parse(CLUSTER_RULES);
 
-/** Plano 3D.3.22-A: só os perfis de migration em 127.0.0.1; recusa demais caminhos. */
+/** Plano de isolamento: só os perfis de migration em 127.0.0.1; recusa demais caminhos. */
 const migratorRules = parse(`
 host  cardapio_digital_dev,cardapio_digital_test,cardapio_digital_shadow  cardapio_migrator  127.0.0.1/32  scram-sha-256
 local all  cardapio_migrator  reject
 host  all  cardapio_migrator  0.0.0.0/0  reject
 host  all  cardapio_migrator  ::0/0  reject`);
 
-describe('isolamento da role de fixtures pelo pg_hba (modelo, 3D.3.12)', () => {
+describe('isolamento da role de fixtures pelo pg_hba (modelo)', () => {
   it('hoje, sem as linhas, a role alcançaria TODOS os bancos conectáveis (inclusive PLATAFORMA_SITES_IA)', () => {
     for (const db of DATABASES) for (const conn of PATHS) expect(decide(cluster, db, ROLE, conn)).toBe('scram-sha-256');
   });
@@ -114,7 +114,7 @@ describe('isolamento da role de fixtures pelo pg_hba (modelo, 3D.3.12)', () => {
   });
 });
 
-describe('plano de isolamento do migrator (modelo, 3D.3.22-A; não aplicado)', () => {
+describe('plano de isolamento do migrator (modelo; não aplicado)', () => {
   const existing = [...exampleRules, ...cluster];
   const proposed = [...migratorRules, ...existing];
   const allowed = new Set(['cardapio_digital_dev', 'cardapio_digital_test', 'cardapio_digital_shadow']);

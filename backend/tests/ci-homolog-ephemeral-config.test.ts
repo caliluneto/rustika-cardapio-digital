@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 3D.5.2-B: invariantes de segurança do workflow manual `homolog-ephemeral`, verificadas como texto (sem executar nada, sem rede).
+ * Invariantes de segurança do workflow manual `homolog-ephemeral`, verificadas como texto (sem executar nada, sem rede).
  * Rodam no job `backend` do ci.yml: se alguém afrouxar o workflow ou os scripts, a CI padrão falha.
  */
 const root = path.resolve(__dirname, '..', '..');

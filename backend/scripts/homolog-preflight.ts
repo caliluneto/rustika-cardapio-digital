@@ -1,5 +1,5 @@
 /**
- * Pré-voo OFFLINE da homologação (3D.5.2): não abre conexão com nenhum banco.
+ * Pré-voo OFFLINE da homologação: não abre conexão com nenhum banco.
  *   CARDAPIO_SECRETS_DIR=<pasta própria da homologação> npm run homolog:preflight   # exit 1 se houver FAIL
  */
 import path from 'node:path';

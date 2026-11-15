@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('3D.5.3-B.1 - env.ts com segredos por ambiente', () => {
+describe('env.ts com segredos por ambiente', () => {
   afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
   it('CARDAPIO_SECRETS_SOURCE=env não resolve (nem falha por) a pasta de segredos', async () => {

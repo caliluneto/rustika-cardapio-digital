@@ -1,7 +1,7 @@
 import { ApiError } from './api';
 
 /**
- * 3D.4.2 — gestão administrativa da disponibilidade de produtos. A API não aceita query string no roteador
+ * Gestão administrativa da disponibilidade de produtos. A API não aceita query string no roteador
  * administrativo, então a lista completa é baixada uma vez e busca/filtros são aplicados aqui, no cliente.
  * Somente a disponibilidade é editável: nada de preço, ativação, categoria ou chaves.
  */

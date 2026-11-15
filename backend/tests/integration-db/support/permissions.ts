@@ -43,11 +43,11 @@ UNION ALL
 SELECT r.rolname || ':column ACL:' || c.relname || '.' || a.attname FROM roles r JOIN pg_class c ON c.relnamespace = 'public'::regnamespace
 JOIN pg_attribute a ON a.attrelid = c.oid CROSS JOIN LATERAL aclexplode(a.attacl) acl
 WHERE acl.grantee IN (0, r.oid)
-  -- 3D.4.1: the ONLY column ACL allowed is UPDATE (status, updated_at) on orders for the runtime role,
+  -- The ONLY column ACL allowed is UPDATE (status, updated_at) on orders for the runtime role,
   -- without GRANT OPTION. Anything else (PUBLIC, fixtures, other columns/privileges) is a violation.
   AND NOT (r.rolname = 'cardapio_test_app' AND acl.grantee = r.oid AND c.relname = 'orders'
            AND a.attname IN ('status', 'updated_at') AND acl.privilege_type = 'UPDATE' AND NOT acl.is_grantable)
-  -- 3D.4.2: and UPDATE (availability_state, updated_at) on products for the runtime role, without GRANT OPTION.
+  -- And UPDATE (availability_state, updated_at) on products for the runtime role, without GRANT OPTION.
   AND NOT (r.rolname = 'cardapio_test_app' AND acl.grantee = r.oid AND c.relname = 'products'
            AND a.attname IN ('availability_state', 'updated_at') AND acl.privilege_type = 'UPDATE' AND NOT acl.is_grantable)
 UNION ALL
@@ -76,7 +76,7 @@ UNION ALL
 SELECT r.rolname || ':database:' || d.datname FROM roles r CROSS JOIN pg_database d
 WHERE (d.datname = 'cardapio_digital_test' AND (has_database_privilege(r.oid, d.oid, 'CREATE')
         OR has_database_privilege(r.oid, d.oid, 'TEMP') OR NOT has_database_privilege(r.oid, d.oid, 'CONNECT')))
- -- 3D.3.11: outside Test only EXPLICIT grants to the role count. CONNECT/TEMP inherited from
+ -- Outside Test only EXPLICIT grants to the role count. CONNECT/TEMP inherited from
  -- PUBLIC (postgres, template1, other projects) cannot be removed from one role; for the
  -- fixtures role it is neutralized by pg_hba and proven by FIXTURES_REACHABLE_SQL + probes.
  OR (d.datname <> 'cardapio_digital_test' AND EXISTS (SELECT 1 FROM aclexplode(d.datacl) a WHERE a.grantee = r.oid))

@@ -1,5 +1,5 @@
 /**
- * 3D.3.29-FIX02: contrato do snapshot de estado do E2E (produzido por `inspect-e2e-state.ts --out`).
+ * Contrato do snapshot de estado do E2E (produzido por `inspect-e2e-state.ts --out`).
  *
  * Funções puras: nenhuma E/S, nenhuma conexão. Qualquer desvio do contrato é um erro explícito
  * (`E2eStateError`); nunca vira "resíduo zero". Tabela AUSENTE (migrations não aplicadas, consulta que não rodou)

@@ -1,5 +1,5 @@
 /**
- * Impressão digital do schema (somente leitura de catálogo), para controle de drift entre ambientes (3D.5.2-A).
+ * Impressão digital do schema (somente leitura de catálogo), para controle de drift entre ambientes.
  *   tsx scripts/schema-fingerprint.ts <migrate-dev|migrate-test|migrate-homolog> [--out arquivo.json]
  * Nunca altera nada; nunca corrige divergências (isso exige uma nova migration revisada). Não é executado por testes nem pelo CI.
  */

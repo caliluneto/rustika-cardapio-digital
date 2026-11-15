@@ -1,4 +1,4 @@
-# 3D.3.11 — EXEMPLO, NÃO APLICADO. Isolamento de conexão da role cardapio_test_fixtures.
+# EXEMPLO, NÃO APLICADO. Isolamento de conexão da role cardapio_test_fixtures.
 #
 # Por que pg_hba e não REVOKE: neste cluster PUBLIC tem CONNECT em postgres, template1,
 # rf004_lab_*, cardapio_restore_precheck e nos bancos de outro projeto (plataforma_sites_ia*).

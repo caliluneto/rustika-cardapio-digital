@@ -76,7 +76,7 @@ function replayEnv(opts: ReplayEnvOpts = {}): string {
   const cluster = opts.cluster === undefined ? CLUSTER : opts.cluster;
   return `DATABASE_URL="${url}"\nEXPECTED_DATABASE_HOST="${host}"\n${cluster === null ? '' : `EXPECTED_CLUSTER_ID="${cluster}"\n`}${project === null ? '' : `EXPECTED_PROJECT_ID="${project}"\n`}`;
 }
-describe('RÚSTIKA C.7.1 — desbloquear replay Prisma no Neon', () => {
+describe('RÚSTIKA — desbloquear replay Prisma no Neon', () => {
   describe('perfil migrate-homolog-replay no Neon (loadDatabaseProfile)', () => {
     it('carrega migrate-homolog-replay com project id e endpoint direto Neon', () => {
       const dir = dirWith({ 'migrate-homolog-replay.env': replayEnv() });

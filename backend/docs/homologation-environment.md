@@ -1,4 +1,4 @@
-# Ambiente de homologação — 3D.5.2 / 3D.5.2-A
+# Ambiente de homologação
 
 **Estado: código, scripts SQL, testes estáticos e documentação PREPARADOS. Nada foi executado contra banco algum, nenhum recurso de
 nuvem foi criado e nenhuma credencial foi gerada.** Todo passo marcado com 🔒 exige autorização explícita e específica.
@@ -120,7 +120,7 @@ Preservados: login, hash scrypt, cookie `rustika_admin`, CSRF/Origin, rate limit
 * Sem banco (CI padrão): perfis e identidade, política Prisma (replay/final), integridade e checksums das sete migrations, **segurança da renomeação** (análise estática das migrations), SQL estático (9 scripts), identidade do servidor, fingerprint/diff/aliases de roles, lint de migrations futuras, pré-voo, bootstrap, `/api/ready`.
 * Preparado, **não executado**: `npm run test:homolog:ephemeral` (`tests/homolog-ephemeral/provisioning.ephemeral.ts`) — fluxo 01→09 + equivalência de schema A×B + 8ª migration + drift; exige `RUSTIKA_HOMOLOG_EPHEMERAL_URL` e `RUSTIKA_HOMOLOG_EPHEMERAL_CONFIRM=RUN_ON_EPHEMERAL_POSTGRES`; aborta se houver qualquer banco/role `cardapio_*`/`rustika_*`.
 
-## 12.1 Ensaio efêmero integral (3D.5.2-B) — workflow manual `homolog-ephemeral`
+## 12.1 Ensaio efêmero integral — workflow manual `homolog-ephemeral`
 Arquivo: `.github/workflows/homolog-ephemeral.yml` (somente `workflow_dispatch`, input `run_homolog_ephemeral` = false por padrão, repositório privado, 25 min, sem secrets, sem artifacts, PostgreSQL **próprio**, não o do job `e2e`).
 `ops/homolog/ci/start-ephemeral-postgres.sh` gera CA sintética (e uma CA "errada" para o teste negativo), certificado do servidor com SAN = IP do runner, `pg_hba` só `hostssl` e publica a porta **apenas** no IP do runner (não-loopback, como exigem os perfis de homologação).
 `diagnostics.sh` (só em falha: 60 linhas de log mascaradas, sem dump) e `teardown.sh` (sempre: container, volume, certificados e senhas; falha se sobrar algo).

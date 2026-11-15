@@ -1,4 +1,4 @@
-// 3D.3.21-A/B: guardas estaticas (sem navegador, sem banco) sobre o codigo e a configuracao do E2E.
+// Guardas estaticas (sem navegador, sem banco) sobre o codigo e a configuracao do E2E.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';

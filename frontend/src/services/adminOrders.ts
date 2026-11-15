@@ -1,7 +1,7 @@
 import { ApiError } from './api';
 
 /**
- * 3D.4.1 — gestão administrativa de pedidos. Sem estado global, sem WebSocket: o painel consulta por polling
+ * Gestão administrativa de pedidos. Sem estado global, sem WebSocket: o painel consulta por polling
  * moderado (ver adminOrdersPolling.ts). Os estados e transições espelham `canTransitionOrder` do backend; a
  * fonte de verdade das ações permitidas é `allowedTransitions` devolvido pela API, nunca esta tabela.
  */

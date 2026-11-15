@@ -1,4 +1,4 @@
--- 3D.3.10 — SOMENTE LEITURA.
+-- SOMENTE LEITURA.
 -- Execute conectado a cardapio_digital_test como role administrativa local.
 -- Não contém GRANT, REVOKE, CREATE, ALTER ou DROP.
 -- A prova de segurança só existe após executar este arquivo no banco realmente migrado.

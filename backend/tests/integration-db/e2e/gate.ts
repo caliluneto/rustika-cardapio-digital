@@ -1,5 +1,5 @@
 /**
- * Gate and target guards for the browser E2E fixtures (3D.3.21-B).
+ * Gate and target guards for the browser E2E fixtures.
  * Pure functions, unit-tested with mocks. The E2E has its OWN confirmation on top of the
  * integration-db one, so confirming one suite never enables the other by accident.
  */

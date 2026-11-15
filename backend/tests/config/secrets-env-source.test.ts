@@ -22,7 +22,7 @@ const envFor = (overrides: Record<string, string | undefined> = {}): NodeJS.Proc
 const load = (profile: string, env: NodeJS.ProcessEnv, purpose: 'runtime' | 'migration' | 'bootstrap' = 'runtime') =>
   loadDatabaseProfile(profile, { purpose, env, secretsDir: undefined });
 
-describe('3D.5.3-B - segredos do perfil app-homolog por variável de ambiente (opt-in)', () => {
+describe('segredos do perfil app-homolog por variável de ambiente (opt-in)', () => {
   it('carrega o perfil de aplicação com as mesmas validações e sem arquivo nem pasta de segredos', () => {
     const secrets = load('app-homolog', envFor());
     expect(secrets).toMatchObject({ profile: 'app-homolog', purpose: 'runtime', database: 'cardapio_digital_homolog', user: HOMOLOG_ROLES.runtime, host: HOST, clusterId: CLUSTER });

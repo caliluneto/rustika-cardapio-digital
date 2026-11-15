@@ -65,7 +65,7 @@ describe('limitador sob saturação adversarial', () => {
     for (let i = 0; i < 50_000; i++) { limiter.hit(`k-${i}`); if (i % 10 === 0) limiter.hit(`k-${i}`); }
     expect(limiter.size).toBeLessThanOrEqual(1_500);
     expect(limiter.blockedSize).toBeLessThanOrEqual(500);
-  }, 30_000); // teste pesado: prazo próprio para não falhar por carga da máquina (3D.3.11)
+  }, 30_000); // teste pesado: prazo próprio para não falhar por carga da máquina
 });
 
 describe('rateLimitAddress', () => {

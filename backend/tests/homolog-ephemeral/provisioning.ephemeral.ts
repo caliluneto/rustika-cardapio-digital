@@ -1,5 +1,5 @@
 /**
- * PREPARADO (3D.5.2-B) — NÃO EXECUTADO. Ensaio integral da homologação em um PostgreSQL 18 TOTALMENTE DESCARTÁVEL, com TLS
+ * PREPARADO — NÃO EXECUTADO. Ensaio integral da homologação em um PostgreSQL 18 TOTALMENTE DESCARTÁVEL, com TLS
  * (CA sintética) e host NÃO-loopback, exercitando os mesmos gates dos wrappers reais (`prisma-run`, identidade do servidor,
  * núcleo do bootstrap). Pensado para o workflow manual `homolog-ephemeral` (.github/workflows/homolog-ephemeral.yml).
  *
@@ -177,7 +177,7 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(head[0]!.ver).toBeGreaterThanOrEqual(170000);
     const databases = await admin.$queryRawUnsafe<Array<{ datname: string }>>(PROJECT_DATABASES_SQL);
     expect(() => assertOnlyPostgresDatabase(databases.map((row) => row.datname)), 'servidor deve conter somente o banco postgres').not.toThrow();
-    // FIX02: a única role do projeto permitida é a administrativa temporária do workflow (igualdade exata); ela deve existir.
+    // A única role do projeto permitida é a administrativa temporária do workflow (igualdade exata); ela deve existir.
     const roles = await admin.$queryRawUnsafe<Array<{ rolname: string }>>(PROJECT_ROLES_SQL);
     expect(() => assertOnlyEphemeralAdminRole(roles.map((row) => row.rolname), ADMIN_USER), 'nenhuma role do projeto pré-existente além da administrativa').not.toThrow();
     expect(spawnSync('psql', ['--version']).status, 'psql disponível no PATH').toBe(0);
@@ -195,7 +195,7 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     const leftoverDatabases = await admin.$queryRawUnsafe<Array<{ datname: string }>>(PROJECT_DATABASES_SQL);
     const leftoverRoles = await admin.$queryRawUnsafe<Array<{ rolname: string }>>(PROJECT_ROLES_SQL);
     await admin.$disconnect();
-    // FIX02: resíduo zero para tudo que pertence à suíte; a role administrativa do workflow permanece (o cleanup externo cuida dela).
+    // Resíduo zero para tudo que pertence à suíte; a role administrativa do workflow permanece (o cleanup externo cuida dela).
     const residue = (): void => {
       assertOnlyPostgresDatabase(leftoverDatabases.map((row) => row.datname));
       assertOnlyEphemeralAdminRole(leftoverRoles.map((row) => row.rolname), ADMIN_USER);
@@ -313,7 +313,7 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
       const differences = diffSnapshots(snapshotA, snapshotB);
       expect(differences, JSON.stringify(differences, null, 1)).toEqual([]);
       expect(fingerprint(snapshotB)).toBe(fingerprint(snapshotA));
-      // FIX03: seções obrigatórias não vazias (defaultAcls pode legitimamente ser vazia) e nenhuma role desconhecida em nenhuma seção.
+      // Seções obrigatórias não vazias (defaultAcls pode legitimamente ser vazia) e nenhuma role desconhecida em nenhuma seção.
       expect(snapshotCompletenessProblems(snapshotB), 'completude do snapshot').toEqual([]);
       expect(await migrationRows(prisma), '_prisma_migrations idêntica (checksums, datas e passos)').toEqual(rowsBefore);
     });

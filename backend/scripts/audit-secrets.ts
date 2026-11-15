@@ -1,5 +1,5 @@
 /**
- * Audit of the database secrets already managed by src/config/secrets.ts (3D.3.21-B).
+ * Audit of the database secrets already managed by src/config/secrets.ts.
  * It reads the same secrets directory the app uses and NEVER prints a password: only roles,
  * profile ids, lengths/classes and pass/fail findings. Read-only; no connection to any database.
  *

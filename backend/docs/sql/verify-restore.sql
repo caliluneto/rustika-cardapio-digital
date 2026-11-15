@@ -1,4 +1,4 @@
--- 3D.3.10 — SOMENTE LEITURA.
+-- SOMENTE LEITURA.
 -- Execute apenas no banco descartável cardapio_restore_check_AAAAMMDD_HHMMSS.
 -- Não contém GRANT, REVOKE, CREATE, ALTER, DROP, INSERT, UPDATE ou DELETE.
 
@@ -37,7 +37,7 @@ FROM pg_constraint
 WHERE connamespace = 'public'::regnamespace
 ORDER BY conrelid::regclass::text, conname;
 
-\echo '=== _prisma_migrations (esperado: linha inicial da 3D.3.9) ==='
+\echo '=== _prisma_migrations (esperado: linha inicial do schema histórico) ==='
 SELECT migration_name, checksum, finished_at IS NOT NULL AS concluida,
        rolled_back_at IS NOT NULL AS revertida, started_at
 FROM public._prisma_migrations

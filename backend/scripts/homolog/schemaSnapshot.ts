@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 
 /**
- * Impressão digital de schema (3D.5.2-A) para detectar DRIFT entre ambientes (Dev, Test, Homologação) e para provar a
+ * Impressão digital de schema para detectar DRIFT entre ambientes (Dev, Test, Homologação) e para provar a
  * equivalência entre o schema do replay histórico e o da homologação. Somente leitura de catálogo; nunca corrige nada:
  * qualquer correção exige uma nova migration revisada. Os nomes físicos das roles são trocados por papéis lógicos
  * (runtime, migrator, bootstrap, placeholder) para que ambientes com nomes diferentes sejam comparáveis.
@@ -21,7 +21,7 @@ export const DEFAULT_ROLE_ALIASES: Readonly<Record<string, string>> = {
 };
 
 /**
- * FIX04 - roles NATIVAS do PostgreSQL que aparecem legitimamente como proprietárias/concedidas. Lista fechada, por nome exato:
+ * Roles NATIVAS do PostgreSQL que aparecem legitimamente como proprietárias/concedidas. Lista fechada, por nome exato:
  * `pg_database_owner` (PG ≥ 14) é o dono padrão do schema `public` e representa "o dono do banco" (que aqui é a role do
  * projeto já mapeada). Qualquer outra role, inclusive outra iniciada por `pg_`, continua desconhecida (`?nome`).
  */
@@ -31,7 +31,7 @@ export const aliasRole = (role: string, aliases: Readonly<Record<string, string>
   role === 'PUBLIC' ? 'PUBLIC' : NATIVE_SPECIAL_ROLES.has(role) ? role : (aliases[role] ?? `?${role}`);
 
 /**
- * FIX03 - seções que o schema histórico OBRIGATORIAMENTE popula (ausência = coleta quebrada ou schema incompleto).
+ * Seções que o schema histórico OBRIGATORIAMENTE popula (ausência = coleta quebrada ou schema incompleto).
  * `defaultAcls` NÃO está aqui: as migrations apenas fazem `ALTER DEFAULT PRIVILEGES … REVOKE` sobre os defaults embutidos, e o
  * PostgreSQL remove de `pg_default_acl` a linha cujo ACL volta ao padrão; zero linhas é o estado esperado. As seções
  * opcionais continuam sendo coletadas, comparadas e entram no fingerprint; apenas "vazia" deixa de ser erro.

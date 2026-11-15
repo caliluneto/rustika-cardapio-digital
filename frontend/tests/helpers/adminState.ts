@@ -1,5 +1,5 @@
 /**
- * Estados da interface administrativa para o E2E (3D.4.2-C). Lógica pura, sem navegador: o formulário de login é
+ * Estados da interface administrativa para o E2E. Lógica pura, sem navegador: o formulário de login é
  * renderizado ANTES do fim da verificação de sessão (`data-session-state="checking"`) e some se a sessão for restaurada;
  * só `anonymous` (verificação concluída sem sessão) é estável para preencher.
  */

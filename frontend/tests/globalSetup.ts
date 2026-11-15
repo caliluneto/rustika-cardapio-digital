@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * 3D.3.21-B: fixtures sinteticas e ISOLADAS da execucao, criadas pelo harness aprovado
+ * Fixtures sinteticas e ISOLADAS da execucao, criadas pelo harness aprovado
  * (backend/tests/integration-db/e2e). Substitui o antigo `node seed_raw.js`, que fazia DELETE global
  * nas tabelas de pedidos/sessoes/convites e tinha credencial embutida: ele NAO e mais invocado.
  *
@@ -17,8 +17,8 @@ const tsxCli = path.join(backendDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const ENV_KEYS = [
   'RUSTIKA_E2E_RUN_ID', 'RUSTIKA_E2E_ADMIN_EMAIL', 'RUSTIKA_E2E_ADMIN_PASSWORD',
   'RUSTIKA_E2E_COMANDA', 'RUSTIKA_E2E_PRODUCT_NAME', 'RUSTIKA_E2E_PRODUCT_PRICE_CENTS', 'RUSTIKA_E2E_STATE_DIR',
-  'RUSTIKA_E2E_ORDER_OPS', // 3D.4.1: "enabled" quando a jornada inclui a operacao administrativa de pedidos
-  'RUSTIKA_E2E_PRODUCT_AVAILABILITY', 'RUSTIKA_E2E_UNKNOWN_PRODUCT_NAME', 'RUSTIKA_E2E_BLOCKED_PRODUCT_NAME', // 3D.4.2 (opt-in)
+  'RUSTIKA_E2E_ORDER_OPS', // "enabled" quando a jornada inclui a operacao administrativa de pedidos
+  'RUSTIKA_E2E_PRODUCT_AVAILABILITY', 'RUSTIKA_E2E_UNKNOWN_PRODUCT_NAME', 'RUSTIKA_E2E_BLOCKED_PRODUCT_NAME', // opt-in
 ] as const;
 
 export default async function globalSetup(): Promise<void> {

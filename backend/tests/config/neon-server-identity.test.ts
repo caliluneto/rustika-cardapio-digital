@@ -12,7 +12,7 @@ const facts = (patch: Partial<NeonServerFacts> = {}): NeonServerFacts => ({
   markerComment: `${MARKER_PREFIX}${CLUSTER}`, projectId: PROJECT, pgStatSslActive: false, external: provenTls, ...patch,
 });
 
-describe('3D.5.3-C.5 (Parte B/C) — evaluateNeonServerIdentity', () => {
+describe('evaluateNeonServerIdentity', () => {
   it('aprova com pg_stat_ssl=false (divergência documentada) quando o TLS externo foi comprovado e tudo o mais confere', () => {
     expect(evaluateNeonServerIdentity(facts(), EXPECTED)).toEqual([]);
     expect(evaluateNeonServerIdentity(facts({ pgStatSslActive: null }), EXPECTED)).toEqual([]);

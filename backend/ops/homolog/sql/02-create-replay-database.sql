@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO, conectado ao banco postgres, apos 01.
+-- NAO EXECUTADO. Via psql, como administrador do cluster de HOMOLOGACAO, conectado ao banco postgres, apos 01.
 -- Cria o banco TRANSITORIO de replay (nome exigido pelas guardas das migrations historicas). Ele deixa de existir com este nome em 04.
 -- Recusa sobrescrever; nao ha DROP em nenhum script deste procedimento.
 \set ON_ERROR_STOP on

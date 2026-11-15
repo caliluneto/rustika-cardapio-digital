@@ -41,6 +41,6 @@ segura aprovada; não converter hashes automaticamente nem tratá-los como senha
 Troca de senha por Prisma deve atualizar `updatedAt`, invalidando as sessões
 administrativas anteriores.
 
-## Atualização 3D.5.2
+## Provisionamento na homologação
 
 A ferramenta com entrada oculta foi preparada (`npm run homolog:bootstrap-admin`) para o ambiente de homologação, com perfil, role e janela de bootstrap próprios. Veja `docs/homologation-environment.md`. Nenhuma conta foi criada e o procedimento ainda depende de autorização explícita.

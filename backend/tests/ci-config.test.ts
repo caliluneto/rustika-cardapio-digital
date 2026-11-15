@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 3D.3.25-A/B: invariantes de segurança do CI, verificadas como texto (sem executar nada, sem rede).
+ * invariantes de segurança do CI, verificadas como texto (sem executar nada, sem rede).
  * Rodam também no próprio CI: se alguém afrouxar o workflow, o job `backend` falha.
  */
 const root = path.resolve(__dirname, '..', '..');
@@ -80,7 +80,7 @@ describe('workflow ci.yml', () => {
     const e2e = jobBlock('e2e');
     expect(e2e).toContain('::add-mask::');
     expect(e2e).toContain('openssl rand -hex');
-    // 3D.3.29-FIX01: `runner` não existe em `jobs.<id>.env`; o caminho vem de RUNNER_TEMP via GITHUB_ENV, no 1º passo.
+    // `runner` não existe em `jobs.<id>.env`; o caminho vem de RUNNER_TEMP via GITHUB_ENV, no 1º passo.
     expect(e2e).not.toMatch(/CARDAPIO_SECRETS_DIR: /);
     expect(e2e).toContain('echo "CARDAPIO_SECRETS_DIR=$RUNNER_TEMP/cardapio-secrets" >> "$GITHUB_ENV"');
     const firstStep = e2e.indexOf('steps:');
@@ -89,7 +89,7 @@ describe('workflow ci.yml', () => {
     expect(e2e).toMatch(/if: always\(\)[\s\S]*docker rm -f[\s\S]*rm -rf "\$CARDAPIO_SECRETS_DIR"/);
   });
 
-  it('estado final (FIX02): JSON gravado pelo script, exit code verificado, sem pipe e descarte sempre executado', () => {
+  it('estado final: JSON gravado pelo script, exit code verificado, sem pipe e descarte sempre executado', () => {
     const e2e = jobBlock('e2e');
     const stepBlock = (name: string) => {
       const start = e2e.indexOf(`- name: ${name}`);
@@ -167,7 +167,7 @@ describe('.gitignore (proteção para o GitHub)', () => {
 });
 
 /**
- * 3D.3.25-C: regressões dos gatilhos e da reprodutibilidade em checkout limpo.
+ * Regressões dos gatilhos e da reprodutibilidade em checkout limpo.
  */
 describe('gatilhos e superfície de ataque do workflow', () => {
   const onBlock = code.slice(code.indexOf('\non:\n'), code.indexOf('\npermissions:'));
@@ -191,7 +191,7 @@ describe('gatilhos e superfície de ataque do workflow', () => {
     expect(cond).not.toContain('pull_request');
   });
 
-  it('3D.4.1-B: integração PostgreSQL e operação de pedidos são opt-in, só no job e2e e só no passo autorizado', () => {
+  it('integração PostgreSQL e operação de pedidos são opt-in, só no job e2e e só no passo autorizado', () => {
     for (const name of ['run_integration', 'run_order_ops', 'run_product_availability']) expect(code).toMatch(new RegExp(`${name}:[\\s\\S]*?type: boolean\\n\\s+default: false`));
     expect(code).toMatch(/run_playwright:[\s\S]*?type: boolean\n\s+default: true/);
     const e2e = jobBlock('e2e');
@@ -202,7 +202,7 @@ describe('gatilhos e superfície de ataque do workflow', () => {
     expect(e2e).toMatch(/if: inputs\.run_integration == true\n\s+working-directory: backend\n\s+run: npm run test:integration:db/);
     expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true && inputs\.run_product_availability != true\n\s+working-directory: frontend\n\s+run: npx playwright/);
     expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true && inputs\.run_product_availability != true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+run: npx playwright/);
-    // 3D.4.2: disponibilidade de produtos, sozinha ou combinada com a operação de pedidos; variáveis constantes
+    // Disponibilidade de produtos, sozinha ou combinada com a operação de pedidos; variáveis constantes
     expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops != true && inputs\.run_product_availability == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_PRODUCT_AVAILABILITY: enabled\n\s+run: npx playwright/);
     expect(e2e).toMatch(/if: inputs\.run_playwright == true && inputs\.run_order_ops == true && inputs\.run_product_availability == true\n\s+working-directory: frontend\n\s+env:\n\s+RUSTIKA_E2E_ORDER_OPS: enabled\n\s+RUSTIKA_E2E_PRODUCT_AVAILABILITY: enabled\n\s+run: npx playwright/);
     expect(code.match(/RUSTIKA_E2E_PRODUCT_AVAILABILITY:/g)).toHaveLength(2);
@@ -307,7 +307,7 @@ describe('checkout limpo: dependências que o CI precisa e que não podem ficar 
 });
 
 /**
- * 3D.3.25-E: a única dependência fora do registro npm é o `xlsx` da origem oficial da SheetJS; o lockfile a
+ * A única dependência fora do registro npm é o `xlsx` da origem oficial da SheetJS; o lockfile a
  * fixa por versão e por hash. Qualquer outra origem externa, ou perda do hash, deve falhar aqui.
  */
 describe('dependência xlsx (origem externa oficial, versão e hash fixos)', () => {

@@ -2,13 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * E2E real contra cardapio_digital_test. A jornada ESCREVE no PostgreSQL Test: so roda com
- * autorizacao especifica (ver backend/docs/e2e-real.md e RELATORIO-ENTREGA-3D.3.21-B.md).
+ * autorizacao especifica (ver backend/docs/e2e-real.md).
  *
- * 3D.3.21-A:
  * - variaveis via `env`, nunca `set X=y && cmd` (no cmd.exe isso grava "y " e desligou a guarda
  *   NODE_ENV=test => DB_PROFILE=app-test);
- * - `reuseExistingServer: false`: a 1a execucao reaproveitou um Vite antigo sem as variaveis do E2E.
- * 3D.3.21-B:
+ * - `reuseExistingServer: false`: uma execucao anterior reaproveitou um Vite antigo sem as variaveis do E2E.
  * - portas ISOLADAS (backend 4100, frontend 5174): nao colidem com os servidores de desenvolvimento
  *   (4000/5173) e, se estiverem ocupadas, o Playwright FALHA em vez de reaproveitar;
  * - a configuracao se recusa a carregar sem a confirmacao explicita, ANTES de subir qualquer servidor;

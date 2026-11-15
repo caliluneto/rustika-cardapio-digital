@@ -30,7 +30,7 @@ afterAll(() => { fs.rmSync(parent, { recursive: true, force: true }); });
 const fakePrisma = (impl: () => Promise<unknown>) => ({ $queryRaw: vi.fn(impl) }) as unknown as PrismaClient;
 const hosted = (prisma?: PrismaClient) => createApp({ prisma, web: { frontendDir: dist } });
 
-describe('3D.5.3-B - frontend estático na mesma origem', () => {
+describe('frontend estático na mesma origem', () => {
   it('sem configuração web o comportamento anterior é mantido: somente API, "/" é 404 JSON', async () => {
     const response = await request(createApp()).get('/');
     expect(response.status).toBe(404);

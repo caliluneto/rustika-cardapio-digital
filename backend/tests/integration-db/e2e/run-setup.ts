@@ -1,5 +1,5 @@
 /**
- * E2E fixture setup (3D.3.21-B). WRITES to cardapio_digital_test through the dedicated fixtures role.
+ * E2E fixture setup. WRITES to cardapio_digital_test through the dedicated fixtures role.
  * Prints exactly ONE line to stdout: the JSON environment for the browser run (it contains the
  * ephemeral password of the synthetic admin: the caller must not echo it). Everything else -> stderr.
  *

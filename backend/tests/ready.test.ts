@@ -7,7 +7,7 @@ import express from 'express';
 
 const fakePrisma = (impl: () => Promise<unknown>) => ({ $queryRaw: vi.fn(impl) }) as unknown as PrismaClient & { $queryRaw: ReturnType<typeof vi.fn> };
 
-describe('GET /api/ready (3D.5.2)', () => {
+describe('GET /api/ready', () => {
   it('200 quando o banco responde e o schema tem a coluna esperada; somente leitura', async () => {
     const prisma = fakePrisma(async () => [{ ok: 1 }]);
     const response = await request(createApp({ prisma })).get('/api/ready');

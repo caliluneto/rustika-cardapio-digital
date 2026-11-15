@@ -3,7 +3,7 @@
  *
  *   tsx tests/integration-db/e2e/cleanup-legacy.ts             # lista, nao apaga
  *   tsx tests/integration-db/e2e/cleanup-legacy.ts --execute   # apaga (exige RUSTIKA_E2E_LEGACY_CLEANUP)
- *   ... --scope blocker --expect-invitation <uuid> --expect-session <uuid>   # (3D.3.23-B) só comanda 999999 + esse convite + essa sessão
+ *   ... --scope blocker --expect-invitation <uuid> --expect-session <uuid>   # só comanda 999999 + esse convite + essa sessão
  *
  * Needs the integration and E2E gates. Writes only with --execute, only the fixed legacy ids, and
  * only when every identifying attribute matches (see legacy.ts).

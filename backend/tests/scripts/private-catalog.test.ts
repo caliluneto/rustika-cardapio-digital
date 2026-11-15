@@ -11,7 +11,7 @@ import { syntheticRows } from '../fixtures/catalog/synthetic-catalog';
 
 /**
  * Asserções sobre a planilha REAL (dado privado, fora do Git). Preservam as verificações que existiam antes da
- * 3D.3.25-D sobre o conteúdo real. Rodam só onde `backend/data/Exportacao-produtos.xlsx` existe; no CI aparecem como
+ * Sobre o conteúdo real. Rodam só onde `backend/data/Exportacao-produtos.xlsx` existe; no CI aparecem como
  * "skipped". Que a fixture sintética passe NÃO substitui estas verificações.
  */
 describe.skipIf(!hasRealCatalog)('planilha real privada (somente onde ela existe)', () => {

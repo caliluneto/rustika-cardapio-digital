@@ -65,7 +65,7 @@ describe('POST /api/orders: limites de requisição', () => {
     const statuses: number[] = [];
     for (const token of tokens) for (let i = 0; i < 10; i++) statuses.push((await mock.post(token).send(body())).status);
     expect(statuses.filter((status) => status === 429)).toHaveLength(0);
-  }, 30_000); // 200 requisições HTTP: prazo próprio para não falhar por carga da máquina (3D.3.11)
+  }, 30_000); // 200 requisições HTTP: prazo próprio para não falhar por carga da máquina
 
   it('tentativas com sessão inválida: após o limite o IP recebe 429, mas a sessão já validada continua', async () => {
     const mock = setup({ invalidSessionPerIp: { max: 3, windowMs: WINDOW } });

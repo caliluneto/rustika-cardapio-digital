@@ -324,7 +324,7 @@ describe('PATCH /api/admin/orders/:orderId/status', () => {
   });
 });
 
-describe('sessões administrativas: ciclo de vida por instância da aplicação (regressão 3D.4.1-D)', () => {
+describe('sessões administrativas: ciclo de vida por instância da aplicação (regressão)', () => {
   const body = { expectedStatus: 'RECEIVED', toStatus: 'IN_PREPARATION' };
 
   it('login e requisições autenticadas na MESMA aplicação funcionam (listagem e PATCH)', async () => {

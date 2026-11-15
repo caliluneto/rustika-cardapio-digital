@@ -1,5 +1,5 @@
 /**
- * Pré-condições da revisão do pedido no E2E (3D.4.2-D). Lógica pura: devolve o PRIMEIRO bloqueio encontrado (mensagem segura,
+ * Pré-condições da revisão do pedido no E2E. Lógica pura: devolve o PRIMEIRO bloqueio encontrado (mensagem segura,
  * sem dados sensíveis) ou null. Evita esperar 60 s por um botão que não pode existir naquele estado.
  */
 export interface CartFacts { drawerOpen: boolean; itemShown: boolean; comandaTitle: string | null; editingHint: boolean; reviewButton: boolean }

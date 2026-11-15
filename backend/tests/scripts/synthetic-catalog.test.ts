@@ -17,7 +17,7 @@ const rowsOf = (file: string) => {
   return xlsx.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]!]!);
 };
 
-describe('fixture sintética do catálogo (3D.3.25-D)', () => {
+describe('fixture sintética do catálogo', () => {
   it('o CSV versionado é idêntico ao gerador determinístico (BOM incluído)', () => {
     expect(readFileSync(syntheticCatalogPath, 'utf8')).toBe(buildSyntheticCatalogCsv());
     expect(readFileSync(syntheticInvalidPricesPath, 'utf8')).toBe(buildInvalidPricesCsv());

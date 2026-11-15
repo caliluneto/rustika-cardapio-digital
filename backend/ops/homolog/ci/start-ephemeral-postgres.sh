@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 3D.5.2-B - PREPARADO, NAO EXECUTADO. Sobe um PostgreSQL 18 TOTALMENTE DESCARTAVEL no runner do GitHub Actions, com TLS (CA sintetica
+# PREPARADO, NAO EXECUTADO. Sobe um PostgreSQL 18 TOTALMENTE DESCARTAVEL no runner do GitHub Actions, com TLS (CA sintetica
 # temporaria), acessivel por um IP NAO-loopback (os perfis de homologacao proibem loopback). Nada aqui usa secrets do repositorio:
 # todas as credenciais e certificados sao gerados na execucao, mascarados nos logs e apagados por teardown.sh.
 # Exporta as variaveis RUSTIKA_HOMOLOG_EPHEMERAL_* via $GITHUB_ENV.
@@ -42,7 +42,7 @@ openssl x509 -req -in "${WORK}/tls/server.csr" -CA "${WORK}/tls/ca.crt" -CAkey "
   -days 1 -extfile "${WORK}/tls/server.ext" -out "${WORK}/tls/server.crt" 2>/dev/null
 rm -f "${WORK}/tls/ca.key" "${WORK}/tls/wrong-ca.key" "${WORK}/tls/server.csr"
 # A imagem oficial roda como o usuario postgres (uid 999); a chave precisa pertencer a ele com modo 0600.
-# ORDEM IMPORTANTE (FIX01): aplicar os modos ANTES de transferir a propriedade. Depois do chown o usuario do runner deixa de ser
+# ORDEM IMPORTANTE: aplicar os modos ANTES de transferir a propriedade. Depois do chown o usuario do runner deixa de ser
 # dono da chave e o chmod falharia com "Operation not permitted". O UID do usuario postgres e confirmado na propria imagem.
 chmod 600 "${WORK}/tls/server.key" "${WORK}/tls/server.crt"
 chmod 644 "${WORK}/tls/ca.crt" "${WORK}/tls/wrong-ca.crt"

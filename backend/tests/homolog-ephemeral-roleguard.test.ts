@@ -10,7 +10,7 @@ import {
   classifyProjectRoles,
 } from './homolog-ephemeral/roleGuard';
 
-describe('3D.5.2-C FIX02 - roles permitidas no PostgreSQL efemero', () => {
+describe('roles permitidas no PostgreSQL efemero', () => {
   it('somente a role administrativa legitima: permitido (inicio e apos o cleanup)', () => {
     expect(() => assertOnlyEphemeralAdminRole([ADMIN], ADMIN)).not.toThrow();
   });

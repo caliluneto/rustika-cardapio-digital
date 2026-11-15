@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 
 /**
- * Identidade do SERVIDOR (3D.5.2-A). Verificar só o hostname não prova isolamento: DNS, túnel ou cópia de URL podem apontar
+ * Identidade do SERVIDOR. Verificar só o hostname não prova isolamento: DNS, túnel ou cópia de URL podem apontar
  * para outro cluster. Antes de qualquer escrita da homologação, o próprio servidor precisa provar, por leitura de catálogo, que:
  *  - a conexão usa TLS de fato (pg_stat_ssl), e o PostgreSQL é ≥ 17;
  *  - o cluster carrega a marca criada pelo script 01 (role NOLOGIN `rustika_homolog_marker` com comentário contendo o UUID

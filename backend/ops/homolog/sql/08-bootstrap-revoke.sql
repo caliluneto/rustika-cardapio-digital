@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Via psql no banco cardapio_digital_homolog COMO cardapio_homolog_migrator: remove os privilegios do bootstrap.
+-- NAO EXECUTADO. Via psql no banco cardapio_digital_homolog COMO cardapio_homolog_migrator: remove os privilegios do bootstrap.
 \set ON_ERROR_STOP on
 BEGIN;
 DO $revoke$

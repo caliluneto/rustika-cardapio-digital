@@ -62,7 +62,7 @@ export interface LegacyResult { inspection: LegacyInspection; executed: boolean;
 
 /**
  * scope 'full'    (padrão): remove as 9 espécies de linha legadas (admin, categoria, produto, comanda e filhos).
- * scope 'blocker' (3D.3.23-A): remove SÓ o que impede o preflight (comanda 999999 e seus convite/sessão);
+ * scope 'blocker': remove SÓ o que impede o preflight (comanda 999999 e seus convite/sessão);
  *                 admin, categoria e produto legados são preservados. Aborta se houver pedidos na comanda.
  */
 export type LegacyScope = 'full' | 'blocker';

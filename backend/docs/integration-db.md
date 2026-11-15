@@ -1,12 +1,16 @@
-# Integração HTTP com PostgreSQL Test — 3D.3.10
+# Integração HTTP com PostgreSQL Test
 
 Suíte que exercita **Express real, rotas reais, services reais e Prisma real** contra
-`cardapio_digital_test`. Preparada e não executada: depende das migrations em Test,
-da role de fixtures e de autorização expressa para escrever em Test.
+`cardapio_digital_test`. É opt-in e não foi executada no PostgreSQL Test local: depende das
+8 migrations aplicadas, da role de fixtures e de autorização expressa para escrever em Test.
+No CI, roda em PostgreSQL efêmero quando `run_integration=true`.
 
-Esta é a revisão da 3D.3.9 para a 3D.3.10: agora são **5 migrations** (a quinta endurece ACLs; desde a 3D.4.1 o conjunto esperado tem **6**, a sexta concede `UPDATE (status, updated_at)` em `orders`; desde a 3D.4.2 tem **7**, a sétima concede `UPDATE (availability_state, updated_at)` em `products`),
-a role de fixtures deixou de ser apenas uma proposta textual e a restauração do backup foi
-corrigida para um plano executável — porém o dump registrado na 3D.3.9 está ausente.
+O conjunto esperado tem **8 migrations**: a quinta endurece ACLs, a sexta concede
+`UPDATE (status, updated_at)` em `orders`, a sétima concede `UPDATE (availability_state, updated_at)`
+em `products` e a oitava concede os privilégios de coluna do CRUD de produtos (RF006).
+A nona migration de identidade existe no disco e é validada por checksum, mas permanece fora do
+baseline de integração (`PENDING_MIGRATIONS`) até ser promovida. A role de fixtures está provisionada e a
+restauração do backup tem plano executável.
 
 ## Arquivos
 
@@ -51,18 +55,18 @@ Testado: rodar `npm run test:integration:db` sem as variáveis aborta no `global
 | Nenhuma role com superuser, bypassrls, createrole, createdb ou replication | todas |
 | Mesmo servidor (`inet_server_addr():port`) nas três conexões | aplicação, fixtures, migrator |
 | `server_version_num >= 170000` | todas |
-| `_prisma_migrations`: exatamente as **6** migrations (a 6ª, 3D.4.1, está preparada e não aplicada), concluídas, não revertidas, checksums esperados | migrator em `SET TRANSACTION READ ONLY` |
-| SHA-256 dos **6** arquivos no disco iguais aos esperados | arquivo |
+| `_prisma_migrations`: exatamente as **8** migrations (a 6ª, a 7ª e a 8ª exigem aplicação autorizada no Test local), concluídas, não revertidas, checksums esperados | migrator em `SET TRANSACTION READ ONLY` |
+| SHA-256 dos **8** arquivos no disco iguais aos esperados | arquivo |
 | Nenhum resíduo de fixture de execução anterior | fixtures |
 | Nenhum produto real com `source_code = PA062240` | fixtures |
 | Matriz de ACL de runtime e fixtures, incluindo PUBLIC, defaults, colunas, schema e sequências | migrator em `SET TRANSACTION READ ONLY` |
 | `pg_try_advisory_lock(3039390001)` obtido (uma execução por vez) | fixtures |
 
-Hoje (1 aplicada, 5 pendentes) o preflight aborta por "migrations pendentes" — por desenho.
-Depois da 3D.3.10, a quinta migration precisa estar concluída com o checksum
+No Test local (5/8), o preflight aborta por "migrations pendentes" — por desenho. A quinta
+migration precisa estar concluída com o checksum
 `24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e`.
 
-## Role de fixtures (preparada, NÃO criada)
+## Role de fixtures (provisionada)
 
 A matriz foi derivada do uso real de `tests/integration-db/support/fixtures.ts`:
 
@@ -71,7 +75,7 @@ A matriz foi derivada do uso real de `tests/integration-db/support/fixtures.ts`:
 | `admins`, `categories`, `products` | `SELECT` | `admins/categories`: `SELECT,INSERT,DELETE`; `products`: `SELECT,INSERT,UPDATE,DELETE` |
 | `comandas`, `comanda_invitations` | `SELECT,INSERT,UPDATE` | `comandas`: `SELECT,INSERT,UPDATE,DELETE`; `comanda_invitations`: `SELECT,INSERT,DELETE` |
 | `comanda_sessions` | `SELECT,INSERT` | `SELECT,INSERT,DELETE` |
-| `orders`, `order_items`, `order_status_history` | `SELECT,INSERT` (`orders` também `UPDATE (status, updated_at)` por coluna, migration 3D.4.1 preparada e não aplicada) | `SELECT,DELETE` |
+| `orders`, `order_items`, `order_status_history` | `SELECT,INSERT` (`orders` também `UPDATE (status, updated_at)` por coluna; as migrations 6, 7 e 8 exigem aplicação autorizada no Test local) | `SELECT,DELETE` |
 | `_prisma_migrations` | nenhum | nenhum |
 | `orders_order_number_seq` | `USAGE` | nenhum |
 | Schema `public` | `USAGE` | `USAGE`, sem `CREATE` |
@@ -106,7 +110,7 @@ fixtures é exclusivo da suíte e não pode ser usado por `prisma-run.ts` nem po
 ## Fixtures (fictícias, por execução)
 
 Cada arquivo gera um `runId` aleatório de 8 hexadecimais e um marcador `fixture-3d39-<runId>`
-(o prefixo 3D.3.9 foi mantido para não invalidar os dados e testes já preparados).
+(o prefixo `fixture-3d39` é mantido por compatibilidade com os dados e testes existentes).
 
 | Dado | Identidade |
 | --- | --- |
@@ -150,6 +154,5 @@ segurança só está comprovada após consultar as ACLs reais no banco migrado.
 
 ## Restauração de backup
 
-O dump registrado na 3D.3.9 não existe mais no caminho documentado. O plano corrigido, com banco
-descartável, `--no-owner`, `--no-privileges`, `--single-transaction`, validação e limpeza, está
-em `docs/restore-backup.md`. Nada foi restaurado.
+O plano de restauração, com banco descartável, `--no-owner`, `--no-privileges`,
+`--single-transaction`, validação e limpeza, está em `docs/restore-backup.md`. Nada foi restaurado.

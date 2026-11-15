@@ -4,8 +4,9 @@ Projeto acadêmico da Prática Extensionista VII da UNAERP: cardápio digital co
 
 > **Estado: entrega acadêmica funcional; ainda não pronta para produção.** Catálogo, carrinho, comanda,
 > pedidos, operação administrativa, acompanhamento do cliente e documentação OpenAPI estão implementados e foram
-> exercitados no PostgreSQL Dev (9/9 migrations), incluindo o CRUD real do RF006. Permanecem pendentes evidências
-> visuais do RF007/RF008, a rotação das credenciais locais e a publicação autorizada.
+> exercitados no PostgreSQL Dev (9/9 migrations), incluindo o CRUD real do RF006 e as evidências de RF007, RF008 e
+> RF009. As credenciais locais foram rotacionadas (4/4) e a auditoria de segredos está aprovada. Permanecem pendentes
+> o vídeo de apresentação, a prova de restauração integral do backup e a publicação dos materiais acadêmicos.
 
 Legenda usada neste documento: **IMPLEMENTADO** (existe no código e é usado), **TESTADO** (coberto por teste
 automatizado), **PARCIAL** (existe, mas incompleto) e **PENDENTE** (não existe).
@@ -28,7 +29,7 @@ backend/
   prisma/         schema.prisma e migrations (inclui privilégio mínimo para a role de runtime)
   scripts/        wrapper do Prisma, auditoria de segredos, catálogo (seed), inspeção/validação do E2E
   tests/          unitários e de contrato (Vitest); integration-db/ = integração e E2E com PostgreSQL de teste
-  docs/           API de catálogo/acesso/pedidos, segredos, E2E, CI, publicação
+  docs/           API de catálogo/acesso/pedidos, segredos, E2E e CI
 frontend/
   src/            componentes (cardápio, carrinho, comanda, revisão), páginas (checkout, admin), serviços (API)
   tests/          testes unitários (node --test) e E2E (Playwright)
@@ -45,20 +46,20 @@ frontend/
 | Comanda | Convite de uso único emitido pelo admin, resgate pelo cliente, sessão por cookie `HttpOnly`, expiração, limites de taxa | IMPLEMENTADO, TESTADO |
 | Pedido | Revisão, envio com `Idempotency-Key`, validação de preço e disponibilidade no servidor, total calculado no servidor, histórico inicial `RECEIVED`, recuperação após falha de rede | IMPLEMENTADO, TESTADO (envio controlado por `VITE_ORDER_SUBMISSION`) |
 | Administração | Login/logout/sessão com cookie `HttpOnly`, emissão de convite de comanda | IMPLEMENTADO, TESTADO |
-| Administração | Todos os pedidos, filtro por status, itens, histórico, paginação por cursor, polling e aviso de novos pedidos | IMPLEMENTADO; gestão e transições validadas no Dev em 14/11/2026; filtro e aviso ainda sem evidência visual |
+| Administração | Todos os pedidos, filtro por status, itens, histórico, paginação por cursor, polling e aviso de novos pedidos | IMPLEMENTADO; gestão e transições validadas no Dev em 14/11/2026; filtro com evidência visual; aviso de novos pedidos pendente de evidência |
 | Administração | Transições de status com compare-and-set e histórico atômico | IMPLEMENTADO, VALIDADO no Dev (`RECEIVED → IN_PREPARATION → READY → DELIVERED`) |
 | Administração | Disponibilidade e CRUD de produtos; exclusão bloqueada quando há item de pedido referenciando o produto | IMPLEMENTADO, VALIDADO no Dev com criar, editar e excluir reais |
-| Cliente | Acompanhamento automático do próprio pedido, autenticado pela sessão de comanda | IMPLEMENTADO; sequência confirmada no banco, atualização visual no navegador pendente de confirmação |
+| Cliente | Acompanhamento automático do próprio pedido, autenticado pela sessão de comanda | IMPLEMENTADO, VALIDADO no Dev; quatro transições observadas na janela do cliente sem recarregar (evidência em `docs/entrega-academica/evidencias/`) |
 | API | Contrato OpenAPI 3.1 em `/api/openapi.json` e visualizador local em `/api/docs` (fora de produção) | IMPLEMENTADO, TESTADO |
 | Operação | Pagamento online, nota fiscal, delivery, upload de imagens, tempo real (Socket.IO) | PENDENTE, fora do escopo atual |
 
 ## Qualidade e CI confirmados
 
-Resultados observados no GitHub Actions do repositório privado:
+Resultados observados na validação final de 14/11/2026 e no GitHub Actions do repositório privado:
 
 | Execução | Resultado |
 | --- | --- |
-| CI #3 (backend + frontend, sem E2E) | Backend: 747 testes aprovados (7 da planilha privada ignorados); frontend aprovado |
+| Validação local final | Backend: **1.237 testes aprovados e 9 ignorados** (planilha privada); frontend: **174/174**; typecheck e builds aprovados |
 | CI #5 (E2E manual) | PostgreSQL 18 efêmero iniciado, migrations aplicadas, Playwright/Chromium: **1 teste aprovado (8,6 s)** cobrindo login do admin → convite → resgate → pedido → verificação; teardown e prova de resíduo zero aprovados; banco e segredos descartados |
 
 O E2E atual cobre **uma jornada** (caminho feliz). Isso não equivale a cobertura de todos os fluxos nem a prontidão para
@@ -129,7 +130,7 @@ Detalhes e lições (contexto `runner` fora de `env`, saída estruturada da insp
 ## Limitações conhecidas
 
 - Categorias e comandas não têm CRUD completo; permanecem fora da rubrica atual.
-- As 9 migrations do Dev incluem o privilégio mínimo para o CRUD de produtos; o Test local ainda não está no mesmo nível.
+- As 9 migrations do Dev incluem o privilégio mínimo para o CRUD de produtos; o Test local está em 5/8 do baseline e depende de aplicação autorizada.
 - Polling e sessões administrativas são locais a uma instância; produção com múltiplas instâncias exige armazenamento compartilhado.
 - Administradores sem papéis ou permissões granulares (qualquer admin ativo pode tudo o que existir).
 - Sem pagamentos, fiscal, delivery, tempo real ou upload de imagens.
@@ -137,13 +138,13 @@ Detalhes e lições (contexto `runner` fora de `env`, saída estruturada da insp
 
 ## Pendências antes de produção
 
-- Rotação de todas as senhas do ambiente local (fracas e compartilhadas) e política de segredos para hospedagem.
 - Provar a restauração integral do backup pré-RF006 em banco descartável autorizado.
 - Hospedagem, TLS, backup/restore automatizados, monitoramento e logs de auditoria.
 - Revisão de segurança e teste de carga do fluxo de pedidos.
 - Mais cenários E2E (indisponibilidade, preço alterado, comanda expirada, idempotência).
+- Gravação do vídeo de apresentação e publicação autorizada dos materiais acadêmicos.
 
 ## Publicação e repositórios
 
 O histórico de desenvolvimento e o repositório publicado (GitHub, privado) são **independentes** por motivos de
-segurança. Procedimento de transferência em `backend/docs/publication-snapshot.md`.
+segurança. O snapshot publicado não contém credenciais, dados reais de clientes nem arquivos privados.

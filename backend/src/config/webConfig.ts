@@ -1,5 +1,5 @@
 /**
- * 3D.5.3-B - configuração de hospedagem em um único Web Service (frontend estático + API na mesma origem).
+ * Configuração de hospedagem em um único Web Service (frontend estático + API na mesma origem).
  *
  * Tudo é opt-in e vem de variáveis de ambiente; sem elas o comportamento é exatamente o anterior (somente API).
  * As mensagens de erro nunca incluem valores (credenciais, caminhos de segredo).

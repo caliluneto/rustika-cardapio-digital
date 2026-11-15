@@ -10,7 +10,7 @@ import {
 import type { RunManifest } from './manifest';
 
 /**
- * Setup / verification / teardown of the browser E2E (3D.3.21-B). Replaces backend/seed_raw.js.
+ * Setup / verification / teardown of the browser E2E. Replaces backend/seed_raw.js.
  *
  * Rules enforced here:
  * - the only writer is the dedicated fixtures role through the approved harness (full preflight:
@@ -26,7 +26,7 @@ export const E2E_QUANTITY = 1;
 
 /** Product shown in the E2E catalog: the "numeric" fixture of FixtureRun, name = `<base> [<marker>]`. */
 export const e2eProductName = (identity: RunIdentity): string => `FRIOS FIXTURE [${identity.marker}]`;
-/** 3D.4.2 (opt-in): "unknown" fixture (starts UNKNOWN; the browser makes it AVAILABLE) and "priceChange" fixture (starts AVAILABLE; the browser makes it UNAVAILABLE). */
+/** Jornada opt-in: "unknown" fixture (starts UNKNOWN; the browser makes it AVAILABLE) and "priceChange" fixture (starts AVAILABLE; the browser makes it UNAVAILABLE). */
 export const e2eUnknownProductName = (identity: RunIdentity): string => `SEM CONFIRMACAO FIXTURE [${identity.marker}]`;
 export const e2eBlockedProductName = (identity: RunIdentity): string => `PRECO ALTERAVEL FIXTURE [${identity.marker}]`;
 
@@ -38,7 +38,7 @@ export interface RunLike {
   remaining(): Promise<Record<string, number>>;
   ordersFor(number: string): Promise<OrderView[]>;
   invitationsFor(number: string): Promise<InvitationView[]>;
-  /** Optional: only needed by the 3D.4.2 availability journey. */
+  /** Optional: only needed by the product availability journey. */
   productStatesFor?(): Promise<{ publicKey: string | null; availabilityState: string }[]>;
 }
 
@@ -124,7 +124,7 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
   const problems: string[] = []; const { comanda, productKey, priceInCents } = manifest.journey;
   const availability = manifest.journey.productAvailability === true;
   const orders = await run.ordersFor(comanda);
-  const expectedOrders = availability ? 2 : 1; // 3D.4.2: o pedido original + um pedido do produto tornado disponível; o bloqueado NÃO gera pedido
+  const expectedOrders = availability ? 2 : 1; // O pedido original + um pedido do produto tornado disponível; o bloqueado NÃO gera pedido
   if (orders.length !== expectedOrders) problems.push(`esperado ${expectedOrders} pedido(s) na comanda ${comanda}, encontrado ${orders.length} (idempotência/duplicidade)`);
   const order = availability ? orders.find((candidate) => candidate.items.some((entry) => entry.productPublicKeySnapshot === productKey)) : orders[0];
   if (order) {
@@ -143,7 +143,7 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
     const history = order.statusHistory;
     if (history[0]?.fromStatus !== null || history[0]?.toStatus !== 'RECEIVED') problems.push('histórico inicial diverge');
     if (manifest.journey.orderOps) {
-      // 3D.4.1: exatamente uma transição válida feita pelo administrador da execução; conflito/transição inválida não gravam nada.
+      // Exatamente uma transição válida feita pelo administrador da execução; conflito/transição inválida não gravam nada.
       const step = history[1];
       if (history.length !== 2 || step?.fromStatus !== 'RECEIVED' || step?.toStatus !== 'IN_PREPARATION') problems.push('histórico da transição administrativa diverge');
       else if (!manifest.ids.adminIds.includes(step.changedByAdminId ?? '')) problems.push('transição não foi registrada pelo administrador da execução');
@@ -158,7 +158,7 @@ export async function verifyJourney(run: Pick<RunLike, 'ordersFor' | 'invitation
 }
 
 /**
- * 3D.4.2 — conferência (somente leitura) da jornada de disponibilidade: o produto "unknown" terminou AVAILABLE e foi pedido uma vez
+ * Conferência (somente leitura) da jornada de disponibilidade: o produto "unknown" terminou AVAILABLE e foi pedido uma vez
  * (preço congelado); o produto "priceChange" terminou UNAVAILABLE e NÃO aparece em nenhum pedido; nenhum outro estado mudou.
  */
 export async function verifyAvailability(run: Pick<RunLike, 'productStatesFor'>, manifest: RunManifest, orders: OrderView[], primary: OrderView | undefined): Promise<string[]> {

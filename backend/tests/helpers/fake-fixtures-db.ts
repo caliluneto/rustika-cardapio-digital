@@ -3,7 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 
 /**
  * In-memory stand-in for the Prisma client, just enough to run the REAL `FixtureRun`, the E2E
- * lifecycle and the legacy cleanup against rows we control (3D.3.21-B). It evaluates the `where`
+ * Lifecycle and the legacy cleanup against rows we control. It evaluates the `where`
  * shapes those modules really use, emulates the RESTRICT foreign keys of the schema (a violating
  * DELETE throws and the transaction is rolled back, as in PostgreSQL) and records every
  * `deleteMany` so tests can assert that nothing unscoped was ever issued.

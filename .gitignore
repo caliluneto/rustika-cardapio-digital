@@ -56,7 +56,7 @@ secrets/
 private-keys/
 
 # ---------------------------------------------------------------------------
-# 3D.3.25-A: preparação para GitHub (regras ADICIONAIS; nenhuma regra anterior foi removida)
+# Preparação para GitHub (regras ADICIONAIS; nenhuma regra anterior foi removida)
 # ---------------------------------------------------------------------------
 
 # Playwright / relatórios de teste (podem conter snapshots de página com dados da execução)
@@ -81,7 +81,7 @@ CardapioDigital/
 backend/data/
 
 # Scripts avulsos locais com credenciais embutidas (herdados do E2E antigo). Permanecem só no
-# computador local; ignorar NÃO os apaga. Ver RELATORIO-ENTREGA-3D.3.25-A.md.
+# computador local; ignorar NÃO os apaga.
 backend/apply_mig.js
 backend/c.js
 backend/c2.js
@@ -102,9 +102,9 @@ backend/seed_raw.js
 backend/update-hba.js
 backend/gen_hash.ts
 
-# Script legado da rotação de senhas cancelada (3D.3.22-C); quebra o tsc e não participa do fluxo
+# Script legado da rotação de senhas cancelada; quebra o tsc e não participa do fluxo
 backend/tests/scripts/verify-fixtures-rotation.ts
 
-# 3D.3.25-B: diagnósticos locais soltos na raiz (inventários e saídas de verificação)
+# Diagnósticos locais soltos na raiz (inventários e saídas de verificação)
 /check_out.txt
 /inventory_*.txt

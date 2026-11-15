@@ -1,4 +1,4 @@
--- 3D.3.25-A — bootstrap do PostgreSQL EFÊMERO do CI. NUNCA usar fora do runner descartável.
+-- bootstrap do PostgreSQL EFÊMERO do CI. NUNCA usar fora do runner descartável.
 -- Executado como superusuário do container pelo socket Unix. Senhas sintéticas chegam por variáveis
 -- do psql (-v), geradas na execução e mascaradas no log. Reproduz os nomes exatos exigidos pelos gates:
 -- roles cardapio_migrator / cardapio_test_app / cardapio_dev_app (dependência da migration

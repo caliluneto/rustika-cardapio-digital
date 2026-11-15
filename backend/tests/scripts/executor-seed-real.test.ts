@@ -3,7 +3,7 @@ import { executeSeedReal } from '../../scripts/executor-seed-real';
 import type { PrismaClient } from '@prisma/client';
 import { syntheticCatalogPath } from '../helpers/catalog-sources';
 
-// 3D.3.25-D: o executor le a fixture SINTETICA (quantitativos identicos aos da planilha real).
+// O executor le a fixture SINTETICA (quantitativos identicos aos da planilha real).
 const catalogPath = syntheticCatalogPath;
 
 describe('executeSeedReal: Executor offline', () => {

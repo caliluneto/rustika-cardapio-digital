@@ -11,7 +11,7 @@ const verify = fs.readFileSync(path.join(dir, '03-verify-ownership.sql'), 'utf8'
 const RUNTIME_AND_PLACEHOLDER_ROLES = ['cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_app', 'cardapio_homolog_placeholder'];
 const stripComments = (sql: string) => sql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
 
-describe('3D.5.3-C.5 (Parte A, estático, não executado) — membership GRANT/REVOKE do provedor Neon', () => {
+describe('membership GRANT/REVOKE do provedor Neon (Parte A, estático, não executado)', () => {
   it('nunca concede nem revoga SET/INHERIT para nenhuma role de runtime ou placeholder', () => {
     for (const role of RUNTIME_AND_PLACEHOLDER_ROLES) {
       expect(grant).not.toMatch(new RegExp(`GRANT\\s+${role}\\b`));
@@ -36,7 +36,7 @@ describe('3D.5.3-C.5 (Parte A, estático, não executado) — membership GRANT/R
     expect(revoke).toContain('FROM CURRENT_USER');
   });
 
-  it('3D.5.3-C.5.1: mínimo privilégio inicial — SET TRUE, INHERIT FALSE (não INHERIT TRUE) em 01', () => {
+  it('mínimo privilégio inicial — SET TRUE, INHERIT FALSE (não INHERIT TRUE) em 01', () => {
     expect(grant).not.toMatch(/WITH SET TRUE, INHERIT TRUE/);
     expect(grant).toContain('INHERIT FALSE');
     expect(grant).toMatch(/alguma linha de membership já tem INHERIT TRUE/);
@@ -45,7 +45,7 @@ describe('3D.5.3-C.5 (Parte A, estático, não executado) — membership GRANT/R
     expect(grant).toMatch(/CREATE DATABASE/);
   });
 
-  it('3D.5.3-C.5.3: elevação temporária (01b) concede INHERIT TRUE só para o RENAME, de forma aditiva (nunca SET ROLE)', () => {
+  it('elevação temporária (01b) concede INHERIT TRUE só para o RENAME, de forma aditiva (nunca SET ROLE)', () => {
     expect(elevate).toContain('GRANT cardapio_migrator TO CURRENT_USER WITH SET TRUE, INHERIT TRUE');
     expect(stripComments(elevate)).not.toMatch(/\bSET ROLE cardapio_migrator\b/);
     expect(elevate).toContain("current_database() <> 'postgres'");
@@ -57,9 +57,9 @@ describe('3D.5.3-C.5 (Parte A, estático, não executado) — membership GRANT/R
     expect(elevate).toMatch(/bool_or\(m\.inherit_option\)/);
   });
 
-  it('3D.5.3-C.5.3: a leitura de pg_auth_members na verificação de 01 usa agregação (bool_or), nunca uma linha única', () => {
+  it('a leitura de pg_auth_members na verificação de 01 usa agregação (bool_or), nunca uma linha única', () => {
     // pg_auth_members tem uma linha por concedente (PostgreSQL >= 16); SELECT...INTO sem agregação leria uma linha
-    // arbitrária quando há mais de uma — bug real encontrado no neon-probe.mjs na C.5.2.
+    // arbitrária quando há mais de uma — bug real encontrado no neon-probe.mjs.
     const verifyBlock = grant.slice(grant.indexOf('neon_grant_verify$\nDECLARE'));
     expect(verifyBlock).toMatch(/bool_or\(m\.set_option AND NOT m\.admin_option\)/);
     expect(verifyBlock).toMatch(/bool_or\(m\.inherit_option\)/);
@@ -75,7 +75,7 @@ describe('3D.5.3-C.5 (Parte A, estático, não executado) — membership GRANT/R
     expect(revoke).toMatch(/ABORT: cardapio_migrator \(nome legado\) ainda existe/);
   });
 
-  it('C.6/Neon: a revogação (02) tolera a linha ADMIN-only automática do bootstrap e exige SET/INHERIT ausentes', () => {
+  it('Neon: a revogação (02) tolera a linha ADMIN-only automática do bootstrap e exige SET/INHERIT ausentes', () => {
     const verifyBlock = revoke.slice(revoke.indexOf('$neon_revoke_verify$'));
     expect(verifyBlock).toMatch(/\(m\.set_option OR m\.inherit_option\)/);
     expect(verifyBlock).toContain('m.admin_option AND NOT m.set_option AND NOT m.inherit_option');

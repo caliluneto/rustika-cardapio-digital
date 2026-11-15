@@ -1,11 +1,12 @@
-# Gestão administrativa de pedidos — Etapa 3D.4.1
+# Gestão administrativa de pedidos
 
-Escopo: o estabelecimento visualiza os pedidos ativos e move cada pedido pelos estados do domínio. **Estado desta
-entrega:** implementado e testado localmente **sem banco**; a migration de privilégio está **preparada e não aplicada**;
-os testes com PostgreSQL real e o E2E estão **preparados e não executados**. Nada aqui afirma prontidão para produção.
+Escopo: o estabelecimento visualiza os pedidos ativos e move cada pedido pelos estados do domínio.
+**Estado:** implementado, testado e validado no PostgreSQL Dev em 14/11/2026 (9/9 migrations), com transições
+reais de `RECEIVED` a `DELIVERED`. Os testes de integração e o E2E com banco efêmero são opt-in no CI; nada aqui
+afirma prontidão para produção.
 
-Pré-requisito do uso real: produtos com disponibilidade `AVAILABLE` (hoje o padrão é `UNKNOWN`, e o pedido exige
-`AVAILABLE`). A gestão de disponibilidade é a etapa seguinte (3D.4.2, ver `product-availability.md`) e **não** faz parte desta.
+Pré-requisito do uso real: produtos com disponibilidade `AVAILABLE` (o padrão da importação é `UNKNOWN`, e o pedido
+exige `AVAILABLE`). A gestão de disponibilidade está em `product-availability.md` e **não** faz parte desta.
 
 ## Estados e transições (fonte única: `src/domain/rules.ts`)
 
@@ -125,4 +126,4 @@ alterado nesta etapa; habilitar a variável é decisão da etapa de validação 
 - Sem busca de pedidos finalizados/histórico na interface; o histórico fica no banco.
 - Sessões administrativas continuam em memória (uma instância); o rate limit também.
 - Cancelar não notifica o cliente; não há rastreamento público do pedido (`trackingTokenHash` reservado e não usado).
-- Disponibilidade de produtos depende da etapa 3D.4.2.
+- Disponibilidade de produtos é tratada em `product-availability.md`.

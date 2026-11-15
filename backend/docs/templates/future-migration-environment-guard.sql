@@ -1,4 +1,4 @@
--- MODELO (3D.5.2-A) para migrations FUTURAS que concedem/revogam privilégios. Não é uma migration: não está em prisma/migrations.
+-- MODELO para migrations FUTURAS que concedem/revogam privilégios. Não é uma migration: não está em prisma/migrations.
 -- A mesma migration deve rodar em Dev, Test e Homologação. Resolva a role de runtime pelo banco corrente e confira a identidade do executor.
 -- Nunca altere as sete migrations históricas; nunca use `migrate resolve`, `db push` ou `migrate reset`.
 BEGIN;

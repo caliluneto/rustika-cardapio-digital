@@ -1,5 +1,5 @@
 /**
- * Migrations que definem o schema esperado (3D.5.2). Fonte usada pelo bootstrap e pelo wrapper de migrations da
+ * Migrations que definem o schema esperado. Fonte usada pelo bootstrap e pelo wrapper de migrations da
  * homologação. DEVE permanecer idêntica a EXPECTED_MIGRATIONS de tests/integration-db/support/preflight.ts
  * (um teste compara as duas listas e o conteúdo real do disco). Nenhum checksum aqui é editável para "fazer
  * uma migration parecer válida": uma divergência é sempre uma falha.

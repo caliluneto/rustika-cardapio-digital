@@ -14,7 +14,7 @@ const full = (): SchemaSnapshot => {
 };
 const DEFAULT_ACL = 'migrator:public:r:runtime:SELECT:false';
 
-describe('3D.5.2-C FIX03 - completude do snapshot e default ACLs', () => {
+describe('completude do snapshot e default ACLs', () => {
   it('defaultAcls (e demais opcionais) vazias antes e depois: equivalência válida e snapshot completo', () => {
     const before = full(); const after = full();
     expect(before.defaultAcls).toEqual([]);

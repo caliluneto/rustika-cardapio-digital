@@ -14,7 +14,7 @@ const snapshot = (overrides: Partial<SchemaSnapshot> = {}): SchemaSnapshot => {
   return { ...base, ...overrides };
 };
 
-describe('3D.5.2-C FIX04 - proprietário nativo pg_database_owner', () => {
+describe('proprietário nativo pg_database_owner', () => {
   it('schema public pertencente a pg_database_owner: completo (sem role desconhecida)', () => {
     expect(aliasRole('pg_database_owner')).toBe('pg_database_owner');
     expect(snapshot().schemas).toEqual(['public:pg_database_owner']);
@@ -57,7 +57,7 @@ describe('3D.5.2-C FIX04 - proprietário nativo pg_database_owner', () => {
     expect(snapshotCompletenessProblems(snapshot({ schemaAcls: ['schema:public:pg_database_owner:USAGE:false'] }))).toEqual([]);
   });
 
-  it('defaultAcls vazia continua permitida (FIX03)', () => {
+  it('defaultAcls vazia continua permitida', () => {
     expect(snapshot().defaultAcls).toEqual([]);
     expect(snapshotCompletenessProblems(snapshot())).toEqual([]);
   });

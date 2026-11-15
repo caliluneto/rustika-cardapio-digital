@@ -1,5 +1,5 @@
 /**
- * Catalogo SINTETICO para os testes de importacao/seed (3D.3.25-D).
+ * Catalogo SINTETICO para os testes de importacao/seed.
  *
  * Substitui, nos testes, a planilha real `backend/data/Exportacao-produtos.xlsx` (dado comercial privado,
  * fora do Git). Todos os dados sao ficticios e deterministicos:

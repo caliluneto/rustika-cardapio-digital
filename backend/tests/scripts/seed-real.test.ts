@@ -3,7 +3,7 @@ import { parsePrice, classifyProduct, validateAllPrices, generateClassificationR
 import { syntheticCatalogPath } from '../helpers/catalog-sources';
 import { SYNTHETIC_EXPECTED } from '../fixtures/catalog/synthetic-catalog';
 
-// 3D.3.25-D: usa a fixture SINTETICA (mesma forma da planilha real). As asserções equivalentes sobre a planilha
+// Usa a fixture SINTETICA (mesma forma da planilha real). As asserções equivalentes sobre a planilha
 // real ficam em private-catalog.test.ts e só rodam onde ela existe.
 const generateClassificationReport = () => generateReport(syntheticCatalogPath);
 

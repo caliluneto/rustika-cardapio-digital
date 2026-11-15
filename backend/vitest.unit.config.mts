@@ -1,7 +1,7 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
 /**
- * Configuração do `npm run test:ci` (3D.3.25-D). NÃO é vitest.config.ts: um teste proíbe esse arquivo para que a
+ * Configuração do `npm run test:ci`. NÃO é vitest.config.ts: um teste proíbe esse arquivo para que a
  * suíte com escrita nunca entre no `npm test`.
  *
  * Nenhum arquivo de teste é excluído. Os testes de importação/seed usam a fixture SINTÉTICA versionada

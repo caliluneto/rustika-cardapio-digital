@@ -1,4 +1,4 @@
-/** Validação da entrada do primeiro administrador (3D.5.2). Funções puras; nunca registram a senha. */
+/** Validação da entrada do primeiro administrador. Funções puras; nunca registram a senha. */
 
 export interface AdminIdentity { name: string; email: string }
 

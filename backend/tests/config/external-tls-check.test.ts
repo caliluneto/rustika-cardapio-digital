@@ -8,7 +8,7 @@ const socket = (patch: Partial<MinimalTlsSocket> & { cert?: Record<string, unkno
   getCipher: () => ({ name: 'TLS_AES_256_GCM_SHA384' }),
 });
 
-describe('3D.5.3-C.5 (Parte B/C) — inspectExternalTls (TLS válido, certificado inválido, hostname incorreto)', () => {
+describe('inspectExternalTls (TLS válido, certificado inválido, hostname incorreto)', () => {
   it('TLS válido: autorizado, nome confere, nome errado é rejeitado, protocolo aceitável', () => {
     const result = inspectExternalTls(socket(), 'a.example');
     expect(result).toMatchObject({ proven: true, authorized: true, nameMatches: true, wrongNameRejected: true, protocol: 'TLSv1.3' });

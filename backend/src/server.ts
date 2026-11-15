@@ -10,7 +10,7 @@ import { NEON_HOMOLOG_PROFILE, assertNeonProxyTlsAck, evaluateNeonServerIdentity
 
 if (env.nodeEnv === 'production') assertHomologRuntimeConfig(env);
 
-// 3D.5.3-B: hospedagem em um único serviço. Falha fechada se a configuração for inválida (mensagens sem valores).
+// Hospedagem em um único serviço. Falha fechada se a configuração for inválida (mensagens sem valores).
 const web = readWebConfig(process.env, () => path.resolve(getBackendRoot(), '..', 'frontend', 'dist'));
 if (env.nodeEnv === 'production' && web.frontendDir && !web.gate) {
   console.warn('[api] Portão de homologação desativado (HOMOLOG_GATE): o frontend e a API estão acessíveis sem credencial adicional.');
@@ -30,7 +30,7 @@ function startListening(): void {
 }
 
 if (env.nodeEnv === 'production' && env.databaseProfile === NEON_HOMOLOG_PROFILE) {
-  // 3D.5.3-C.5: perfil OPT-IN para o Neon Free. Exige reconhecimento humano explícito ANTES de qualquer conexão (ver
+  // Perfil OPT-IN para o Neon Free. Exige reconhecimento humano explícito ANTES de qualquer conexão (ver
   // neonServerIdentity.ts); a verificação de identidade é independente da de app-homolog (política diferente, não mais fraca).
   try {
     assertNeonProxyTlsAck(process.env.RUSTIKA_HOMOLOG_NEON_PROXY_TLS_ACK);
@@ -51,7 +51,7 @@ if (env.nodeEnv === 'production' && env.databaseProfile === NEON_HOMOLOG_PROFILE
         console.error('[api] Identidade do servidor de banco (Neon) não confere; encerrando sem aceitar tráfego.');
         process.exit(1);
       }
-      // 3D.5.3-C.5.1: VERIFICAÇÃO COMPLEMENTAR. O que foi comprovado acima (readNeonServerFacts) é o TLS externo de UMA
+      // VERIFICAÇÃO COMPLEMENTAR. O que foi comprovado acima (readNeonServerFacts) é o TLS externo de UMA
       // CONEXÃO INDEPENDENTE, aberta só para esta verificação — não o socket que o Prisma usa para servir tráfego (o
       // motor do Prisma não expõe seu socket ao código JS, então ele não pode ser inspecionado diretamente). A conexão
       // independente usa a MESMA URL/parâmetros (sslmode=require, sslaccept=strict — nunca relaxáveis, ver secrets.ts)
@@ -77,7 +77,7 @@ if (env.nodeEnv === 'production' && env.databaseProfile === NEON_HOMOLOG_PROFILE
       process.exit(1);
     });
 } else if (env.nodeEnv === 'production') {
-  // 3D.5.2-A: o servidor de banco precisa provar a identidade (TLS, marca do cluster, banco definitivo) antes de aceitar tráfego.
+  // O servidor de banco precisa provar a identidade (TLS, marca do cluster, banco definitivo) antes de aceitar tráfego.
   const clusterId = loadDatabaseProfile(env.databaseProfile, { purpose: 'runtime', secretsDir: env.secretsDir }).clusterId ?? '';
   readServerFacts(prisma)
     .then((facts) => {

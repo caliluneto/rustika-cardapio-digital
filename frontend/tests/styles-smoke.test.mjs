@@ -1,4 +1,4 @@
-// 3D.3.13 — proteção contra regressão visual do CSS.
+// proteção contra regressão visual do CSS.
 // Por que os testes anteriores não detectaram a troca do index.css: todos rodam em Node e checam
 // lógica e markup de SSR; nenhum carregava o CSS. Este arquivo liga os dois lados: renderiza os
 // componentes reais do catálogo e exige que (1) o CSS real tenha regras para as classes que eles

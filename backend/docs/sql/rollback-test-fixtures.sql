@@ -1,4 +1,4 @@
--- 3D.3.10 — PREPARADO, NÃO EXECUTADO.
+-- PREPARADO, NÃO EXECUTADO.
 -- Revoga os privilégios conhecidos e remove cardapio_test_fixtures.
 -- Exige autorização específica e role administrativa local com SUPERUSER.
 -- Falha de forma explícita se a role possuir objetos; não use DROP OWNED BY sem revisão.

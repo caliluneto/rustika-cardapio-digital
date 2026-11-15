@@ -1,4 +1,4 @@
--- 3D.3.10 — PREPARADO, NÃO EXECUTADO.
+-- PREPARADO, NÃO EXECUTADO.
 -- Cria a role de fixtures somente em cardapio_digital_test, sem senha (NOLOGIN).
 -- Exige autorização específica e uma role administrativa local com atributo SUPERUSER.
 -- A senha é definida depois, de forma interativa, por enable-test-fixtures-login.sql.
@@ -132,7 +132,7 @@ BEGIN
     RAISE EXCEPTION 'Role de fixtures não pode criar objetos nem usar TEMP no banco Test.';
   END IF;
 
-  -- 3D.3.11: nenhuma concessão EXPLÍCITA à role fora de Test. CONNECT herdado de PUBLIC não é
+  -- Nenhuma concessão EXPLÍCITA à role fora de Test. CONNECT herdado de PUBLIC não é
   -- concessão da role e não pode ser retirado dela; enquanto a role é NOLOGIN ele é inócuo.
   -- O isolamento de conexão é exigido no passo de LOGIN (enable-test-fixtures-login.sql),
   -- via pg_hba.conf (ver pg_hba-test-fixtures.conf.example).

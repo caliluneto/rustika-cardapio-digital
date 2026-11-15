@@ -6,7 +6,7 @@ import { dropInjectedEnv, guardedLaunch, launchEnv } from './integration-db/e2e/
 
 const GOOD = { RUSTIKA_E2E_CONFIRM: 'RUN_E2E_ON_CARDAPIO_DIGITAL_TEST', NODE_ENV: 'test', DB_PROFILE: 'app-test' };
 
-describe('launch-env (3D.3.23-D): unidades', () => {
+describe('launch-env: unidades', () => {
   it('URL definida pelo operador no lançamento bloqueia o gate', () => {
     const env = { ...GOOD, DATABASE_URL: 'postgresql://operador@h/outro' };
     expect(() => guardedLaunch(assertE2eGate, env, { DATABASE_URL: env.DATABASE_URL })).toThrow(/DATABASE_URL/);
@@ -56,7 +56,7 @@ describe('launch-env (3D.3.23-D): unidades', () => {
 });
 
 /** Processo real, na mesma ordem de imports dos entry points: o Prisma pode (ou não) injetar o .env legado. */
-describe('launch-env (3D.3.23-D): processo real', () => {
+describe('launch-env: processo real', () => {
   const backend = path.resolve(__dirname, '..');
   const tsx = path.join(backend, 'node_modules', 'tsx', 'dist', 'cli.mjs');
   const probe = path.join(backend, 'tests', 'helpers', 'launch-probe.ts');

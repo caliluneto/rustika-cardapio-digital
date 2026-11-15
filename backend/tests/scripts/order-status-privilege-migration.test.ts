@@ -12,11 +12,11 @@ const bytes = fs.readFileSync(path.join(root, name, 'migration.sql'));
 const raw = bytes.toString('utf8');
 const sql = raw.replace(/--[^\n]*/g, '');
 
-describe('3D.4.1 order status update privilege (static; migration NOT applied, not an ACL proof)', () => {
+describe('order status update privilege (static; not an ACL proof)', () => {
   it('is pinned by checksum, last in order, and previous migrations are untouched', () => {
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(EXPECTED_MIGRATIONS.find((m) => m.name === name)?.checksum);
     const names = fs.readdirSync(root).filter((p) => fs.statSync(path.join(root, p)).isDirectory()).sort();
-    expect(names.indexOf(name)).toBe(5); // a 7ª (3D.4.2) é a última
+    expect(names.indexOf(name)).toBe(5); // a 7ª é a última
     for (const m of EXPECTED_MIGRATIONS) {
       expect(createHash('sha256').update(fs.readFileSync(path.join(root, m.name, 'migration.sql'))).digest('hex')).toBe(m.checksum);
     }

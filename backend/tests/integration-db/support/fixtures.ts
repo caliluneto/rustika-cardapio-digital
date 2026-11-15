@@ -4,7 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../../../src/security/password';
 
 /**
- * Fictitious, run-scoped fixtures for cardapio_digital_test (3D.3.9 naming, revised in 3D.3.10).
+ * Fictitious, run-scoped fixtures for cardapio_digital_test.
  * Never executed in this delivery. Every row is identifiable by the run marker; cleanup deletes only rows reachable from
  * the run identity (never TRUNCATE, never an unscoped DELETE).
  */
@@ -163,7 +163,7 @@ export class FixtureRun {
     });
   }
 
-  /** Read-only (3D.4.2): availability state of every product of THIS run, to verify what the browser changed. */
+  /** Read-only: availability state of every product of THIS run, to verify what the browser changed. */
   async productStatesFor() {
     return this.db.product.findMany({
       where: { category: { publicKey: this.identity.categoryKey } }, select: { publicKey: true, availabilityState: true }, orderBy: { publicKey: 'asc' },

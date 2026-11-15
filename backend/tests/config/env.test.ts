@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { assertRuntimeDatabaseProfile, resolveDatabaseProfile } from '../../src/config/env';
 
-/** 3D.3.21-A: `set NODE_ENV=test && cmd` no cmd.exe grava "test " (espaço no fim). Sem normalizar,
+/** `set NODE_ENV=test && cmd` no cmd.exe grava "test " (espaço no fim). Sem normalizar,
  * a guarda NODE_ENV=test => DB_PROFILE=app-test deixava passar app-dev. */
 describe('NODE_ENV com espaço no fim (lançamento via cmd.exe)', () => {
   async function loadEnv(nodeEnv: string, profile: string) {

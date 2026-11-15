@@ -3,7 +3,7 @@ import { executeSeedReal } from '../../scripts/executor-seed-real';
 import type { PrismaClient } from '@prisma/client';
 import { syntheticCatalogPath } from '../helpers/catalog-sources';
 
-// 3D.3.25-D: fixture SINTETICA no lugar da planilha real.
+// Fixture SINTETICA no lugar da planilha real.
 const catalogPath = syntheticCatalogPath;
 
 describe('Seed atual: executor offline', () => {

@@ -4,7 +4,7 @@ import { createFixedWindowLimiter, clientAddress, tooManyRequests } from './acce
 import type { GateConfig } from '../config/webConfig';
 
 /**
- * 3D.5.3-B - portão HTTP Basic EXCLUSIVO da homologação (desativado por padrão; ver webConfig).
+ * Portão HTTP Basic EXCLUSIVO da homologação (desativado por padrão; ver webConfig).
  *
  * Não substitui a autenticação do administrador, o CSRF nem a validação de Origin: é uma camada à frente de tudo.
  * - Credenciais só por configuração; comparação em tempo constante (SHA-256 de ambos os lados + timingSafeEqual) sem

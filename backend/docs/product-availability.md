@@ -1,8 +1,9 @@
-# Gestão administrativa da disponibilidade de produtos — Etapa 3D.4.2
+# Gestão administrativa da disponibilidade de produtos
 
-Escopo: o estabelecimento decide, produto a produto, se um item pode ser pedido. **Estado desta entrega:** implementado
-e testado localmente **sem banco**; a migration de privilégio está **preparada e não aplicada**; os testes com
-PostgreSQL real e a jornada E2E estão **preparados e não executados**. Nada aqui afirma prontidão para produção.
+Escopo: o estabelecimento decide, produto a produto, se um item pode ser pedido. **Estado:** implementado, testado e
+validado no PostgreSQL Dev em 14/11/2026 (9/9 migrations), inclusive a mudança real do produto
+`TESTE_RF004_PEDIDO` para `UNAVAILABLE`. Os testes de integração e a jornada E2E são opt-in no CI; nada aqui afirma
+prontidão para produção.
 
 ## Política (fonte única: `Product.availabilityState`)
 

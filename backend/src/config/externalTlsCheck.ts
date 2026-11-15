@@ -1,9 +1,9 @@
 import tls from 'node:tls';
 
 /**
- * 3D.5.3-C.5 — verificação INDEPENDENTE do TLS externo (o que o CLIENTE comprova sobre a conexão que ele mesmo abriu:
+ * Verificação INDEPENDENTE do TLS externo (o que o CLIENTE comprova sobre a conexão que ele mesmo abriu:
  * cadeia/CA, nome do servidor, protocolo). Porta a lógica já auditada em `backend/scripts/neon-probe-checks.mjs`
- * (3D.5.3-C.2.2) para dentro do backend, para uso no gate de inicialização do perfil Neon.
+ * para dentro do backend, para uso no gate de inicialização do perfil Neon.
  *
  * Isto é DELIBERADAMENTE uma camada diferente de `pg_stat_ssl` (ver `neonServerIdentity.ts`): aqui provamos o TLS entre
  * este processo e o endpoint ao qual ele se conectou; não provamos o trecho entre o proxy do provedor e o PostgreSQL.

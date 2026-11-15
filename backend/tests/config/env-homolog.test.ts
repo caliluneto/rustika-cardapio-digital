@@ -3,7 +3,7 @@ import { assertRuntimeDatabaseProfile, resolveDatabaseProfile } from '../../src/
 import { assertHomologRuntimeConfig } from '../../src/config/homologRuntime';
 import { createPrismaRuntime } from '../../src/lib/prisma';
 
-describe('gates de ambiente (3D.5.2)', () => {
+describe('gates de ambiente', () => {
   it('app-homolog só roda com NODE_ENV=production e production só com app-homolog', () => {
     expect(() => assertRuntimeDatabaseProfile('app-homolog', 'production')).not.toThrow();
     for (const runtime of ['development', '']) expect(() => assertRuntimeDatabaseProfile('app-homolog', runtime)).toThrow(/NODE_ENV=production/);

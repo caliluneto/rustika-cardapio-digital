@@ -10,7 +10,7 @@
 - `verify-restore.sql`: confere schema, dados e `_prisma_migrations` de um banco descartável de
   restauração; execute somente no banco `cardapio_restore_check_*`.
 
-## Provisão da role de fixtures (3D.3.10, preparada e NÃO executada)
+## Provisão da role de fixtures
 
 Os arquivos de provisão alteram o cluster e exigem autorização específica, role
 administrativa local com `SUPERUSER` e conferência prévia de `pg_hba.conf`/ACLs de `PUBLIC`:

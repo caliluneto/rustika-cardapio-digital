@@ -33,7 +33,7 @@ export function adaptCategory(value: unknown): Category {
 }
 
 /**
- * Absolute API base for resolving relative image paths. `VITE_API_URL=/api` (same-origin hosting, 3D.5.3-B) is resolved
+ * Absolute API base for resolving relative image paths. `VITE_API_URL=/api` (same-origin hosting) is resolved
  * against the page origin; without one (non-browser) the relative base cannot be resolved, so images are omitted.
  */
 function absoluteBase(baseUrl: string): string | undefined {

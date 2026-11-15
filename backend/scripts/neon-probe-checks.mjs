@@ -1,4 +1,4 @@
-// 3D.5.3-C.2.2 - verificacoes PURAS do neon-probe (testaveis offline). Nada aqui abre conexao nem le segredos.
+// Verificacoes PURAS do neon-probe (testaveis offline). Nada aqui abre conexao nem le segredos.
 import tls from 'node:tls';
 
 export const WRONG_HOST = 'wrong.example.invalid';

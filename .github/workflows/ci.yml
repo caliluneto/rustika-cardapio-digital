@@ -1,4 +1,4 @@
-# RÚSTIKA — CI (3D.3.25-A). PREPARADO, NÃO EXECUTADO. Revisar antes do primeiro push.
+# RÚSTIKA — Integração contínua.
 #
 # - Jobs `backend` e `frontend`: sem banco, sem segredos; rodam em pull_request e sob demanda.
 # - Job `e2e`: Playwright contra um PostgreSQL 18 EFÊMERO criado no runner. Só roda manualmente
@@ -214,9 +214,9 @@ jobs:
         working-directory: backend
         run: npm run e2e:inspect
 
-      # 3D.4.1-B: validar migrations + ACL + operação de pedidos em PostgreSQL real ANTES do navegador.
+      # Valida migrations, ACL e operação de pedidos em PostgreSQL real antes do navegador.
       # Escreve só no banco efêmero do runner; as fixtures são por execução e removidas pela própria suíte.
-      - name: Integração PostgreSQL (7 migrations exatas, ACL por coluna, operação de pedidos, disponibilidade de produtos)
+      - name: Integração PostgreSQL (8 migrations exatas, ACL por coluna, operação de pedidos, disponibilidade de produtos)
         if: inputs.run_integration == true
         working-directory: backend
         run: npm run test:integration:db
@@ -226,7 +226,7 @@ jobs:
         working-directory: frontend
         run: npx playwright test --workers=1 --project=chromium --reporter=line
 
-      # Jornada ampliada (3D.4.1): variável constante, presente SOMENTE neste passo (nunca no env do job).
+      # Jornada ampliada: variável constante, presente somente neste passo (nunca no env do job).
       - name: Playwright E2E ampliado com operação de pedidos (opt-in)
         if: inputs.run_playwright == true && inputs.run_order_ops == true && inputs.run_product_availability != true
         working-directory: frontend
@@ -234,7 +234,7 @@ jobs:
           RUSTIKA_E2E_ORDER_OPS: enabled
         run: npx playwright test --workers=1 --project=chromium --reporter=line
 
-      # Jornada ampliada (3D.4.2): disponibilidade de produtos. Variável constante, só nos passos dedicados.
+      # Jornada ampliada: disponibilidade de produtos. Variável constante, só nos passos dedicados.
       - name: Playwright E2E ampliado com disponibilidade de produtos (opt-in)
         if: inputs.run_playwright == true && inputs.run_order_ops != true && inputs.run_product_availability == true
         working-directory: frontend

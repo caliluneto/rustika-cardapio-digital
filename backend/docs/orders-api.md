@@ -2,10 +2,10 @@
 
 `POST /api/orders` recebe identificação do cliente e itens, consulta o catálogo e
 grava pedido, snapshots e primeiro evento de histórico numa transação Prisma.
-Implementação testada com doubles; nenhuma conexão ou escrita no PostgreSQL foi
-realizada nesta entrega. O frontend ainda não envia pedidos.
+Implementação testada com doubles e validada no PostgreSQL Dev em 14/11/2026. O frontend
+envia pedidos quando `VITE_ORDER_SUBMISSION=enabled`.
 
-**Atualização 3D.3.8:** `POST /api/orders` passou a exigir `X-Rustika-Request: 1`
+**Contrato atual:** `POST /api/orders` exige `X-Rustika-Request: 1`
 (mesmo contrato das rotas de acesso), ganhou limites de requisição (seção "Limites
 de requisição") e o frontend tem o fluxo de envio preparado, desligado por padrão
 (`VITE_ORDER_SUBMISSION=enabled` liga). A seção "CORS" descreve o comportamento real.
@@ -143,13 +143,13 @@ por processo, janela fixa, sem Redis. Toda recusa é
 | Por sessão | SHA-256 do cookie | 10 / 5 min | Uma sessão é um dispositivo de uma comanda; 10 envios em 5 min já é mais do que um uso real. Replays com a mesma chave também contam. |
 | Sessões confirmadas | SHA-256 do cookie | 8 h | Conjunto de sessões que já tiveram pedido aceito ou recusado por regra de negócio (404/409/422), que só ocorre depois da validação da sessão. |
 
-Memória e expiração (revisado na 3D.3.9): cada limitador tem dois depósitos.
+Memória e expiração: cada limitador tem dois depósitos.
 
 - **Ativos** (abaixo do limite): até 10 000 chaves, removidas em ordem de expiração a cada
   acesso. Cheio, descarta o mais antigo e aceita a chave nova; um cliente novo nunca é
   bloqueado por saturação.
 - **Bloqueados** (atingiram o limite): até 10 000 chaves, que **não** são descartadas pela
-  chegada de chaves novas. Na 3D.3.8, inundar a tabela com chaves descartáveis apagava o
+  chegada de chaves novas. Na versão anterior, inundar a tabela com chaves descartáveis apagava o
   contador de quem já estava bloqueado; agora não apaga (testado). Se o depósito de bloqueados
   enche, vencidos são varridos e, persistindo, sai quem tem a penalidade mais perto do fim.
   Encher esse depósito custa `max` requisições por chave. Varredura de vencidos no máximo uma vez
@@ -276,25 +276,20 @@ Envelope preservado: `{ "success": false, "error": { "code": "...", "message": "
 Falhas internas não expõem SQL, credenciais ou detalhes do driver na resposta
 nem no log do middleware.
 
-## Bloqueios reais e alcance do RF004
+## Alcance do RF004
 
-- Não existem emissão autenticada de convite e resgate para sessão/cookie.
-- A migration de comandas/sessões revoga privilégios da aplicação nessas tabelas;
-  somente aplicá-la não habilita a leitura de sessão/comanda. A operação também
-  depende de leitura do catálogo, SELECT/INSERT de pedidos/itens/histórico e uso
-  da sequência. Permissões efetivas não foram consultadas nem modificadas.
-- Schema aplicado, dados reais, catálogo `AVAILABLE` e persistência/rollback
-  real permanecem não verificados. Não foram criados seeds ou dados fictícios.
-- O frontend ainda precisa coletar identificação, usar a sessão legítima, enviar
-  a revisão e apresentar a confirmação. Carrinho e revisão não foram alterados.
-
-Assim, esta entrega implementa a parte backend do RF004 condicionada à sessão
-válida; o requisito ponta a ponta permanece **parcialmente implementado**.
+- Emissão autenticada de convite, resgate para sessão/cookie e envio pelo frontend estão implementados.
+- As migrations de comandas/sessões e de privilégio mínimo estão aplicadas no PostgreSQL Dev (9/9);
+  o Test local está em 5/8 do baseline e depende de aplicação autorizada.
+- O fluxo foi validado com o pedido #5 (comanda `000126`), incluindo persistência, snapshots e histórico.
+  Rollback SQL real não foi exercitado.
+- O E2E automatizado cobre a jornada principal no CI; cenários adicionais (indisponibilidade, preço
+  alterado, comanda expirada) permanecem como lacuna.
 
 ## Testes locais
 
 `tests/orders-csrf.test.ts` (header de proteção), `tests/orders-rate-limit.test.ts`
-(limites) e `tests/security/accessLimits.test.ts` (limitador) cobrem a 3D.3.8.
+(limites) e `tests/security/accessLimits.test.ts` (limitador) cobrem esse comportamento.
 `tests/orders.test.ts` e `tests/services/order.service.test.ts` usam exclusivamente
 Prisma simulado e não instanciam clientes ou carregam credenciais. Cobrem sucesso,
 preços/quantidades, elegibilidade, sessão, confirmação, idempotência, erros HTTP,
@@ -310,6 +305,6 @@ npm run typecheck
 npm run build
 ```
 
-## Operação administrativa (3D.4.1)
+## Operação administrativa
 
 A listagem e a atualização de status feitas pelo estabelecimento estão em `docs/order-operations.md`. O pedido criado aqui nasce em `RECEIVED`; a transição é feita apenas pelas rotas administrativas.

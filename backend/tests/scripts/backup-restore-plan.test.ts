@@ -6,7 +6,7 @@ const doc = fs.readFileSync(path.join(process.cwd(), 'docs', 'restore-backup.md'
 const verify = fs.readFileSync(path.join(process.cwd(), 'docs', 'sql', 'verify-restore.sql'), 'utf8');
 
 describe('plano de restauração isolada do backup (estático; nada foi executado)', () => {
-  // 3D.3.12: a 3D.3.10 dava o dump como ausente por ter procurado o nome errado. O fato correto
+  // A versão anterior dava o dump como ausente por ter procurado o nome errado. O fato correto
   // (os dois arquivos existem, com seus hashes) é o que o plano deve registrar agora.
   it('registra os dumps reais e não finge que a restauração foi provada', () => {
     expect(doc).toContain('cardapio_digital_test_pre3d38_20261104-012137.dump');
@@ -46,14 +46,14 @@ describe('plano de restauração isolada do backup (estático; nada foi executad
     expect(body).toContain('\\gexec');
   });
 
-  it('3D.3.12: usa o dump mais recente com SHA-256 completo e para se divergir', () => {
+  it('usa o dump mais recente com SHA-256 completo e para se divergir', () => {
     expect(doc).toContain('cardapio_digital_test_pre-migrations-3d311_20261104-102650Z_1a9636.dump');
     expect(doc).toContain("$expected = 'f2304f0ac150218ef6dc36a1cbdc517402180daa8ed73bd949c6d2f05306cadf'");
     expect(doc).toContain('SHA-256 divergente: parar.');
     expect(doc).not.toContain('não está mais no caminho documentado');
   });
 
-  it('3D.3.12: isola o banco descartável de PUBLIC e preserva os bancos existentes', () => {
+  it('isola o banco descartável de PUBLIC e preserva os bancos existentes', () => {
     expect(doc).toContain('REVOKE ALL ON DATABASE $target FROM PUBLIC');
     for (const name of ['plataforma_sites_ia', 'cardapio_restore_precheck', 'rf004_lab_']) expect(doc).toContain(name);
     expect(doc).toContain('_antes.txt');

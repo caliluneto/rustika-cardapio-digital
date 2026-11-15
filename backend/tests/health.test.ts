@@ -6,8 +6,8 @@ import { env } from '../src/config/env';
 
 const app = createApp();
 
-// 3D.3.12: recuperado de health.test-Calil-Notebook.ts (cópia de conflito do OneDrive com a
-// versão do início da 3D.3.9). O arquivo ativo tinha regredido para uma versão de 22/10.
+// Regressão: o arquivo ativo havia regredido para uma versão antiga; o teste garante que o
+// cliente injetado continua sendo usado sem abrir conexão durante o health check.
 describe('inicialização isolada do app', () => {
   it('aceita cliente injetado sem criar conexão durante o health', async () => {
     const prisma = { $connect: vi.fn() } as unknown as PrismaClient;

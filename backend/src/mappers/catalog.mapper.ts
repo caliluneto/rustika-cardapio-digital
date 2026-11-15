@@ -62,7 +62,7 @@ export function mapProduct(record: ProductRecord): Product {
 }
 
 /**
- * Visão administrativa de produto (3D.4.2). O identificador exposto é a chave pública (`rustika-<código>`);
+ * Visão administrativa de produto. O identificador exposto é a chave pública (`rustika-<código>`);
  * não há UUID interno, descrição de origem, ingredientes, imagem nem o campo legado `isAvailable`.
  */
 export const adminProductSelect = {

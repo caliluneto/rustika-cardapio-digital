@@ -4,7 +4,7 @@ import { WebConfigError, readGateConfig, readTrustProxyHops, readWebConfig } fro
 const PASSWORD = 'Senha-Longa-De-Teste-000-xyz';
 const dir = () => '/tmp/frontend-dist';
 
-describe('3D.5.3-B - configuração web (opt-in, falha fechada)', () => {
+describe('configuração web (opt-in, falha fechada)', () => {
   it('sem variáveis: somente API, 0 saltos de proxy, sem portão, sem noindex', () => {
     expect(readWebConfig({}, dir)).toEqual({ trustProxyHops: 0, noindex: false });
   });

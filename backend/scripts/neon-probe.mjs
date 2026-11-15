@@ -1,4 +1,4 @@
-// 3D.5.3-C.2 / C.2.1 - ENSAIO SUPERVISIONADO de compatibilidade Neon Free
+// ENSAIO SUPERVISIONADO de compatibilidade Neon Free
 // Modo "read"  : somente leitura.
 // Modo "write" : cria/renomeia/exclui SOMENTE objetos zz_probe_* e exige NEON_PROBE_ALLOW_WRITE=yes.
 import crypto from 'node:crypto';
@@ -19,7 +19,7 @@ const allowWrite = process.env.NEON_PROBE_ALLOW_WRITE === 'yes';
 const allowGrant = process.env.NEON_PROBE_ALLOW_GRANT === 'yes';
 const skipPrisma = process.env.NEON_PROBE_SKIP_PRISMA === 'yes';
 const EXPECT = { database: 'neondb', user: 'neondb_owner', versionPrefix: '18.', projectId: 'aged-scene-47291697' };
-// C.3: nomes UNICOS por execucao (runId aleatorio). Assim a limpeza so alcanca objetos desta execucao, mesmo contra outro processo concorrente
+// Nomes UNICOS por execucao (runId aleatorio). Assim a limpeza so alcanca objetos desta execucao, mesmo contra outro processo concorrente
 // que crie zz_probe_* no meio do ensaio; a pre-checagem por prefixo (zz_probe_%) continua recusando qualquer resto de execucoes anteriores.
 const runId = crypto.randomBytes(4).toString('hex');
 const P = `zz_probe_${runId}_`;
@@ -76,9 +76,8 @@ async function open(database = baseDb, user = baseUser, password = basePassword,
 }
 const rows = async (client, sql, params) => (await client.query(sql, params)).rows;
 const one = async (id, fn) => { try { const detail = await fn(); record(id, 'COMPROVADO', detail); return true; } catch (error) { record(id, 'INCOMPATIVEL', `${error.code ?? ''} ${error.message}`.trim()); return false; } };
-// 3D.5.3-C.5.3: o PostgreSQL >= 16 guarda uma linha de pg_auth_members POR CONCEDENTE (grantor) para o mesmo par
-// (role, membro). Um "[0]" sem agregacao leria uma linha arbitraria quando ha mais de uma - bug real encontrado e
-// corrigido nesta etapa (ver RELATORIO-ENTREGA-3D.5.3-C.5.2-EXECUCAO.md, secao 3). Esta funcao agrega SEMPRE.
+// O PostgreSQL >= 16 guarda uma linha de pg_auth_members POR CONCEDENTE (grantor) para o mesmo par
+// (role, membro). Um "[0]" sem agregacao leria uma linha arbitraria quando ha mais de uma. Esta funcao agrega SEMPRE.
 const aggMembership = async (client, roleName, memberName) => {
   const r = (await rows(client,
     'SELECT bool_or(set_option) s, bool_or(inherit_option) i, bool_or(admin_option) a, count(*)::int n, ' +
@@ -236,12 +235,12 @@ try {
       if (!haveDb) {
         const diag = await aggMembership(admin, roleName, baseUser);
         record('E_DIAGNOSTICO_MEMBERSHIP', 'COMPROVADO', JSON.stringify(diag));
-        // 3D.5.3-C.5.2/C.5.3: minimo privilegio, fundamentado (nao suposicao) na documentacao oficial do PostgreSQL
+        // Minimo privilegio, fundamentado (nao suposicao) na documentacao oficial do PostgreSQL
         // (Role Membership, 16 e 18, texto identico): "To create an object owned by another role ... you must have
         // the ability to SET ROLE to that role" - a ligacao documentada e com SET, nao com INHERIT, para esta
         // operacao especifica. INHERIT TRUE (uso automatico e continuo dos privilegios da role concedida) so e
         // concedido mais abaixo, na janela estrita em volta do RENAME (F0), que exige a checagem de "privilegios
-        // do dono" (has_privs_of_role), essa sim dependente de INHERIT - ver E_DIAGNOSTICO/F0 e o relatorio C.5.2.
+        // do dono" (has_privs_of_role), essa sim dependente de INHERIT - ver E_DIAGNOSTICO/F0.
         if (!allowGrant) record('E2_GRANT_SET_TRUE_INHERIT_FALSE_NA_ROLE_DESCARTAVEL', 'PENDENTE DE AUTORIZACAO', 'exige NEON_PROBE_ALLOW_GRANT=yes');
         else if (await one('E2_GRANT_SET_TRUE_INHERIT_FALSE_NA_ROLE_DESCARTAVEL', async () => { await admin.query(`GRANT ${qi(roleName)} TO ${qi(baseUser)} WITH SET TRUE, INHERIT FALSE`); return 'grant aplicado (somente na role zz_probe_*)'; })) {
           grantUsed = true;
@@ -256,7 +255,7 @@ try {
       if (haveDb) {
         await one('E4_REVOKE_GRANT_CONNECT_NO_BANCO_DESCARTAVEL', async () => { await admin.query(`REVOKE ALL ON DATABASE ${qi(N.db)} FROM PUBLIC`); await admin.query(`GRANT CONNECT ON DATABASE ${qi(N.db)} TO ${qi(N.reader)}`); return 'REVOKE/GRANT ok'; });
 
-        // F0 - ELEVACAO TEMPORARIA E CONTROLADA, so para a janela do RENAME (3D.5.3-C.5.3; mesma causa raiz da C.5.2):
+        // F0 - ELEVACAO TEMPORARIA E CONTROLADA, so para a janela do RENAME:
         // ALTER DATABASE RENAME exige "privilegios do dono" (has_privs_of_role), que SO acompanha memberships com
         // INHERIT - SET nao basta. CREATEDB para a propria operacao vem do ATRIBUTO PROPRIO do admin (nao herdado).
         // NUNCA eleva a role de runtime; a elevacao e so sobre a role de teste ja concedida em E2.

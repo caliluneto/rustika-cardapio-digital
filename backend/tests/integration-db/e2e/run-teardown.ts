@@ -1,5 +1,5 @@
 /**
- * E2E verification + surgical teardown (3D.3.21-B). Reads the run manifest, verifies the persisted
+ * E2E verification + surgical teardown. Reads the run manifest, verifies the persisted
  * order (read-only), deletes ONLY the run's rows and proves zero residue. Prints one JSON summary
  * (no secrets) to stdout. Exit 2: aborted before deleting; exit 3: cleaned up but verification failed.
  */

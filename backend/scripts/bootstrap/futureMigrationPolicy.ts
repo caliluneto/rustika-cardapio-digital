@@ -1,5 +1,5 @@
 /**
- * Política para migrations FUTURAS (oitava em diante) — 3D.5.2-A. As sete históricas são imutáveis e não passam por este lint.
+ * Política para migrations FUTURAS (oitava em diante). As sete históricas são imutáveis e não passam por este lint.
  * Uma migration nova precisa ser neutra em relação ao ambiente: o mesmo arquivo roda em Dev, Test e Homologação (com os nomes
  * definitivos `cardapio_digital_homolog`/`cardapio_homolog_*`), sem nunca marcar nada como aplicado manualmente.
  * Retorna a lista de violações (vazia = conforme). Heurística estática; não substitui a revisão humana.

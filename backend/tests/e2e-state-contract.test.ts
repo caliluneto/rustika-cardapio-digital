@@ -9,7 +9,7 @@ import {
 import { collectState, emitState, parseOutPath, type InspectClient } from '../scripts/inspect-e2e-state';
 
 /**
- * 3D.3.29-FIX02: contrato do estado do E2E. Sem banco, sem rede: funções puras + processos que só leem/gravam
+ * Contrato do estado do E2E. Sem banco, sem rede: funções puras + processos que só leem/gravam
  * arquivos temporários (o "erro de conexão" aponta para uma porta fechada de loopback).
  */
 const goodState = () => ({

@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Somente leitura. Via psql conectado ao banco de REPLAY como cardapio_migrator, depois do replay das migrations.
+-- NAO EXECUTADO. Somente leitura. Via psql conectado ao banco de REPLAY como cardapio_migrator, depois do replay das migrations.
 -- Confirma que as sete migrations historicas foram aplicadas pelo Prisma (nao marcadas) e que o estado de ACL e o esperado, ANTES de renomear.
 \set ON_ERROR_STOP on
 BEGIN READ ONLY;
@@ -17,7 +17,7 @@ BEGIN
     RAISE EXCEPTION 'REPLAY: ACL do runtime diferente da esperada';
   END IF;
   IF (SELECT count(*) FROM public.admins) <> 0 THEN RAISE EXCEPTION 'REPLAY: o banco deveria estar vazio'; END IF;
-  -- 3D.5.2-B: ownership e ausencia de objetos que embutam nomes de roles/banco (a renomeacao NAO reescreve SQL armazenado).
+  -- Ownership e ausencia de objetos que embutam nomes de roles/banco (a renomeacao NAO reescreve SQL armazenado).
   IF (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database()) <> 'cardapio_migrator' THEN
     RAISE EXCEPTION 'OWNER: o dono do banco deve ser cardapio_migrator';
   END IF;

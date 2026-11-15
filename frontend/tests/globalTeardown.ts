@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * 3D.3.21-B: verificacao (somente leitura) do pedido persistido + limpeza CIRURGICA das linhas da
+ * Verificacao (somente leitura) do pedido persistido + limpeza CIRURGICA das linhas da
  * propria execucao, guiada pelo manifesto. Roda mesmo quando a jornada falha. Se o banco contiver algo
  * que o manifesto nao explica, aborta ANTES de apagar e mantem o manifesto (nada de limpeza improvisada):
  * nesse caso use `npm run e2e:teardown` no backend depois de investigar.

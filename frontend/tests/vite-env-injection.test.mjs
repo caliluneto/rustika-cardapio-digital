@@ -1,4 +1,4 @@
-// 3D.3.21-A: regressao do defeito que impediu o checkout E2E.
+// Regressao do defeito que impediu o checkout E2E.
 // `const meta = import.meta; meta.env?.VITE_ORDER_SUBMISSION` nunca recebia o `env` (o Vite so injeta
 // `import.meta.env = {...}` em modulos que contem o texto literal `import.meta.env`), entao
 // VITE_ORDER_SUBMISSION=enabled nao tinha efeito algum. Estes testes exercitam o proprio Vite.

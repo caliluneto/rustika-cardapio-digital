@@ -53,7 +53,7 @@ describe('provisão da role de fixtures (estática; nada foi executado)', () => 
     expect(provision).not.toMatch(/GRANT[^;]*(cardapio_digital_dev|cardapio_digital_shadow)/s);
   });
 
-  // 3D.3.11: Dev/Shadow já não concedem CONNECT a PUBLIC, mas postgres, template1 e bancos de
+  // Dev/Shadow já não concedem CONNECT a PUBLIC, mas postgres, template1 e bancos de
   // outros projetos concedem. O isolamento passou a ser pg_hba, exigido no passo de LOGIN.
   it('provisão NOLOGIN não aborta por CONNECT herdado, mas recusa concessão explícita fora de Test', () => {
     const body = stripComments(provision);

@@ -74,9 +74,9 @@ describe('segurança e concorrência com PostgreSQL real', () => {
     expect(await count()).toBe(before + 1);
   });
 
-  it('a role da aplicação não consegue apagar pedidos nem alterar colunas além de status/updated_at (privilégios pós-migration 3D.4.1)', async () => {
+  it('a role da aplicação não consegue apagar pedidos nem alterar colunas além de status/updated_at (privilégios pós-migration)', async () => {
     await expect(h.db.app.order.deleteMany({ where: { comanda: { number } } })).rejects.toThrow();
-    // 3D.4.1: UPDATE só nas colunas status e updated_at. Qualquer outra coluna continua negada.
+    // UPDATE só nas colunas status e updated_at. Qualquer outra coluna continua negada.
     await expect(h.db.app.order.updateMany({ where: { comanda: { number } }, data: { customerName: 'x' } })).rejects.toThrow();
     await expect(h.db.app.order.updateMany({ where: { comanda: { number } }, data: { totalAmount: 0 } })).rejects.toThrow();
     await expect(h.db.app.$executeRawUnsafe('TRUNCATE TABLE orders')).rejects.toThrow();
@@ -84,12 +84,10 @@ describe('segurança e concorrência com PostgreSQL real', () => {
   });
 
   /**
-   * Matriz mínima aprovada na 3D.3.7 (seção 20.3). A 3D.3.10 preparou a migration
-   * 20261104000000_runtime_least_privilege, mas ela ainda não foi aplicada: pelas ACLs lidas na
-   * 3D.3.9, cardapio_test_app mantém INSERT/UPDATE/DELETE em admins/categories/products e o
-   * default ACL concede DML a tabelas novas. Este teste deve falhar até a Operação C aplicar a
-   * migration e as ACLs reais serem conferidas. Ele existe para tornar a lacuna visível na
-   * primeira execução real, não para ser ajustado.
+   * Matriz mínima aprovada de privilégios. A migration 20261104000000_runtime_least_privilege
+   * está aplicada no PostgreSQL Dev (9/9) e integra o conjunto de 8 migrations esperadas no Test.
+   * Este teste confere as ACLs efetivas depois da migration; no Test local ele só pode rodar após
+   * a aplicação autorizada das migrations pendentes.
    */
   it('privilégios efetivos da role da aplicação conferem com a matriz mínima', async () => {
     const rows = await h.db.app.$queryRawUnsafe<{ table_name: string; privileges: string }[]>(
@@ -109,7 +107,7 @@ describe('segurança e concorrência com PostgreSQL real', () => {
     });
   });
 
-  it('UPDATE em orders é exclusivamente por coluna: apenas status e updated_at (3D.4.1)', async () => {
+  it('UPDATE em orders é exclusivamente por coluna: apenas status e updated_at', async () => {
     const rows = await h.db.app.$queryRawUnsafe<{ attname: string; can_update: boolean }[]>(
       `SELECT a.attname, has_column_privilege(a.attrelid, a.attnum, 'UPDATE') AS can_update
        FROM pg_attribute a WHERE a.attrelid = 'public.orders'::regclass AND a.attnum > 0 AND NOT a.attisdropped ORDER BY 1`);

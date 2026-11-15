@@ -1,16 +1,16 @@
-# Restauração isolada do backup do PostgreSQL Test — 3D.3.10
+# Restauração isolada do backup do PostgreSQL Test
 
 **Estado: plano preparado, nenhuma restauração executada, nenhum banco criado ou excluído.**
 
-## Dumps disponíveis (corrigido na 3D.3.11/3D.3.12)
+## Dumps disponíveis
 
-A 3D.3.10 registrou o dump como ausente porque procurou o nome errado
+A primeira versão do plano registrou o dump como ausente porque procurou o nome errado
 (`cardapio_test_pre3d38_…`). Os dois arquivos existem, fora do OneDrive e do repositório:
 
 | Uso | Arquivo em `%LOCALAPPDATA%\RustikaBackups\` | SHA-256 |
 | --- | --- | --- |
 | **Prova de restauração (usar este)** | `cardapio_digital_test_pre-migrations-3d311_20261104-102650Z_1a9636.dump` | `f2304f0ac150218ef6dc36a1cbdc517402180daa8ed73bd949c6d2f05306cadf` |
-| Histórico (3D.3.8) | `cardapio_digital_test_pre3d38_20261104-012137.dump` | `1be946052157a2c54b7af979c9c174e0d41d70cfaab9abc9b5de90663f925265` |
+| Histórico | `cardapio_digital_test_pre3d38_20261104-012137.dump` | `1be946052157a2c54b7af979c9c174e0d41d70cfaab9abc9b5de90663f925265` |
 
 Ambos: 20 928 bytes, `pg_dump` 18.6, `-Fc --create`, estado anterior às migrations pendentes
 (7 tabelas, `_prisma_migrations` com 1 linha, demais tabelas vazias). Conteúdo SQL idêntico entre
@@ -41,7 +41,7 @@ tocar em `cardapio_digital_dev`, `cardapio_digital_test` ou `cardapio_digital_sh
    não use `dropdb` preventivo.
 5. **Isolar owner e ACLs:** usar `--no-owner --no-privileges`. O objetivo é validar schema e
    dados, não depender de roles do cluster nem aplicar ACLs do dump. A fidelidade de ACL é
-   conferida separadamente por `docs/sql/verify-test-fixtures.sql` e pelas consultas da 3D.3.9.
+   conferida separadamente por `docs/sql/verify-test-fixtures.sql` e pelas consultas oficiais de verificação.
 6. **Transação única:** `--single-transaction --exit-on-error`; qualquer erro aborta e não deixa
    restauração parcial.
 7. **Sem credenciais em argumentos, arquivos versionados ou logs.** Usar `pgpass` fora do
@@ -99,7 +99,7 @@ createdb -h 127.0.0.1 -p 5432 -U <role_administrativa> -T template0 -E UTF8 $tar
 Não usar `-O cardapio_migrator`: a restauração será `--no-owner`; o owner do destino é a role
 administrativa. Isso isola o teste das roles do cluster.
 
-Isolamento de conexões (3D.3.12): todo banco novo concede `CONNECT`/`TEMP` a `PUBLIC`, ou seja, a
+Isolamento de conexões: todo banco novo concede `CONNECT`/`TEMP` a `PUBLIC`, ou seja, a
 qualquer role do cluster (inclusive as da PLATAFORMA_SITES_IA). Fechar imediatamente, só no
 banco descartável:
 
@@ -178,7 +178,7 @@ limpeza deve ser igual ao arquivo `_antes.txt` do passo 1. O banco
 - Não executa `pg_restore`, `createdb` ou `dropdb`.
 - Não cria role, não altera ACL e não aplica migration.
 - Não declara o dump restaurável antes da execução completa dos passos 0 a 5.
-- Não substitui a Operação B da 3D.3.9; ele a corrige e a torna executável quando houver dump.
+- Não substitui a Operação B original; corrige o plano e o torna executável quando houver dump.
 
 ## RF006 — backup integral do Dev antes de `migrate deploy`
 

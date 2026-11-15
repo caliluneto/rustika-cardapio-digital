@@ -1,5 +1,5 @@
 /**
- * 3D.3.23-D. Importar `@prisma/client` (Prisma 6) carrega o `backend/.env` legado e injeta DATABASE_URL no
+ * Importar `@prisma/client` (Prisma 6) carrega o `backend/.env` legado e injeta DATABASE_URL no
  * processo ANTES de os gates do E2E rodarem. Os gates proíbem DATABASE_URL/SHADOW_DATABASE_URL (só valem os
  * perfis da pasta de segredos), então todo comando real abortava por uma variável que o operador nunca definiu.
  *

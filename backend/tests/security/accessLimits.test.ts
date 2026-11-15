@@ -60,7 +60,7 @@ describe('createFixedWindowLimiter', () => {
     const c = clock(); const limiter = createFixedWindowLimiter({ max: 5, windowMs: 60_000, now: c.now });
     for (let i = 0; i < 25_000; i++) expect(limiter.hit(`ip-${i}`).limited).toBe(false);
     expect(limiter.size).toBe(DEFAULT_LIMIT_CAPACITY);
-  }, 30_000); // teste pesado: prazo próprio para não falhar por carga da máquina (3D.3.11)
+  }, 30_000); // teste pesado: prazo próprio para não falhar por carga da máquina
 
   it.each([{ max: 0 }, { max: 1.5 }, { windowMs: 0 }, { capacity: 0 }])('recusa configuração inválida %j', (override) => {
     const c = clock();

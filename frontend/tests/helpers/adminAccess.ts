@@ -4,7 +4,7 @@ import { classifyAdmin, nextAdminAction } from './adminState';
 import type { AdminDomFacts } from './adminState';
 
 /**
- * Acesso administrativo determinístico (3D.4.2-C): abre #admin, espera a verificação de sessão terminar, faz login só
+ * Acesso administrativo determinístico: abre #admin, espera a verificação de sessão terminar, faz login só
  * se o formulário estiver estável e confirma o painel autenticado. Sem verificação instantânea de visibilidade e sem atrasos fixos.
  */
 const readFacts = async (page: Page): Promise<AdminDomFacts> => ({

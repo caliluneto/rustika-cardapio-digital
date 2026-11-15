@@ -1,5 +1,5 @@
 /**
- * Valida o arquivo de estado produzido por `npm run e2e:inspect -- --out <arquivo>` (3D.3.29-FIX02).
+ * Valida o arquivo de estado produzido por `npm run e2e:inspect -- --out <arquivo>`.
  * Somente leitura de arquivo; nenhuma conexão. Códigos de saída:
  *   0  contrato válido e resíduo zero
  *   1  contrato válido, mas há tabela ausente ou resíduo

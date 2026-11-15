@@ -1,8 +1,8 @@
-# Role de fixtures do PostgreSQL Test — 3D.3.10
+# Role de fixtures do PostgreSQL Test
 
-**Estado: preparada, não criada e não executada.** Nenhum `CREATE ROLE`, `GRANT`, `REVOKE`
-ou `DROP ROLE` foi executado nesta entrega. A existência e as ACLs reais só podem ser
-comprovadas depois das Operações B/C, com autorização própria.
+**Estado: provisionada e em uso no PostgreSQL Test.** A matriz abaixo é a política aplicada; a existência e as
+ACLs efetivas são conferidas pelos scripts oficiais (`backend/docs/sql/`). Qualquer nova provisão exige autorização
+específica.
 
 ## Por que uma role separada
 
@@ -33,7 +33,7 @@ Também **não** recebe: `TRUNCATE`, `REFERENCES`, `TRIGGER`, `MAINTAIN`, `CREAT
 `CREATEDB`, `CREATEROLE`, `BYPASSRLS`, `REPLICATION` ou `INHERIT`. A role não cria pedidos:
 pedidos nascem pela API e consomem `orders_order_number_seq` com a role de runtime.
 
-## Como o PostgreSQL decide (base da estratégia, 3D.3.11)
+## Como o PostgreSQL decide (base da estratégia)
 
 | Mecanismo | Funcionamento real | Consequência aqui |
 | --- | --- | --- |
@@ -64,9 +64,9 @@ conferido. Separação das quatro funções:
 
 1. **Migration 20261104 aplicada e concluída no Test.** O script recusa se a linha não estiver
    em `_prisma_migrations`.
-2. **Isolamento de conexão por `pg_hba.conf` (revisado na 3D.3.11).** Leitura real do
+2. **Isolamento de conexão por `pg_hba.conf`.** Leitura real do
    cluster em 04/11/2026: `cardapio_digital_dev` e `cardapio_digital_shadow` **já não**
-   concedem `CONNECT` a `PUBLIC` (o bloqueio da 3D.3.10 não existe). Mas `PUBLIC` conecta
+   concedem `CONNECT` a `PUBLIC` (o bloqueio da versão inicial não existe). Mas `PUBLIC` conecta
    em `postgres`, `template1`, `rf004_lab_*`, `cardapio_restore_precheck` e nos bancos de outro
    projeto (`plataforma_sites_ia`, `plataforma_sites_ia_test`). Privilégios de `PUBLIC`
    são aditivos: `REVOKE ... FROM cardapio_test_fixtures` não os retira, e revogá-los de `PUBLIC`
@@ -102,7 +102,7 @@ cd C:\Users\<USUARIO>\OneDrive\Documentos\Cardapio_Digital\backend
 psql -X -h 127.0.0.1 -p 5432 -U <role_administrativa> -d cardapio_digital_test `
   -v ON_ERROR_STOP=1 -f docs/sql/provision-test-fixtures.sql
 
-# Isolamento (3D.3.11): copiar o pg_hba.conf atual para fora do OneDrive, inserir no TOPO as
+# Isolamento: copiar o pg_hba.conf atual para fora da sincronização em nuvem, inserir no TOPO as
 # 5 linhas de docs/sql/pg_hba-test-fixtures.conf.example e recarregar (SELECT pg_reload_conf()).
 
 # Abra o psql interativo; \password precisa ler do terminal, não de -f.

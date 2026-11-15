@@ -1,7 +1,8 @@
-# Rotação das credenciais do PostgreSQL — procedimento (3D.3.21-B)
+# Rotação das credenciais do PostgreSQL
 
-**Estado: preparado, NÃO executado.** Nenhuma senha, role ou ACL foi alterada. Os valores das senhas
-nunca aparecem neste documento, nos relatórios nem em log.
+**Estado: executado em 14/11/2026 (4/4 roles).** `npm run secrets:audit` termina com `POLICY_OK`; as quatro
+roles usam senhas distintas, fortes e coerentes entre as URLs de banco e shadow. Nenhuma senha, role ou ACL é
+exibida neste documento, nos relatórios ou em log.
 
 ## Incidente (sem divulgar valores)
 
@@ -19,10 +20,9 @@ Auditoria de 04/11/2026 (`npm run secrets:audit` + comparação por conteúdo co
 | Nuvem | a pasta do projeto está no OneDrive: scripts e `.git` são sincronizados com a conta |
 | Relatórios/docs | varredura por conteúdo (513 arquivos, repositório e backups): nenhuma senha vigente em relatório, documento ou dump; só nos 9 scripts acima |
 
-**Roles a rotacionar (todas):** `cardapio_dev_app`, `cardapio_test_app`, `cardapio_migrator`,
-`cardapio_test_fixtures`. Recomendação: **antes de qualquer nova execução real**. As senhas embutidas
-de `cardapio_migrator` nos scripts não coincidem com a vigente, mas se algum dia foram válidas, trate-as
-como comprometidas.
+**Roles rotacionadas (todas):** `cardapio_dev_app`, `cardapio_test_app`, `cardapio_migrator`,
+`cardapio_test_fixtures`. As senhas embutidas de `cardapio_migrator` nos scripts antigos não coincidem com a
+vigente, mas se algum dia foram válidas, devem ser tratadas como comprometidas.
 
 ## Alvo da política
 
@@ -30,7 +30,7 @@ Uma senha **distinta por role**, ≥ 16 caracteres (recomendado 32, geradas por 
 mesma role com a **mesma** senha em todas as URLs (db e shadow). `npm run secrets:audit` verifica isso e
 sai com código 1 se algo falhar.
 
-## Procedimento seguro (executar só com autorização)
+## Procedimento aplicado (mantido como referência)
 
 Impacto: Dev e Test. Rotacionar `cardapio_migrator` afeta migrations/shadow de ambos; `cardapio_dev_app`
 afeta o backend de Dev. Pare backend, frontend, `vitest` e qualquer E2E antes de começar.
@@ -73,14 +73,14 @@ afeta o backend de Dev. Pare backend, frontend, `vitest` e qualquer E2E antes de
 Se uma role deixar de autenticar: use o backup da pasta de segredos para ler o valor anterior (sem
 exibi-lo) e repita o `\password` com ele; nunca crie uma senha provisória fraca.
 
-## Depois da rotação: tratar as cópias embutidas (decisão do usuário)
+## Cópias embutidas: tratamento posterior (decisão do usuário)
 
-As senhas embutidas ficam inválidas, mas as cópias continuam sendo ruído e risco de reaparecimento:
+As senhas embutidas ficaram inválidas com a rotação, mas as cópias continuam sendo ruído e risco de reaparecimento:
 
 - **Scripts soltos** (`backend/check_*.js`, `db-check.js`, `db-dumper.js`, `seed_pg.js`, `seed_e2e.js`,
-  `seed_raw.js`): classificação e destino na seção 4 do relatório da 3D.3.21-B. Mover para uma pasta de
-  quarentena **fora do repositório e do OneDrive** em vez de apagar; só depois decidir a remoção.
-- **Refs do Cline** (`refs/cline/checkpoints/*`, locais): contêm essas versões. Remoção, **somente com
+  `seed_raw.js`): mover para uma pasta de quarentena **fora do repositório e da sincronização em nuvem** em vez
+  de apagar; só depois decidir a remoção.
+- **Refs locais de ferramentas de desenvolvimento** que contenham essas versões: remoção **somente com
   aprovação**, e depois da rotação:
 
   ```powershell
@@ -90,7 +90,7 @@ As senhas embutidas ficam inválidas, mas as cópias continuam sendo ruído e ri
   ```
 
   É destrutivo para esses snapshots (não para `main`). Não executar sem autorização.
-- **Lixeira do OneDrive:** esvaziar depois de mover os scripts, ou as cópias persistem na nuvem.
+- **Lixeira da sincronização em nuvem:** esvaziar depois de mover os scripts, ou as cópias persistem.
 - **Nunca** reescrever o histórico de `main` por causa disto: não há credencial real nele.
-- Antes do checkpoint Git, excluir esses arquivos da lista (o checkpoint usa lista explícita; o
-  `.gitignore` não protege o que já está versionado, e aqui nada está).
+- Ao preparar um novo commit, usar lista explícita de arquivos: o `.gitignore` não protege o que já está
+  versionado.

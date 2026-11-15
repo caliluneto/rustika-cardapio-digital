@@ -1,4 +1,4 @@
-// 3D.5.3-C.2.2 - testes OFFLINE das verificacoes do neon-probe (node --test). Servidores TLS locais em 127.0.0.1 com certificados
+// Testes OFFLINE das verificacoes do neon-probe (node --test). Servidores TLS locais em 127.0.0.1 com certificados
 // gerados na hora (openssl); nenhum banco, nenhuma rede externa, nenhum segredo.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -146,7 +146,7 @@ describe('garantias no codigo do probe', () => {
   });
 });
 
-describe('C.3 - auditoria estatica do modo write', () => {
+describe('auditoria estatica do modo write', () => {
   const src = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'neon-probe.mjs'), 'utf8');
   const statements = [...src.matchAll(/`((?:CREATE|ALTER|DROP|GRANT|REVOKE|COMMENT)\b[^`]*)`/g)].map((m) => m[1]);
   const ALLOWED = [
@@ -172,7 +172,7 @@ describe('C.3 - auditoria estatica do modo write', () => {
       }
     }
   });
-  it('3D.5.3-C.5.2: minimo privilegio - SET TRUE, INHERIT FALSE e a membership e revogada depois do rename', () => {
+  it('mínimo privilégio - SET TRUE, INHERIT FALSE e a membership e revogada depois do rename', () => {
     assert.ok(/WITH SET TRUE, INHERIT TRUE/.test(src));
     assert.ok(/WITH SET TRUE, INHERIT FALSE/.test(src));
     assert.ok(/G[12]_/.test(src));

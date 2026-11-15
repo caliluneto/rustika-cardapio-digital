@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 3D.5.2-B - PREPARADO, NAO EXECUTADO. Diagnostico SEGURO em caso de falha: apenas as ultimas linhas do log do servidor descartavel,
+# PREPARADO, NAO EXECUTADO. Diagnostico SEGURO em caso de falha: apenas as ultimas linhas do log do servidor descartavel,
 # com URLs de conexao mascaradas. Nao gera dump, nao gera artifact, nao imprime variaveis de ambiente nem credenciais.
 set -uo pipefail
 : "${PG_CONTAINER:?PG_CONTAINER obrigatorio}"

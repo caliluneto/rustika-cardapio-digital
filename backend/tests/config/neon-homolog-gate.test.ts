@@ -5,7 +5,7 @@ import { assertNeonProxyTlsAck, NEON_HOMOLOG_PROFILE, NEON_PROXY_TLS_ACK, NeonHo
 import { assertRuntimeDatabaseProfile, PRODUCTION_HOMOLOG_PROFILES } from '../../src/config/env';
 import { assertHomologRuntimeConfig } from '../../src/config/homologRuntime';
 
-describe('3D.5.3-C.5 (Parte B/C) — falha de inicialização quando um gate obrigatório não é satisfeito', () => {
+describe('falha de inicialização quando um gate obrigatório não é satisfeito', () => {
   it('assertNeonProxyTlsAck bloqueia por padrão (undefined), com typo, com o valor de outro gate, e só aceita o valor exato', () => {
     for (const value of [undefined, '', 'yes', 'true', '1', 'accept-proxy-terminated-tls-pg-stat-ssl-flase', NEON_PROXY_TLS_ACK.toUpperCase()]) {
       expect(() => assertNeonProxyTlsAck(value)).toThrow(NeonHomologBlockedError);
@@ -34,7 +34,7 @@ describe('3D.5.3-C.5 (Parte B/C) — falha de inicialização quando um gate obr
     expect(() => assertHomologRuntimeConfig({ ...base, databaseProfile: NEON_HOMOLOG_PROFILE, corsOrigin: 'http://homolog.exemplo.invalid' })).toThrow(/CORS_ORIGIN/);
   });
 
-  it('3D.5.3-C.5.1 (estático): o reconhecimento humano é checado ANTES de qualquer conexão e nunca substitui a verificação de identidade/TLS', () => {
+  it('o reconhecimento humano é checado ANTES de qualquer conexão e nunca substitui a verificação de identidade/TLS', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'src', 'server.ts'), 'utf8');
     const ack = server.indexOf('assertNeonProxyTlsAck(');
     const loadProfile = server.indexOf('loadDatabaseProfile(env.databaseProfile');

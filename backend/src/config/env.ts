@@ -13,11 +13,11 @@ function readPort(value: string | undefined, fallback: number): number {
   return port;
 }
 
-// 3D.3.21-A: trimmed. A Windows `set NODE_ENV=test && cmd` leaves "test " (trailing space), which
-// silently disabled the NODE_ENV=test => DB_PROFILE=app-test guard below.
+// O valor é normalizado com trim: no Windows, `set NODE_ENV=test && cmd` deixa "test " (espaço no fim),
+// o que desativava silenciosamente a guarda NODE_ENV=test => DB_PROFILE=app-test abaixo.
 const nodeEnv = (process.env.NODE_ENV ?? 'development').trim();
 
-// 3D.5.3-C.5: perfis de homologação aceitos em produção. 'app-homolog-neon' é opt-in e tem a MESMA identidade final
+// Perfis de homologação aceitos em produção. 'app-homolog-neon' é opt-in e tem a MESMA identidade final
 // (banco/role) de 'app-homolog' — só o provedor e a verificação de identidade do servidor mudam (ver neonServerIdentity.ts).
 export const PRODUCTION_HOMOLOG_PROFILES: ReadonlySet<string> = new Set(['app-homolog', 'app-homolog-neon']);
 
@@ -26,7 +26,7 @@ export function assertRuntimeDatabaseProfile(profile: string, runtimeEnv: string
   if (runtimeEnv === 'test' && profile !== 'app-test') {
     throw new Error('NODE_ENV=test exige exclusivamente DB_PROFILE=app-test.');
   }
-  // 3D.5.2: a homologação roda em modo production e só com um dos perfis dela; production nunca usa Dev/Test.
+  // A homologação roda em modo production e só com um dos perfis dela; production nunca usa Dev/Test.
   if (PRODUCTION_HOMOLOG_PROFILES.has(profile) && runtimeEnv !== 'production') {
     throw new Error(`DB_PROFILE=${profile} exige NODE_ENV=production.`);
   }
@@ -50,6 +50,6 @@ export const env = {
   port: readPort(process.env.PORT, 4000),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   databaseProfile: resolveDatabaseProfile(nodeEnv, process.env.DB_PROFILE),
-  // 3D.5.3-B.1: com CARDAPIO_SECRETS_SOURCE=env não há pasta de segredos; evitar falhar na importação por causa de um HOME atípico.
+  // Com CARDAPIO_SECRETS_SOURCE=env não há pasta de segredos; evitar falhar na importação por causa de um HOME atípico.
   secretsDir: process.env.CARDAPIO_SECRETS_SOURCE?.trim() === 'env' ? '' : resolveSecretsDir(),
 };

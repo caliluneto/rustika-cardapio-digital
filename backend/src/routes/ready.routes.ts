@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { PrismaClient } from '@prisma/client';
 
 /**
- * GET /api/ready (3D.5.2) — prontidão para receber tráfego: banco acessível e schema compatível com a API.
+ * GET /api/ready — prontidão para receber tráfego: banco acessível e schema compatível com a API.
  * Só leitura (SELECT com a role de runtime), com timeout curto e cache de poucos segundos para não amplificar
  * carga. Responde apenas 200/503 e um código fixo: nenhum detalhe de infraestrutura, versão ou erro.
  * `GET /api/health` continua sendo apenas "processo vivo" (liveness) e não consulta o banco.

@@ -14,8 +14,8 @@ export const MIGRATE_DEV_CONFIRMATION_VALUE = 'APPLY_RF006_TO_CARDAPIO_DIGITAL_D
 export const MIGRATE_DEV_PROBE_APPLICATION = 'rustika-rf006-migrate-dev-preflight';
 export const RF006_MIGRATION_NAME = '20261110000000_rf006_product_crud_privilege';
 export const PRODUCT_INSERT_IDENTITY_COLUMNS_MIGRATION_NAME = '20261114000000_product_insert_identity_columns';
-// 3D.5.2: homologação remota. Perfil, banco e confirmação PRÓPRIOS; a confirmação do Test local não vale aqui.
-// 3D.5.2-A: banco definitivo `cardapio_digital_homolog`; o replay das migrations históricas usa perfil, banco transitório e confirmação próprios.
+// Homologação remota. Perfil, banco e confirmação PRÓPRIOS; a confirmação do Test local não vale aqui.
+// Banco definitivo `cardapio_digital_homolog`; o replay das migrations históricas usa perfil, banco transitório e confirmação próprios.
 export const MIGRATE_HOMOLOG_PROFILE = 'migrate-homolog';
 export const MIGRATE_HOMOLOG_DATABASE = 'cardapio_digital_homolog';
 export const HOMOLOG_DEPLOY_CONFIRMATION_ENV = 'CARDAPIO_MIGRATE_HOMOLOG_CONFIRMATION';

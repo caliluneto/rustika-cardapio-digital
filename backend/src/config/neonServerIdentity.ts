@@ -4,11 +4,11 @@ import { inspectExternalTls, type ExternalTlsResult } from './externalTlsCheck';
 import { FINAL_DATABASE, MARKER_PREFIX, MARKER_ROLE, REPLAY_DATABASE } from './serverIdentity';
 
 /**
- * 3D.5.3-C.5 — identidade do servidor para o perfil OPT-IN `app-homolog-neon`.
+ * Identidade do servidor para o perfil OPT-IN `app-homolog-neon`.
  *
  * Por que isto é um arquivo separado e não uma alteração de `serverIdentity.ts`: a política para o cluster PostgreSQL
  * dedicado (perfil `app-homolog`) continua EXATAMENTE como estava — `evaluateServerIdentity` continua exigindo
- * `pg_stat_ssl.ssl === true`. Essa política não é preservável no Neon (3D.5.3-C.2.2/C.3): o TLS que o cliente comprova
+ * `pg_stat_ssl.ssl === true`. Essa política não é preservável no Neon: o TLS que o cliente comprova
  * termina no proxy do provedor antes do processo PostgreSQL, então `pg_stat_ssl` ali é `false`/`null` mesmo com TLS
  * íntegro. Em vez de afrouxar `evaluateServerIdentity` (o que enfraqueceria silenciosamente o PostgreSQL dedicado),
  * este módulo define uma política DIFERENTE e mais estrita no que ela pode controlar:
@@ -20,7 +20,7 @@ import { FINAL_DATABASE, MARKER_PREFIX, MARKER_ROLE, REPLAY_DATABASE } from './s
  *      PostgreSQL ≥ 17, ausência de bancos de desenvolvimento) — nada disso é relaxado;
  *   4. `pg_stat_ssl=false` é registrado como DIVERGÊNCIA DOCUMENTADA, nunca tratado como prova nem como falha por si só.
  *
- * LIMITE HONESTO (3D.5.3-C.5.1): a verificação (1) prova o TLS da CONEXÃO INDEPENDENTE, não do socket do Prisma (que
+ * LIMITE HONESTO: a verificação (1) prova o TLS da CONEXÃO INDEPENDENTE, não do socket do Prisma (que
  * não é inspecionável em JS). A URL usada aqui é idêntica à do Prisma, e `secrets.ts` nunca deixa essa URL carregar
  * `sslaccept` fraco; `server.ts` ainda faz o PRÓPRIO cliente Prisma confirmar banco/role antes de aceitar tráfego,
  * como evidência complementar — mas isso prova que o Prisma CONECTA com esses parâmetros, não que o handshake dele é
@@ -52,7 +52,7 @@ export function assertNeonProxyTlsAck(value: string | undefined): void {
   if (value !== NEON_PROXY_TLS_ACK) {
     throw new NeonHomologBlockedError(
       'RUSTIKA_HOMOLOG_NEON_PROXY_TLS_ACK ausente ou incorreto: o perfil app-homolog-neon permanece bloqueado. ' +
-      'Leia docs/neon-homolog.md (3D.5.3-C.5) antes de definir essa variável — ela reconhece que o TLS termina no ' +
+      'Leia backend/docs/homologation-environment.md antes de definir essa variável — ela reconhece que o TLS termina no ' +
       'proxy do provedor antes do PostgreSQL (pg_stat_ssl=false), uma divergência documentada e não uma falha a contornar.',
     );
   }
@@ -142,6 +142,6 @@ export function evaluateNeonServerIdentity(facts: NeonServerFacts, expected: Neo
       if (facts.databases.includes(dev)) problems.push(`o servidor contém ${dev}: réplica de desenvolvimento/replay ainda presente.`);
     }
   }
-  // facts.pgStatSslActive === false|null é a divergência documentada (3D.5.3-C.2.2): NUNCA empurrada para `problems`.
+  // facts.pgStatSslActive === false|null é a divergência documentada: NUNCA empurrada para `problems`.
   return problems;
 }

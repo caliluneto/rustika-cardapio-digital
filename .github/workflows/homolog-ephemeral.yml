@@ -1,4 +1,4 @@
-# RÚSTIKA — Ensaio efêmero da homologação (3D.5.2-B). PREPARADO, NÃO EXECUTADO. Revisar antes do primeiro disparo.
+# RÚSTIKA — Ensaio efêmero da homologação. PREPARADO, NÃO EXECUTADO. Revisar antes do primeiro disparo.
 #
 # - Workflow EXCLUSIVO e MANUAL (workflow_dispatch) com opt-in `run_homolog_ephemeral`, inicialmente false.
 #   Nunca roda em push, pull_request, schedule ou workflow_run. Não compartilha o PostgreSQL do job `e2e` do ci.yml.
@@ -6,7 +6,7 @@
 #   tests/homolog-ephemeral. Nenhum secret do repositório; credenciais e certificados são gerados na execução e mascarados.
 # - Valida a identidade do servidor (cluster_name, TLS, banco vazio) antes da primeira escrita; descarta tudo ao final (always()).
 # - Não anexa artifacts, dumps nem logs de credenciais. Timeout curto. Recusa repositório público.
-# - Documentação: backend/docs/homologation-environment.md (seção "Ensaio efêmero") e RELATORIO-ENTREGA-3D.5.2-B.md.
+# - Documentação: backend/docs/homologation-environment.md (seção "Ensaio efêmero").
 name: homolog-ephemeral
 
 on:

@@ -10,7 +10,7 @@ import { syntheticCatalogPath } from '../helpers/catalog-sources';
 import { SYNTHETIC_EXPECTED } from '../fixtures/catalog/synthetic-catalog';
 
 /**
- * 3D.3.25-E: regressão do bug dos cabeçalhos do executor. O código lia "C�digo" e "Pre�o venda"
+ * Regressão do bug dos cabeçalhos do executor. O código lia "C�digo" e "Pre�o venda"
  * (caractere de substituição U+FFFD), então `codigo` era sempre '' e `preco` sempre 0, sem erro algum.
  */
 const rowsOf = (file: string) => {

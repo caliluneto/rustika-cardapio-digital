@@ -10,9 +10,9 @@ import type { CartFacts } from './helpers/cartPreconditions';
  * Os dados vem das fixtures SINTETICAS desta execucao (globalSetup -> manifesto); nada e fixo:
  * admin, comanda, produto e preco mudam a cada execucao e sao removidos pelo globalTeardown.
  *
- * 3D.3.21-A: sem atalhos. O teste nao habilita o envio por JavaScript, nao remove `disabled` e nao
+ * Sem atalhos. O teste nao habilita o envio por JavaScript, nao remove `disabled` e nao
  * forca cliques; se o envio estiver desligado o botao fica desabilitado e o teste falha ali.
- * 3D.3.21-B: confere o POST (cabecalhos, 201) e a idempotencia (mesmo POST reenviado => 200, mesmo pedido).
+ * Confere o POST (cabecalhos, 201) e a idempotencia (mesmo POST reenviado => 200, mesmo pedido).
  * A conferencia do que foi gravado no banco (1 pedido, 1 item, total, historico, comanda) e feita
  * pelo globalTeardown, em somente leitura, ANTES de limpar.
  */
@@ -123,7 +123,7 @@ test.describe('E2E Real Journey', () => {
     await page.click('button[type="submit"]');
     await expect(createdCard).toBeVisible({ timeout: 25000 });
 
-    // 7. 3D.4.1 (PREPARADO, NAO EXECUTADO): mudanca opcional de status do pedido recem-criado.
+    // 7. (Opcional, não executado no E2E padrão): mudanca opcional de status do pedido recem-criado.
     // So roda quando o setup foi iniciado com RUSTIKA_E2E_ORDER_OPS=enabled; o teardown entao espera
     // IN_PREPARATION e exatamente duas linhas de historico (verifyJourney). Sem atalhos: so a interface
     // para a transicao valida; as tentativas invalidas usam a API com a sessao do navegador e NAO gravam nada.
@@ -177,7 +177,7 @@ test.describe('E2E Real Journey', () => {
       // somente leitura, antes da limpeza cirurgica (residuo zero).
     }
 
-    // 3D.4.2 (PREPARADO, NAO EXECUTADO): disponibilidade de produtos pelo painel. So roda com
+    // Disponibilidade de produtos pelo painel (opcional). So roda com
     // RUSTIKA_E2E_PRODUCT_AVAILABILITY=enabled (passo proprio e opt-in do CI). Produtos 100% sinteticos desta execucao:
     // "unknown" (nasce UNKNOWN -> o admin torna DISPONIVEL e o cliente pede) e "priceChange" (nasce DISPONIVEL ->
     // o cliente o coloca no carrinho, o admin o torna INDISPONIVEL e o envio e rejeitado). O globalTeardown confere em

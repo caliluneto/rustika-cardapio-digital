@@ -4,7 +4,7 @@ import express from 'express';
 import type { RequestHandler, Router } from 'express';
 
 /**
- * 3D.5.3-B - serve o build do Vite (`frontend/dist`) na mesma origem da API.
+ * Serve o build do Vite (`frontend/dist`) na mesma origem da API.
  *
  * Montado DEPOIS de todas as rotas `/api` e ANTES do `notFound`:
  *  - qualquer caminho `/api…` (inclusive desconhecido) nunca chega aqui: segue para o 404 JSON;

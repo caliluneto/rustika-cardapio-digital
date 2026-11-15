@@ -27,7 +27,7 @@ interface Entry { count: number; until: number }
  *   full table never blocks a new, unrelated client.
  * - `blocked`: keys that reached the limit. They are never evicted by new keys arriving in
  *   `active`; flooding the limiter with fresh keys therefore cannot reset an abuser's counter
- *   (the 3D.3.8 version could be reset that way). If `blocked` itself fills up, expired entries
+ *   (a versão anterior podia ser reiniciada dessa forma). If `blocked` itself fills up, expired entries
  *   are swept and, if still full, the entry whose penalty ends first gives way. Filling it costs
  *   `max` requests per key, so the O(n) sweep is paid by the abuser, not by normal traffic.
  *

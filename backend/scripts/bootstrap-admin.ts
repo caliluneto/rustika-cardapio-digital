@@ -1,5 +1,5 @@
 /**
- * Provisiona o PRIMEIRO administrador de um ambiente novo (3D.5.2). Operação separada da API.
+ * Provisiona o PRIMEIRO administrador de um ambiente novo. Operação separada da API.
  *
  *   CARDAPIO_SECRETS_DIR=<pasta própria da homologação> \
  *   tsx scripts/bootstrap-admin.ts --profile bootstrap-homolog --name "Nome" --email a@dominio   # dry-run

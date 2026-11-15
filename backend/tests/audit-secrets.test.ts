@@ -16,7 +16,7 @@ describe('auditoria de segredos (nunca imprime valores)', () => {
     expect(findings).toEqual([{ level: 'OK', code: 'POLICY_OK', message: expect.stringContaining('3 segredo(s)') }]);
   });
 
-  it('reproduz o padrão do achado da 3D.3.21-B (valores SINTÉTICOS): runtime e migrator com a mesma senha numérica de 8 dígitos', () => {
+  it('reproduz o padrão do achado da auditoria (valores SINTÉTICOS): runtime e migrator com a mesma senha numérica de 8 dígitos', () => {
     const findings = analyzeSecrets([
       entry('app-dev:db', 'cardapio_dev_app', '90817263'), entry('app-test:db', 'cardapio_test_app', '90817263'),
       entry('migrate-test:db', 'cardapio_migrator', '90817263'), entry('migrate-dev:db', 'cardapio_migrator', '90817263'),

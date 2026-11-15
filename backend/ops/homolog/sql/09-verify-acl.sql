@@ -1,4 +1,4 @@
--- 3D.5.2-A - NAO EXECUTADO. Somente leitura. Via psql no banco cardapio_digital_homolog (migrator definitivo ou administrador).
+-- NAO EXECUTADO. Somente leitura. Via psql no banco cardapio_digital_homolog (migrator definitivo ou administrador).
 -- Aborta se algo divergir da identidade e das ACLs esperadas.
 \set ON_ERROR_STOP on
 BEGIN READ ONLY;
