@@ -1,7 +1,7 @@
 # Manifesto de arquivos para entrega ao professor
 
 **Pacote:** `docs/entrega-academica/pacote-final/`  
-**Repositório:** `https://github.com/caliluneto/rustika-cardapio-digital` — branch `main`, HEAD `1d71979`  
+**Repositório:** `https://github.com/caliluneto/rustika-cardapio-digital` · branch `main` — versão publicada mais recente  
 **Regra:** o pacote referencia os documentos existentes; não duplica relatório, evidências ou código.
 
 ## 1. Estrutura sugerida da pasta de entrega
@@ -39,7 +39,7 @@ RUSTIKA-entrega-academica/
 ```
 Repositório: https://github.com/caliluneto/rustika-cardapio-digital
 Branch: main
-Commit de referência: 1d71979
+Commit de referência: branch main — versão publicada mais recente
 Acesso: [público ou convite nominal — preencher após decisão]
 ```
 

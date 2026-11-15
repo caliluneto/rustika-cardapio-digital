@@ -46,8 +46,9 @@
 - [x] Nenhum segredo real nos commits: verificação no staging e `secrets:audit` (`POLICY_OK`, exit 0).
 - [x] Caminhos locais não publicados permanecem fora do repositório (provisionadores Neon, backups,
       `_not-for-publication/`, scripts locais; `node_modules/` e `dist/` são ignorados pelo `.gitignore`).
-- [x] Commits desta rodada `435c3d4` (documentação) e `902c3b9` (evidências) enviados; `origin/main` sincronizado.
-      O hash do commit final de registro consta no relatório de conclusão.
+- [x] Commits desta rodada `435c3d4` (documentação), `902c3b9` (evidências), `1d71979` (registro da publicação)
+      e `1e49371` (organização final) enviados; `origin/main` sincronizado com a branch `main` — versão publicada
+      mais recente.
 - [ ] Decidir e registrar a forma de acesso do avaliador (repositório público ou convite nominal).
 - [ ] Não fazer deploy sem autorização; nenhum deploy foi executado.
 

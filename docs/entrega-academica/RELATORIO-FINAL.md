@@ -129,10 +129,12 @@ Assinatura: ________________________________________
 
 ## 4. Links da entrega
 
-- Repositório GitHub: `https://github.com/caliluneto/rustika-cardapio-digital` — branch `main`, commit anterior
-  `7b487c3` (99 arquivos) e commits desta rodada `435c3d4` (documentação) e `902c3b9` (evidências), com
-  `origin/main` sincronizado. Visibilidade **privada**, não alterada; o acesso do avaliador depende de autorização
-  para tornar o repositório público ou conceder acesso individual. **PENDENTE: definir a forma de acesso.**
+- Repositório GitHub (branch `main` — versão publicada mais recente):
+  `https://github.com/caliluneto/rustika-cardapio-digital`. O histórico consolida `7b487c3` (99 arquivos),
+  `435c3d4` (documentação), `902c3b9` (evidências), `1d71979` (registro da publicação) e `1e49371` (organização de
+  código e documentação), com `origin/main` sincronizado. Visibilidade **privada**, não alterada; o acesso do
+  avaliador depende de autorização para tornar o repositório público ou conceder acesso individual.
+  **PENDENTE: definir a forma de acesso.**
 - Vídeo demonstrativo: **[PENDENTE — inserir link após gravação e upload autorizados]**.
 
 ## 5. Foto do cardápio físico
@@ -181,8 +183,8 @@ O que ainda impede declarar a entrega completa, sem omitir pendências reais:
 - Vídeo MP4 de até cinco minutos e link público com acesso testado. **PENDENTE.** A sequência dinâmica do RF008 já
   foi executada no pedido #5; refazê-la exigiria um novo pedido. O vídeo deve usar as capturas reais com rótulo
   “captura real de 14/11/2026” ou obter nova autorização, sem simular atualização ao vivo.
-- Repositório em `https://github.com/caliluneto/rustika-cardapio-digital` (branch `main`, commit de referência
-  `7b487c3` e commits desta rodada), com visibilidade **privada**; falta definir como o avaliador terá acesso.
+- Repositório em `https://github.com/caliluneto/rustika-cardapio-digital` (branch `main` — versão publicada mais
+  recente), com visibilidade **privada**; falta definir como o avaliador terá acesso.
 
 **Publicação segura**
 
@@ -191,8 +193,8 @@ O que ainda impede declarar a entrega completa, sem omitir pendências reais:
 - Commits seletivos, por inventário; `.env`, dumps, logs, `_not-for-publication/`, scripts locais com credenciais e
   artefatos privados ficaram fora. Os caminhos locais não publicados permanecem apenas na máquina.
 - Push exclusivamente para `main`, sem force, sem deploy e sem alterar a visibilidade do repositório. Os commits
-  `435c3d4` e `902c3b9` foram enviados e `origin/main` está sincronizado; o HEAD final desta rodada consta no
-  relatório de conclusão.
+  `435c3d4`, `902c3b9`, `1d71979` e `1e49371` foram enviados e `origin/main` está sincronizado com a branch `main` —
+  versão publicada mais recente.
 
 **Backup e ambientes**
 

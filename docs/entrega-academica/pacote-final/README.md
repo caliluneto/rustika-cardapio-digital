@@ -4,7 +4,7 @@
 **Documento-base:** [`../RELATORIO-FINAL.md`](../RELATORIO-FINAL.md)  
 **Data de referência:** 14/11/2026  
 **Branch:** `main`  
-**HEAD publicado:** `1d71979`  
+**HEAD publicado:** branch `main` — versão publicada mais recente  
 **Repositório:** privado, sem alteração de visibilidade nesta etapa.
 
 Este pacote organiza a entrega acadêmica sem alterar código, banco, pedidos, produtos ou configurações. Ele reúne o checklist final, o guia de gravação, a estrutura do relatório, a lista de dados do estabelecimento e o manifesto de arquivos.
@@ -21,7 +21,7 @@ Este pacote organiza a entrega acadêmica sem alterar código, banco, pedidos, p
 | Testes frontend | 174/174 |
 | Typecheck e builds | Aprovados |
 | Documentação | Atualizada em `docs/entrega-academica/` |
-| GitHub | `origin/main` em `1d71979`, privado |
+| GitHub | `origin/main` na branch `main` — versão publicada mais recente, privado |
 | Vídeo | Ainda não gravado |
 | Documentos humanos | Ainda pendentes |
 
@@ -30,7 +30,7 @@ Este pacote organiza a entrega acadêmica sem alterar código, banco, pedidos, p
 - Código e banco local validados; nenhuma nova escrita foi feita nesta etapa.
 - Matriz de requisitos, relatório, checklist, guia de execução, roteiro e evidências.
 - Evidências reais de RF007, RF008 e RF009 em [`../evidencias/`](../evidencias/).
-- Commits e push normal já concluídos até `1d71979`.
+- Commits e push normal já concluídos até `1e49371`.
 
 ## O que depende de pessoa
 

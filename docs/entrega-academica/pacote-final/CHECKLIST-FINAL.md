@@ -1,6 +1,6 @@
 # Checklist final da entrega — concluído × pendente
 
-**Base:** `docs/entrega-academica/` · **HEAD:** `1d71979` · **Data:** 14/11/2026
+**Base:** `docs/entrega-academica/` · **HEAD:** branch `main` — versão publicada mais recente · **Data:** 14/11/2026
 
 Este checklist consolida o estado real. Itens marcados como concluídos têm evidência no repositório ou na documentação; itens humanos não foram presumidos.
 
@@ -43,8 +43,8 @@ Este checklist consolida o estado real. Itens marcados como concluídos têm evi
 
 - [x] `MATRIZ-REQUISITOS.md`, `CHECKLIST-ENTREGA.md`, `RELATORIO-FINAL.md`, `ROTEIRO-VIDEO-5MIN.md` e `GUIA-EXECUCAO.md` atualizados.
 - [x] Evidências de RF007, RF008 e RF009 em `evidencias/`.
-- [x] Commit `435c3d4` (documentação), `902c3b9` (evidências) e `1d71979` (registro da publicação).
-- [x] Push normal para `main`; `origin/main` em `1d71979`.
+- [x] Commits `435c3d4` (documentação), `902c3b9` (evidências), `1d71979` (registro da publicação) e `1e49371` (organização final).
+- [x] Push normal; `origin/main` sincronizado com a branch `main` — versão publicada mais recente.
 - [x] Repositório privado; visibilidade não alterada.
 - [x] Nenhum deploy, migration, reset, clean ou force push executado.
 
