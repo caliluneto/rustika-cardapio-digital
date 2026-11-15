@@ -64,15 +64,15 @@ pedido. O frontend público não limpa o carrinho: a limpeza só ocorre após pe
 mostra "Algum item não está mais disponível. Revise o carrinho.". Produto `false` não entra no carrinho; `null` (não
 confirmado) é rotulado e o servidor decide.
 
-## Migration `20261106000000_product_availability_update_privilege` (preparada; NÃO aplicada)
+## Migration `20261106000000_product_availability_update_privilege` (aplicada no Dev; pendente no Test local)
 
 `GRANT UPDATE (availability_state, updated_at) ON public.products TO <role de runtime>`, nada mais: sem `UPDATE` de
 tabela, sem `DELETE`/`TRUNCATE`/`REFERENCES`/`TRIGGER`, sem `GRANT OPTION`, sem outra coluna (preço, `is_active`,
 `category_id`, chaves, `is_available`…) nem tabela. Guardas: banco (`cardapio_digital_test|dev`), identidade
 `cardapio_migrator`, PG ≥ 17, atributos/membros das roles, colunas existentes, e estado anterior exato (a única ACL de coluna
 em `public` é a da migration 6). A pós-condição, na mesma transação, aborta qualquer desvio. Checksum fixado em
-`EXPECTED_MIGRATIONS` (7 entradas); `PERMISSIONS_SQL` tolera somente essas duas ACLs de coluna. Aplicação:
-exclusivamente pelo wrapper autorizado, após revisão.
+`EXPECTED_MIGRATIONS` (8 entradas); `PERMISSIONS_SQL` tolera somente essas duas ACLs de coluna. Aplicação:
+exclusivamente pelo wrapper autorizado; aplicada no Dev e pendente no Test local.
 
 ## Testes
 

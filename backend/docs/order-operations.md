@@ -74,7 +74,7 @@ Conflitos de serialização (`P2034`) são repetidos até 2 vezes; depois, `409 
 transação inteira (status e histórico juntos). Duas atualizações simultâneas do mesmo pedido: uma vence, a outra recebe `409`,
 e há um único histórico. Repetir a mesma requisição (duplo clique) recebe `409` e não duplica o histórico.
 
-## Privilégios PostgreSQL e migration (preparada, **não aplicada**)
+## Privilégios PostgreSQL e migration (aplicada no Dev; pendente no Test local)
 
 Arquivo: `prisma/migrations/20261105000000_order_status_update_privilege/migration.sql`
 (SHA-256 `3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84`, fixado em `EXPECTED_MIGRATIONS`).
@@ -89,7 +89,7 @@ Arquivo: `prisma/migrations/20261105000000_order_status_update_privilege/migrati
   `PERMISSIONS_SQL` passou a aceitar **exclusivamente** essa ACL de coluna (sem `PUBLIC`, sem fixtures, sem `GRANT OPTION`,
   sem outras colunas) e a rejeitar qualquer outra.
 - Validação feita: sintaxe pelo parser do PostgreSQL (libpg-query, offline) e testes estáticos. **Nenhuma conexão com banco.**
-- Até ser aplicada, o preflight da suíte de integração aborta por "migrations pendentes" (por desenho).
+- Até ser aplicada no Test local, o preflight da suíte de integração aborta por "migrations pendentes" (por desenho).
 
 ## Painel administrativo (frontend)
 

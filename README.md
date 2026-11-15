@@ -6,7 +6,8 @@ Projeto acadêmico da Prática Extensionista VII da UNAERP: cardápio digital co
 > pedidos, operação administrativa, acompanhamento do cliente e documentação OpenAPI estão implementados e foram
 > exercitados no PostgreSQL Dev (9/9 migrations), incluindo o CRUD real do RF006 e as evidências de RF007, RF008 e
 > RF009. As credenciais locais foram rotacionadas (4/4) e a auditoria de segredos está aprovada. Permanecem pendentes
-> o vídeo de apresentação, a prova de restauração integral do backup e a publicação dos materiais acadêmicos.
+> o vídeo de apresentação, a prova de restauração integral do backup e a publicação final dos materiais acadêmicos
+> (relatório exportado, vídeo e anexos).
 
 Legenda usada neste documento: **IMPLEMENTADO** (existe no código e é usado), **TESTADO** (coberto por teste
 automatizado), **PARCIAL** (existe, mas incompleto) e **PENDENTE** (não existe).
@@ -55,7 +56,7 @@ frontend/
 
 ## Qualidade e CI confirmados
 
-Resultados observados na validação final de 14/11/2026 e no GitHub Actions do repositório privado:
+Resultados observados na validação final de 14/11/2026 e em execução manual do GitHub Actions do repositório privado:
 
 | Execução | Resultado |
 | --- | --- |

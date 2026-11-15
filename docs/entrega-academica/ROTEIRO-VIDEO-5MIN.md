@@ -48,7 +48,7 @@
 | Tempo | RF | Ação prática | O que precisa aparecer |
 | --- | --- | --- | --- |
 | 0:00–0:15 | — | Capa com curso, disciplina, projeto e integrantes | Nomes/códigos reais; não inventar |
-| 0:15–0:45 | **RF001** | Janela CLIENTE: rolar categorias, usar a busca, abrir um produto | Catálogo vindo da API, categorias e paginação |
+| 0:15–0:45 | **RF001** | Janela CLIENTE: percorrer as categorias, filtrar uma delas e abrir um produto | Catálogo vindo da API, categorias e contagem de itens |
 | 0:45–1:05 | **RF002** | Abrir o modal de um produto | Imagem, descrição/ingredientes quando disponíveis, preço e disponibilidade; se usar produto real, não alegar descrição inexistente |
 | 1:05–1:30 | **RF003** | Adicionar ao carrinho, alterar quantidade e remover | Contador, subtotal e total em centavos; estado em memória |
 | 1:30–1:45 | **RF005** | Painel administrativo; opcionalmente, logout/login | Rota protegida e sessão; nunca mostrar a senha |

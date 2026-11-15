@@ -29,9 +29,9 @@ elevada a migrator.
    destino e resultado sem credenciais/tokens/hashes. Entregar credenciais somente
    ao titular por canal seguro.
 
-Não foi criado script operacional nesta entrega. A ferramenta com entrada oculta
-deve ser preparada na etapa autorizada, sem criar uma via automática de escrita
-no banco antes dessa aprovação.
+Não existe via automática de escrita no banco. A ferramenta de homologação
+(`npm run homolog:bootstrap-admin`, seção seguinte) só executa a operação aprovada,
+com perfil, role e janela de bootstrap próprios.
 
 ## Contas anteriores
 

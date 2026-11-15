@@ -16,7 +16,7 @@ Auditoria de 04/11/2026 (`npm run secrets:audit` + comparação por conteúdo co
 | `cardapio_test_fixtures` | senha forte (26 caracteres), mas **vigente e embutida** em arquivos |
 | Onde as senhas **vigentes** estão embutidas | 5 scripts não rastreados em `backend/` com a senha de `cardapio_test_fixtures` (`seed_raw.js`, `check_invites.js`, `check_orders.js`, `check_products.js`, `check_sessions.js`) e 4 com a senha compartilhada de `cardapio_dev_app`/`cardapio_test_app`/`cardapio_migrator` (`seed_pg.js`, `db-dumper.js`, `db-check.js`, `check_db.js`). Outros 2 embutem valores que **já não** são os vigentes (`seed_e2e.js`, `check_admin_app.js`) |
 | Git | **Nenhuma credencial real em arquivo rastreado nem no histórico de `main`** (os achados rastreados são valores fictícios: `fake`, `disabled`). Sem remoto: nada foi enviado |
-| Cópias locais | 71 refs `refs/cline/checkpoints/*` no `.git` local guardam versões desses scripts (objetos de snapshot de arquivos não rastreados) |
+| Cópias locais | 71 refs `refs/cline/checkpoints/*` no `.git` da máquina de desenvolvimento guardavam versões desses scripts (objetos de snapshot de arquivos não rastreados); o repositório publicado não contém essas refs |
 | Nuvem | a pasta do projeto está no OneDrive: scripts e `.git` são sincronizados com a conta |
 | Relatórios/docs | varredura por conteúdo (513 arquivos, repositório e backups): nenhuma senha vigente em relatório, documento ou dump; só nos 9 scripts acima |
 

@@ -31,8 +31,8 @@
 - [x] Backup pré-RF006 gerado e verificado por SHA-256 e TOC: 47.535 bytes, SHA-256
       `12b97471552173e3bd6291585dd93d497393c700e63c2ef5222cb4ef75c8ee96`.
 - [ ] Provar a restauração integral do backup em banco descartável; até lá o backup não é considerado comprovado.
-- [ ] Executar integração e Playwright E2E no banco de teste autorizado; o Test local está em 5/7 (faltam
-      20261105/06).
+- [ ] Executar integração e Playwright E2E no banco de teste local autorizado; o Test local está em 5/8 do
+      baseline (faltam `20261105`, `20261106` e `20261110`).
 - [x] Evidências guardadas sem cookies, tokens, senhas ou connection strings.
 - [x] Incidente do pedido #1 cancelado registrado em `backend/docs/incidente-pedido-1-dev.md`, sem reescrever o
       histórico.

@@ -21,7 +21,7 @@ Este pacote organiza a entrega acadêmica sem alterar código, banco, pedidos, p
 | Testes frontend | 174/174 |
 | Typecheck e builds | Aprovados |
 | Documentação | Atualizada em `docs/entrega-academica/` |
-| GitHub | `origin/main` na branch `main` — versão publicada mais recente, privado |
+| GitHub | `origin/main` sincronizado; repositório privado |
 | Vídeo | Ainda não gravado |
 | Documentos humanos | Ainda pendentes |
 

@@ -1,5 +1,8 @@
 # Catálogo conectado — Entrega 1B
 
+> **Documento histórico da Entrega 1B.** O envio de pedidos e o painel administrativo foram implementados nas
+> entregas seguintes; para o estado atual, consulte `backend/docs/orders-api.md` e o `README.md` da raiz.
+
 O frontend consome o contrato de `backend/docs/catalog-api.md` e mantém os
 componentes visuais e o carrinho existentes. Não envia pedidos nesta entrega.
 

@@ -200,5 +200,6 @@ O que ainda impede declarar a entrega completa, sem omitir pendências reais:
 
 - A restauração integral do backup pré-RF006 **não foi comprovada**; só um ensaio em banco descartável autorizado
   permite afirmá-la.
-- Integração/E2E no banco de teste e no GitHub Actions não foram executados nesta sprint.
+- A integração local no banco de teste não foi executada nesta etapa; o E2E no GitHub Actions foi executado
+  manualmente (CI #5, anterior ao RF006) e está registrado em `backend/docs/github-actions-e2e.md`.
 - O ambiente Neon permanece intocado; as 9/9 migrations são do Dev.

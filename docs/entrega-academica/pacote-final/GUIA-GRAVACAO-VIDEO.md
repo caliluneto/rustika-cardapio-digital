@@ -51,10 +51,10 @@ ambiente local de desenvolvimento e dados fictícios.”
 
 1. Rolar até “NOSSO MENU”.
 2. Passar pelas categorias (PORÇÕES, DRINKS, CERVEJAS etc.).
-3. Usar a busca por um produto real, por exemplo `CORONA`.
-4. Mostrar que o catálogo vem da API e é paginado.
+3. Selecionar a categoria `CERVEJAS` e localizar um produto real, por exemplo `CORONA`.
+4. Mostrar que o catálogo vem da API, com a contagem de itens e categorias.
 
-**Dizer:** “O catálogo é carregado da API, com categorias, busca e paginação.”
+**Dizer:** “O catálogo é carregado da API, com categorias e todos os itens disponíveis.”
 
 **Não fazer:** não clicar em Admin, não recarregar.
 
@@ -199,7 +199,7 @@ link do vídeo e a definição de acesso ao repositório privado. Não houve dep
 
 | Trecho | Ação | Escreve no banco? |
 | --- | --- | --- |
-| RF001 | navegar, buscar, rolar | Não |
+| RF001 | navegar, filtrar por categoria, rolar | Não |
 | RF002 | abrir modal de produto | Não |
 | RF003 | adicionar/alterar/remover no carrinho | Não; estado em memória |
 | RF004 | visualizar pedido #5 | Não |

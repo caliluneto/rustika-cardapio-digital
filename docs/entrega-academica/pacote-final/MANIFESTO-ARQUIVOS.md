@@ -34,6 +34,10 @@ RUSTIKA-entrega-academica/
 └── 06-repositorio.txt
 ```
 
+> Documentos internos de apoio (`README.md`, `CHECKLIST-FINAL.md`, `DADOS-ESTABELECIMENTO.md`,
+> `ESTRUTURA-RELATORIO-FINAL.md`, `GUIA-GRAVACAO-VIDEO.md` e este `MANIFESTO-ARQUIVOS.md`) permanecem no repositório
+> e não integram a pasta entregue ao professor.
+
 `06-repositorio.txt` deve conter apenas:
 
 ```
@@ -71,7 +75,9 @@ Não incluir token, senha, cookie ou convite de repositório no arquivo.
 - `.env`, `.env.*`, arquivos de segredos e `backend/.env`.
 - Dumps, backups `.dump`, `.bak`, `.bak2` e logs de teste.
 - `_not-for-publication/` e qualquer material interno.
-- `backend/ops/homolog/` com provisionadores Neon, scripts de replay e testes de credenciais.
+- Scripts locais não versionados em `backend/ops/homolog/` (provisionadores Neon, recuperação de ACL, replay de
+  segredos e testes de credenciais) e em `backend/ops/homolog/sql/neon/`; os arquivos versionados de `ci/` e `sql/`
+  fazem parte do repositório.
 - `backend/scripts/Invoke-Rf006RestoreIsolatedTest.ps1` e scripts locais equivalentes.
 - `node_modules/`, `dist/`, `coverage/`, caches e artefatos gerados.
 - Cookies, tokens de convite, capturas de DevTools com headers, connection strings e hashes de sessão.
