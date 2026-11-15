@@ -40,13 +40,14 @@
 ## GitHub e publicação
 
 - [x] URL e branch confirmadas: `origin` = `https://github.com/caliluneto/rustika-cardapio-digital.git`, branch `main`.
-- [x] Commit de referência publicado: `7b487c3` (99 arquivos); `origin/main` sincronizado antes desta rodada.
+- [x] Commit de referência anterior: `7b487c3` (99 arquivos); `origin/main` estava sincronizado antes desta rodada.
 - [x] Visibilidade do repositório: **privada**, não alterada. O acesso do avaliador depende de autorização para
       tornar o repositório público ou conceder acesso individual.
 - [x] Nenhum segredo real nos commits: verificação no staging e `secrets:audit` (`POLICY_OK`, exit 0).
 - [x] Caminhos locais não publicados permanecem fora do repositório (provisionadores Neon, backups,
       `_not-for-publication/`, scripts locais; `node_modules/` e `dist/` são ignorados pelo `.gitignore`).
-- [ ] Publicar os novos commits desta rodada e confirmar `origin/main` sincronizado.
+- [x] Commits desta rodada `435c3d4` (documentação) e `902c3b9` (evidências) enviados; `origin/main` sincronizado.
+      O hash do commit final de registro consta no relatório de conclusão.
 - [ ] Decidir e registrar a forma de acesso do avaliador (repositório público ou convite nominal).
 - [ ] Não fazer deploy sem autorização; nenhum deploy foi executado.
 

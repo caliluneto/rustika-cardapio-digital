@@ -129,9 +129,10 @@ Assinatura: ________________________________________
 
 ## 4. Links da entrega
 
-- Repositório GitHub: `https://github.com/caliluneto/rustika-cardapio-digital` — branch `main`, commit
-  `7b487c3` publicado (99 arquivos). Visibilidade **privada**, não alterada; o acesso do avaliador depende de
-  autorização para tornar o repositório público ou conceder acesso individual. **PENDENTE: definir a forma de acesso.**
+- Repositório GitHub: `https://github.com/caliluneto/rustika-cardapio-digital` — branch `main`, commit anterior
+  `7b487c3` (99 arquivos) e commits desta rodada `435c3d4` (documentação) e `902c3b9` (evidências), com
+  `origin/main` sincronizado. Visibilidade **privada**, não alterada; o acesso do avaliador depende de autorização
+  para tornar o repositório público ou conceder acesso individual. **PENDENTE: definir a forma de acesso.**
 - Vídeo demonstrativo: **[PENDENTE — inserir link após gravação e upload autorizados]**.
 
 ## 5. Foto do cardápio físico
@@ -189,8 +190,9 @@ O que ainda impede declarar a entrega completa, sem omitir pendências reais:
   conformes. Nenhum segredo real entrou nos commits.
 - Commits seletivos, por inventário; `.env`, dumps, logs, `_not-for-publication/`, scripts locais com credenciais e
   artefatos privados ficaram fora. Os caminhos locais não publicados permanecem apenas na máquina.
-- Push exclusivamente para `main`, sem force, sem deploy e sem alterar a visibilidade do repositório. O hash final
-  desta rodada é registrado no relatório de conclusão.
+- Push exclusivamente para `main`, sem force, sem deploy e sem alterar a visibilidade do repositório. Os commits
+  `435c3d4` e `902c3b9` foram enviados e `origin/main` está sincronizado; o HEAD final desta rodada consta no
+  relatório de conclusão.
 
 **Backup e ambientes**
 
