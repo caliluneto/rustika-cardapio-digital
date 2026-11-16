@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { EXPECTED_MIGRATIONS, PENDING_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
+import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 
 const dir = path.join(process.cwd(), 'ops/homolog/sql/neon');
 const grant = fs.readFileSync(path.join(dir, '01-grant-set-true-migrator.sql'), 'utf8');
@@ -114,8 +114,8 @@ describe('membership GRANT/REVOKE do provedor Neon (Parte A, estático, não exe
     expect(idx('02-revoke-set-true-migrator.sql')).toBeGreaterThan(idx('04-finalize-rename.sql'));
   });
 
-  it('as oito migrations históricas continuam intactas e a migration de identidade permanece separada como pendente', () => {
+  it('as nove migrations do baseline continuam intactas', () => {
     const names = fs.readdirSync(path.join(process.cwd(), 'prisma/migrations')).filter((p) => /^\d{14}_/.test(p)).sort();
-    expect(names).toEqual([...EXPECTED_MIGRATIONS, ...PENDING_MIGRATIONS].map((migration) => migration.name));
+    expect(names).toEqual(EXPECTED_MIGRATIONS.map((migration) => migration.name));
   });
 });

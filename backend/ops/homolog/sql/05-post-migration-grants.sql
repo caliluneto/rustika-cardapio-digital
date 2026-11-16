@@ -7,8 +7,9 @@ BEGIN
   IF current_database() <> 'cardapio_digital_homolog' OR current_user <> 'cardapio_homolog_migrator' OR session_user <> 'cardapio_homolog_migrator' THEN
     RAISE EXCEPTION 'ABORT: banco ou role inesperados';
   END IF;
-  IF (SELECT count(*) FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL) < 7 THEN
-    RAISE EXCEPTION 'ABORT: as migrations precisam estar aplicadas e concluidas';
+  IF (SELECT count(*) FROM public._prisma_migrations) <> 9
+     OR (SELECT count(*) FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL) <> 9 THEN
+    RAISE EXCEPTION 'ABORT: as nove migrations precisam estar aplicadas, concluidas e sem reversao';
   END IF;
   IF (SELECT count(*) FROM public.admins) <> 0 THEN
     RAISE EXCEPTION 'ABORT: ja existe administrador; o bootstrap nao se aplica';

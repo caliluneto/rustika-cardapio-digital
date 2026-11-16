@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXPECTED_MIGRATIONS } from '../integration-db/support/preflight';
-import { PENDING_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 
 const root = path.join(process.cwd(), 'prisma/migrations');
 const name = '20261104000000_runtime_least_privilege';
@@ -19,15 +18,15 @@ describe('Least privilege (static, not an ACL proof)', () => {
     expect(createHash('sha256').update(fs.readFileSync(path.join(root, 'migration_lock.toml'))).digest('hex'))
       .toBe('99836963713b4f5b269ad49af0ed3d7b0b2e336115c2f92dc9ac683d139d0900');
   });
-  it('is the fifth migration, followed only by the reviewed privilege, RF006 and pending identity migrations', () => {
+  it('is the fifth migration, followed only by the reviewed privilege, RF006 and identity migrations', () => {
     const names = fs.readdirSync(root).filter((p) => fs.statSync(path.join(root, p)).isDirectory()).sort();
-    expect(names).toEqual([...EXPECTED_MIGRATIONS, ...PENDING_MIGRATIONS].map((m) => m.name));
+    expect(names).toEqual(EXPECTED_MIGRATIONS.map((m) => m.name));
     expect(names.indexOf(name)).toBe(4);
     expect(names.slice(5)).toEqual([
       '20261105000000_order_status_update_privilege',
       '20261106000000_product_availability_update_privilege',
       rf006Name,
-      ...PENDING_MIGRATIONS.map((m) => m.name),
+      '20261114000000_product_insert_identity_columns',
     ]);
   });
   it('uses a transaction and LF with Git byte-preservation', () => {

@@ -24,6 +24,7 @@ export const EXPECTED_MIGRATIONS: ReadonlyArray<{ name: string; checksum: string
   { name: '20261105000000_order_status_update_privilege', checksum: '3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84' },
   { name: '20261106000000_product_availability_update_privilege', checksum: '3665ed812c4033527d17c6de3a7c66a623d659d676c719fc1b6f6477f7e69308' },
   { name: '20261110000000_rf006_product_crud_privilege', checksum: 'b3feb0dfca618498219161ec91f11b4edff9700de5386e452edf67eadf41561e' },
+  { name: '20261114000000_product_insert_identity_columns', checksum: '6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9' },
 ];
 
 export class IntegrationAbort extends Error {
@@ -100,7 +101,7 @@ export function evaluatePreflight(facts: PreflightFacts): string[] {
 
   const byName = new Map(facts.migrations.map((row) => [row.name, row]));
   if (facts.migrations.length !== EXPECTED_MIGRATIONS.length) {
-    reasons.push(`_prisma_migrations tem ${facts.migrations.length} linhas, esperadas ${EXPECTED_MIGRATIONS.length} (migrations pendentes?).`);
+    reasons.push(`_prisma_migrations tem ${facts.migrations.length} linhas, esperadas ${EXPECTED_MIGRATIONS.length} (baseline incompleto?).`);
   }
   for (const expected of EXPECTED_MIGRATIONS) {
     const row = byName.get(expected.name);

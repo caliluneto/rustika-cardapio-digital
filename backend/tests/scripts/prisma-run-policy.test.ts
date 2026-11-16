@@ -22,7 +22,7 @@ import {
   type MigrateDevServerFacts,
   type ParsedPrismaInvocation,
 } from '../../scripts/prisma-run-policy';
-import { EXPECTED_MIGRATIONS, PENDING_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
+import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 import { verifyAppliedMigrationPrefix } from '../../scripts/bootstrap/migrationIntegrity';
 
 const migrationTestDatabase = {
@@ -371,11 +371,12 @@ describe('conteúdo e GRANTs da migration RF006', () => {
       'checkDeployConfirmation(parsed.value)',
       'authorizePrismaInvocation(parsed.value, database)',
       'evaluateMigrateDevDatabaseUrl(database.databaseUrl)',
-      'verifyMigrationDirectory(migrationsDirectory, PENDING_MIGRATIONS)',
-      'evaluateProductInsertIdentityColumnsMigrationSql(pendingSql, {',
+      'verifyMigrationDirectory(migrationsDirectory)',
+      'evaluateProductInsertIdentityColumnsMigrationSql(identitySql, {',
       "SET TRANSACTION READ ONLY",
       'evaluateMigrateDevServerIdentity(preflight.facts)',
-      'verifyAppliedMigrationPrefix(preflight.migrations, EXPECTED_MIGRATIONS, pendingMigration)',
+      'verifyAppliedMigrationPrefix(preflight.migrations)',
+      'verifyFinalHomologMigrationHistory(migrations)',
     ]) {
       expect(runnerSource.indexOf(gate), gate).toBeGreaterThan(0);
       expect(runnerSource.indexOf(gate), gate).toBeLessThan(spawn);
@@ -383,7 +384,7 @@ describe('conteúdo e GRANTs da migration RF006', () => {
   });
 });
 
-describe('conteúdo e GRANTs da migration pendente de identidade de INSERT', () => {
+describe('conteúdo e GRANTs da migration de identidade de INSERT', () => {
   const migrationFile = path.join(
     process.cwd(),
     'prisma',
@@ -486,20 +487,20 @@ describe('conteúdo e GRANTs da migration pendente de identidade de INSERT', () 
   });
 
   it('recusa checksum divergente e histórico fora de ordem antes do spawn', () => {
-    const pending = PENDING_MIGRATIONS[0]!;
-    const rows = [...EXPECTED_MIGRATIONS, pending].map(({ name, checksum }) => ({
+    const rows = EXPECTED_MIGRATIONS.map(({ name, checksum }) => ({
       name,
       checksum,
       finished: true,
       rolledBack: false,
     }));
-    expect(verifyAppliedMigrationPrefix(rows, EXPECTED_MIGRATIONS, pending)).toEqual([]);
+    expect(verifyAppliedMigrationPrefix(rows)).toEqual([]);
 
-    const divergent = rows.map((row) => row.name === pending.name ? { ...row, checksum: '0'.repeat(64) } : row);
-    expect(verifyAppliedMigrationPrefix(divergent, EXPECTED_MIGRATIONS, pending).join(' ')).toMatch(/checksum gravado diverge/i);
+    const identity = EXPECTED_MIGRATIONS.at(-1)!;
+    const divergent = rows.map((row) => row.name === identity.name ? { ...row, checksum: '0'.repeat(64) } : row);
+    expect(verifyAppliedMigrationPrefix(divergent).join(' ')).toMatch(/checksum gravado diverge/i);
 
     const outOfOrder = [...rows];
     [outOfOrder[6], outOfOrder[7]] = [outOfOrder[7]!, outOfOrder[6]!];
-    expect(verifyAppliedMigrationPrefix(outOfOrder, EXPECTED_MIGRATIONS, pending).join(' ')).toMatch(/ordem de migrations divergente/i);
+    expect(verifyAppliedMigrationPrefix(outOfOrder).join(' ')).toMatch(/ordem de migrations divergente/i);
   });
 });

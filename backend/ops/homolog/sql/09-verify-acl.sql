@@ -12,8 +12,9 @@ BEGIN
     RAISE EXCEPTION 'IDENTIDADE: roles legadas ainda existem; finalize a renomeacao';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rustika_homolog_marker') THEN RAISE EXCEPTION 'IDENTIDADE: cluster sem marca'; END IF;
-  IF (SELECT count(*) FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL) < 7 THEN
-    RAISE EXCEPTION 'SCHEMA: migrations nao concluidas';
+  IF (SELECT count(*) FROM public._prisma_migrations) <> 9
+     OR (SELECT count(*) FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL) <> 9 THEN
+    RAISE EXCEPTION 'SCHEMA: o baseline exato de nove migrations nao esta concluido';
   END IF;
   IF (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database()) <> 'cardapio_homolog_migrator' THEN
     RAISE EXCEPTION 'ACL: o dono do banco deve ser cardapio_homolog_migrator';
@@ -25,6 +26,11 @@ BEGIN
      OR has_table_privilege('cardapio_homolog_app', 'public._prisma_migrations', 'SELECT')
      OR NOT has_column_privilege('cardapio_homolog_app', 'public.orders', 'status', 'UPDATE')
      OR NOT has_column_privilege('cardapio_homolog_app', 'public.products', 'availability_state', 'UPDATE')
+     OR NOT has_column_privilege('cardapio_homolog_app', 'public.products', 'name', 'INSERT')
+     OR NOT has_column_privilege('cardapio_homolog_app', 'public.products', 'id', 'INSERT')
+     OR NOT has_column_privilege('cardapio_homolog_app', 'public.products', 'updated_at', 'INSERT')
+     OR NOT has_table_privilege('cardapio_homolog_app', 'public.products', 'DELETE')
+     OR has_table_privilege('cardapio_homolog_app', 'public.products', 'INSERT')
      OR has_table_privilege('cardapio_homolog_app', 'public.products', 'UPDATE') THEN
     RAISE EXCEPTION 'ACL: o runtime diverge do conjunto minimo aprovado';
   END IF;
