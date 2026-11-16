@@ -413,7 +413,7 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
         expect((await login(`${ADMIN_PASSWORD}x`)).status).toBe(401);
 
         const created = await runtime.product.create({ data: {
-          publicKey: 'rustika-ephemeral-crud', sourceCode: 'EPHEMERAL-CRUD', sourceName: 'Produto efêmero',
+          publicKey: 'rustika-EPHEMERALCRUD', sourceCode: 'EPHEMERALCRUD', sourceName: 'Produto efêmero',
           sourceGroup: 'TEST_ONLY', name: 'Produto efêmero', price: '12.34', categoryId: category.id,
           isActive: true, availabilityState: 'AVAILABLE',
         } });
