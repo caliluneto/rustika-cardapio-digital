@@ -51,20 +51,20 @@ describe('preflight de identidade do banco (decide antes de qualquer escrita)', 
     expect(evaluatePreflight(healthy())).toEqual([]);
   });
 
-  it('estado registrado do Test (1 aplicada, agora 7 pendentes) aborta', () => {
+  it('estado registrado do Test (1 aplicada, baseline incompleto) aborta', () => {
     const facts = healthy(); facts.migrations = facts.migrations.slice(0, 1);
     const reasons = evaluatePreflight(facts);
-    expect(reasons.some((r) => /pendentes/.test(r))).toBe(true);
-    expect(reasons.filter((r) => /não aplicada/.test(r))).toHaveLength(7);
+    expect(reasons.some((r) => /baseline incompleto/.test(r))).toBe(true);
+    expect(reasons.filter((r) => /não aplicada/.test(r))).toHaveLength(8);
   });
 
-  it('oito migrations exatas passam; a oitava pendente, uma desconhecida extra ou uma trocada abortam', () => {
-    expect(EXPECTED_MIGRATIONS).toHaveLength(8);
+  it('nove migrations exatas passam; baseline incompleto, migration extra ou trocada abortam', () => {
+    expect(EXPECTED_MIGRATIONS).toHaveLength(9);
     expect(evaluatePreflight(healthy())).toEqual([]);
     const pending = healthy(); pending.migrations = pending.migrations.slice(0, 7);
-    expect(evaluatePreflight(pending).join(' ')).toMatch(/8.*(pendentes|esperadas)|20261110000000_rf006_product_crud_privilege não aplicada/);
+    expect(evaluatePreflight(pending).join(' ')).toMatch(/7 linhas, esperadas 9|20261110000000_rf006_product_crud_privilege não aplicada/);
     const extra = healthy(); extra.migrations.push({ name: '20261107000000_desconhecida', checksum: 'f'.repeat(64), finished: true, rolledBack: false });
-    expect(evaluatePreflight(extra).join(' ')).toMatch(/9 linhas, esperadas 8/);
+    expect(evaluatePreflight(extra).join(' ')).toMatch(/10 linhas, esperadas 9/);
     const swapped = healthy(); swapped.migrations[7] = { ...swapped.migrations[7]!, name: '20261110000000_outra' };
     expect(evaluatePreflight(swapped).join(' ')).toMatch(/rf006_product_crud_privilege não aplicada/);
     const seventhDisk = healthy(); seventhDisk.diskChecksums[EXPECTED_MIGRATIONS[7]!.name] = 'x';

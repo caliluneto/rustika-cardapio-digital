@@ -1,20 +1,15 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { EXPECTED_MIGRATIONS } from './expectedMigrations';
+import { EXPECTED_MIGRATIONS, REPLAY_BASELINE_LAST_MIGRATION } from './expectedMigrations';
 
 /**
  * Integridade das migrations (separada da política de autorização do ambiente). Só leitura; nunca altera arquivos.
  * Devolve a lista de problemas (vazia = íntegro). Falha fechada: migration desconhecida também é problema.
- * `pending` cobre migrations conhecidas e ainda não aplicadas (a identidade de INSERT em products): o diretório e o
- * checksum são verificados, mas elas não entram no baseline aplicado de oito migrations.
  */
-export function verifyMigrationDirectory(
-  directory: string,
-  pending: ReadonlyArray<{ name: string; checksum: string }> = [],
-): string[] {
+export function verifyMigrationDirectory(directory: string): string[] {
   const problems: string[] = [];
-  const expected = [...EXPECTED_MIGRATIONS, ...pending];
+  const expected = EXPECTED_MIGRATIONS;
   let entries: string[];
   try {
     entries = fs.readdirSync(directory);
@@ -64,22 +59,19 @@ export function verifyAppliedMigrations(rows: readonly AppliedMigration[]): stri
 /**
  * Estado de um banco que pode estar em qualquer ponto de uma sequência conhecida (Dev antes do deploy).
  * As linhas aplicadas precisam ser um PREFIXO EXATO da lista esperada, na ordem: sem lacuna, sem migration
- * desconhecida, sem falha/reversão e com o checksum gravado igual ao do disco. `optionalTrailing` aceita a
- * migration pendente já aplicada como última linha (ex.: identidade de INSERT em products), sem transformá-la em baseline histórica.
+ * desconhecida, sem falha/reversão e com o checksum gravado igual ao do disco.
  */
 export function verifyAppliedMigrationPrefix(
   rows: readonly AppliedMigration[],
   expected: ReadonlyArray<{ name: string; checksum: string }> = EXPECTED_MIGRATIONS,
-  optionalTrailing?: { name: string; checksum: string },
 ): string[] {
   const problems: string[] = [];
   const allowedNames = new Set(expected.map((migration) => migration.name));
-  if (optionalTrailing) allowedNames.add(optionalTrailing.name);
   for (const row of rows) {
     if (!allowedNames.has(row.name)) problems.push(`migration desconhecida aplicada: ${row.name}.`);
   }
   for (const [index, row] of rows.entries()) {
-    const expectedAt = index < expected.length ? expected[index] : optionalTrailing;
+    const expectedAt = expected[index];
     if (!expectedAt) {
       problems.push(`migration aplicada fora da sequência esperada: ${row.name}.`);
       continue;
@@ -89,6 +81,21 @@ export function verifyAppliedMigrationPrefix(
     }
     if (!row.finished || row.rolledBack) problems.push(`migration com falha ou revertida: ${row.name}.`);
     if (row.checksum !== expectedAt.checksum) problems.push(`checksum gravado diverge: ${row.name}.`);
+  }
+  return problems;
+}
+
+/**
+ * O banco final nasce exclusivamente do rename do replay. Exige o prefixo íntegro até a 9ª migration,
+ * mas permite migrations futuras, revisadas e neutras de ambiente, pendentes para `migrate-homolog:deploy`.
+ */
+export function verifyFinalHomologMigrationHistory(rows: readonly AppliedMigration[]): string[] {
+  const problems = verifyAppliedMigrationPrefix(rows);
+  const replayLastIndex = EXPECTED_MIGRATIONS.findIndex(({ name }) => name === REPLAY_BASELINE_LAST_MIGRATION);
+  if (replayLastIndex < 0) {
+    problems.push(`baseline de replay inválido: ${REPLAY_BASELINE_LAST_MIGRATION} não está no inventário.`);
+  } else if (rows.length <= replayLastIndex) {
+    problems.push(`banco final sem o baseline completo de replay até ${REPLAY_BASELINE_LAST_MIGRATION}.`);
   }
   return problems;
 }

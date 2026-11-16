@@ -3,7 +3,6 @@ import path from 'node:path';
 import { loadDatabaseProfile } from '../../src/config/secrets';
 import type { DatabaseSecrets } from '../../src/config/secrets';
 import { verifyMigrationDirectory } from '../bootstrap/migrationIntegrity';
-import { PENDING_MIGRATIONS } from '../bootstrap/expectedMigrations';
 
 export const HOMOLOG_PROFILES = ['app-homolog', 'migrate-homolog', 'bootstrap-homolog', 'migrate-homolog-replay'] as const;
 export const HOMOLOG_SQL_FILES = [
@@ -58,9 +57,9 @@ export function runHomologPreflight(input: PreflightInputs): PreflightFinding[] 
     else add('OK', 'PASSWORD_LENGTH', `Todas as senhas têm ao menos ${MIN_HOMOLOG_PASSWORD_LENGTH} caracteres.`);
   }
 
-  const migrationProblems = verifyMigrationDirectory(input.migrationsDir, PENDING_MIGRATIONS);
+  const migrationProblems = verifyMigrationDirectory(input.migrationsDir);
   if (migrationProblems.length > 0) add('FAIL', 'MIGRATIONS', migrationProblems.join(' '));
-  else add('OK', 'MIGRATIONS', 'As oito migrations históricas e a migration de identidade pendente existem e os checksums coincidem.');
+  else add('OK', 'MIGRATIONS', 'As nove migrations do baseline existem e os checksums coincidem.');
 
   const missing = HOMOLOG_SQL_FILES.filter((file) => !fs.existsSync(path.join(input.sqlDir, file)));
   if (missing.length > 0) add('FAIL', 'SQL_FILES', `Scripts SQL ausentes: ${missing.join(', ')}.`);

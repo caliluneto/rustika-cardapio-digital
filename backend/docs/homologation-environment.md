@@ -1,7 +1,7 @@
 # Ambiente de homologação
 
-**Estado: código, scripts SQL, testes estáticos e documentação PREPARADOS. Nada foi executado contra banco algum, nenhum recurso de
-nuvem foi criado e nenhuma credencial foi gerada.** Todo passo marcado com 🔒 exige autorização explícita e específica.
+**Estado local: baseline de nove migrations, wrappers, scripts SQL, testes estáticos e documentação PREPARADOS. Esta preparação não
+confirma o estado do Neon e não executou migration, SQL ou provisionamento remoto.** Todo passo marcado com 🔒 exige autorização explícita e específica.
 
 ## 1. Os três ambientes
 
@@ -19,7 +19,7 @@ Os nomes `cardapio_digital_dev`, `cardapio_digital_test` e `cardapio_digital_sha
 
 ## 2. Por que as migrations históricas não rodam direto em `cardapio_digital_homolog`
 
-As migrations 3, 5, 6 e 7 são imutáveis (SHA-256 registrado) e contêm guardas fixas: `current_database()` ∈ {`cardapio_digital_dev`, `cardapio_digital_test`};
+As migrations 3 e 5–9 são imutáveis (SHA-256 registrado) e contêm guardas fixas: `current_database()` ∈ {`cardapio_digital_dev`, `cardapio_digital_test`};
 a role de runtime derivada (`cardapio_test_app`/`cardapio_dev_app`) e a "outra" precisam **existir**; o executor e o dono do banco têm de ser `cardapio_migrator`; PostgreSQL ≥ 17.
 A migration 2 revoga privilégios de `cardapio_test_app`, `cardapio_dev_app` (nomes literais). Executá-las em um banco com outro nome falha por desenho.
 Não se altera nenhum arquivo SQL histórico, não se usa `migrate resolve`, `db push`, `migrate reset`, nem se marca migration como aplicada.
@@ -29,7 +29,7 @@ Não se altera nenhum arquivo SQL histórico, não se usa `migrate resolve`, `db
 Num **cluster PostgreSQL dedicado e vazio** de homologação:
 
 1. cria-se, de forma **transitória**, as roles legadas e um banco `cardapio_digital_test` (nome que as guardas aceitam), **apenas nesse cluster**;
-2. o Prisma aplica as **sete migrations ORIGINAIS** (`migrate-homolog-replay`), registrando em `_prisma_migrations` os checksums reais;
+2. o Prisma aplica as **nove migrations do baseline** (`migrate-homolog-replay`), registrando em `_prisma_migrations` os checksums reais; as migrations 8 e 9 precisam ocorrer aqui porque suas guardas recusam o banco final;
 3. o administrador executa `ALTER DATABASE cardapio_digital_test RENAME TO cardapio_digital_homolog` e renomeia as roles (`cardapio_test_app`→`cardapio_homolog_app`, `cardapio_migrator`→`cardapio_homolog_migrator`, `cardapio_dev_app`→`cardapio_homolog_placeholder`).
 
 Por que preserva o schema: owners, ACLs de tabela/coluna/schema/banco e privilégios padrão são armazenados por **OID**, não por nome; nenhuma migration grava nome de role/banco em objeto persistente
@@ -53,10 +53,10 @@ coerência da fase (replay: existe `cardapio_digital_test`, não existe `cardapi
 
 | Perfil | Finalidade | Role | Banco | Privilégios |
 |---|---|---|---|---|
-| `app-homolog` | runtime da API | `cardapio_homolog_app` | `cardapio_digital_homolog` | os definidos pelas migrations 4–7; **sem** INSERT em `admins` |
+| `app-homolog` | runtime da API | `cardapio_homolog_app` | `cardapio_digital_homolog` | os definidos pelas migrations 4–9; **sem** INSERT em `admins` |
 | `migrate-homolog` | `prisma migrate status/deploy` | `cardapio_homolog_migrator` (dono) | `cardapio_digital_homolog` | DDL; sem atributos elevados |
 | `bootstrap-homolog` | primeiro administrador | `cardapio_homolog_bootstrap` | `cardapio_digital_homolog` | `SELECT, INSERT` em `admins`, `SELECT` em `_prisma_migrations`; sem UPDATE/DELETE/TRUNCATE; **sem login** fora da janela |
-| `migrate-homolog-replay` (transitório) | replay das sete migrations | `cardapio_migrator` | `cardapio_digital_test` (do cluster de homologação) | DDL; deixa de existir após o rename |
+| `migrate-homolog-replay` (transitório) | replay das nove migrations do baseline | `cardapio_migrator` | `cardapio_digital_test` (do cluster de homologação) | DDL; deixa de existir após o rename |
 | (placeholder) | exigência das guardas | `cardapio_homolog_placeholder` | — | `NOLOGIN`, sem privilégios, sem membros |
 | (marca) | identidade do cluster | `rustika_homolog_marker` | — | `NOLOGIN`; só carrega o comentário `rustika-homolog-cluster:<uuid>` |
 
@@ -77,12 +77,16 @@ Pré-condições: cluster PostgreSQL ≥ 17 **dedicado e vazio**, TLS, administr
 2. `01-cluster-roles.sql` (admin): recusa se houver qualquer banco `cardapio_digital_*` ou role do projeto; cria roles legadas transitórias, `cardapio_homolog_bootstrap` e a marca; **imprime o UUID** → `EXPECTED_CLUSTER_ID`. Defina senhas com `\password`.
 3. `02-create-replay-database.sql` (admin): cria `cardapio_digital_test` (dono `cardapio_migrator`); recusa se algum banco do projeto existir.
 4. `npm run homolog:replay:status`, depois `CARDAPIO_MIGRATE_HOMOLOG_REPLAY_CONFIRMATION=REPLAY_HISTORICAL_MIGRATIONS_RUSTIKA_HOMOLOG npm run homolog:replay:deploy`.
-5. `03-verify-replay.sql` (somente leitura, como `cardapio_migrator`).
+5. `03-verify-replay.sql` (somente leitura, como `cardapio_migrator`): exige exatamente as nove migrations, checksums aprovados e grants de CRUD, inclusive INSERT em `products.id` e `products.updated_at`.
 6. Opcional recomendado: `npm run schema:fingerprint -- --profile … --out replay.json` (snapshot A).
 7. Encerrar conexões ao banco de replay e executar `04-finalize-rename.sql` (admin, banco `postgres`): transacional; recusa se o banco definitivo/dev/shadow existir, se as roles definitivas existirem ou se houver conexões ativas. Redefina as senhas (`\password cardapio_homolog_migrator`, `cardapio_homolog_app`).
-8. `npm run homolog:migrate:status` (perfil final; exige a identidade FINAL do servidor) e snapshot B; `npm run schema:compare -- replay.json final.json` deve retornar 0 (equivalência).
+8. `npm run homolog:migrate:status` (perfil final; exige a identidade FINAL e recusa histórico que não tenha chegado à 9ª migration antes do rename) e snapshot B; `npm run schema:compare -- replay.json final.json` deve retornar 0 (equivalência).
 9. `05-post-migration-grants.sql` (migrator), `06-bootstrap-window-open.sql` (admin), bootstrap (seção 7), `07-bootstrap-window-close.sql`, `08-bootstrap-revoke.sql` (migrator), `09-verify-acl.sql` (somente leitura).
 10. `GET /api/ready` = 200; login do administrador por HTTPS.
+
+**Checklist obrigatório antes do rename:** identidade transitória aprovada; diretório sem migration desconhecida; nove checksums do disco aprovados; `_prisma_migrations` com exatamente nove linhas concluídas e não revertidas; `03-verify-replay.sql` aprovado; grants de `products` limitados por coluna, com `id`/`updated_at` em INSERT e sem INSERT/UPDATE de tabela; nenhum dado real; zero conexão ativa. Qualquer divergência interrompe o procedimento.
+
+**Checklist após o rename:** identidade final aprovada; nenhuma role/banco legado; histórico ainda idêntico; snapshots A×B equivalentes; `09-verify-acl.sql` aprovado; runtime sem atributos administrativos, sem acesso a `_prisma_migrations` e sem INSERT em `admins`. Não iniciar bootstrap ou aplicação se qualquer item falhar.
 
 **Falhas e recuperação.** Scripts 01–03/05–09 são transacionais ou abortam antes de alterar; nenhum contém `DROP`. Falha no replay: o Prisma registra a migration como falha — **não use `migrate resolve`**;
 o cluster é dedicado e descartável: o administrador cria outro cluster/banco vazio (remoção manual, autorizada, fora destes scripts). Falha no rename: a transação reverte; corrigir a precondição (ex.: conexões) e repetir.
@@ -94,15 +98,15 @@ CARDAPIO_SECRETS_DIR=… npm run homolog:bootstrap-admin -- --profile bootstrap-
 CARDAPIO_BOOTSTRAP_CONFIRMATION=CREATE_FIRST_ADMIN_RUSTIKA_HOMOLOG CARDAPIO_SECRETS_DIR=… npm run homolog:bootstrap-admin -- --profile bootstrap-homolog --name "Nome" --email pessoa@dominio --execute
 ```
 Senha digitada duas vezes, sem eco, só em TTY; argumentos com aparência de segredo são recusados. Antes de escrever: **identidade do servidor** (TLS, marca do cluster, sem Dev/Shadow), banco e role exatos,
-role sem atributos elevados e sem UPDATE/DELETE/TRUNCATE em `admins`, PostgreSQL ≥ 17, sete migrations com checksum esperado, nenhum administrador. Somente o primeiro; inserção `Serializable`.
+role sem atributos elevados e sem UPDATE/DELETE/TRUNCATE em `admins`, PostgreSQL ≥ 17, nove migrations com checksum esperado, nenhum administrador. Somente o primeiro; inserção `Serializable`.
 
-## 8. Migrations futuras (a 8ª em diante) — Dev, Test e Homologação
+## 8. Migrations futuras (a 10ª em diante) — Dev, Test e Homologação
 
-* **Regra**: nunca alterar as sete históricas. A lista `EXPECTED_MIGRATIONS` (`scripts/bootstrap/expectedMigrations.ts` e `tests/integration-db/support/preflight.ts`) é **fail-closed**: uma migration nova no disco é "desconhecida" e é recusada pelos wrappers até a lista (nome + SHA-256) ser atualizada em revisão, nos dois arquivos (um teste exige igualdade entre eles e com o disco).
+* **Regra**: nunca alterar as nove migrations do baseline. A lista `EXPECTED_MIGRATIONS` (`scripts/bootstrap/expectedMigrations.ts` e `tests/integration-db/support/preflight.ts`) é **fail-closed**: uma migration nova no disco é "desconhecida" e é recusada pelos wrappers até a lista (nome + SHA-256) ser atualizada em revisão, nos dois arquivos (um teste exige igualdade entre eles e com o disco).
 * **SQL neutro de ambiente**: partir de `docs/templates/future-migration-environment-guard.sql` (guarda por `current_database()` cobrindo Dev/Test/Homolog; executor ∈ {`cardapio_migrator`, `cardapio_homolog_migrator`}; roles resolvidas por `format('%I', …)`). `lintFutureMigration` (`scripts/bootstrap/futureMigrationPolicy.ts`) reprova guardas só-Dev/Test, roles literais, `GRANT/REVOKE` sem guarda, `TRUNCATE` e DDL de banco/role.
 * **Dev**: pelo fluxo de migração já autorizado para o perfil `migrate-dev` (banco `cardapio_digital_dev`, shadow `cardapio_digital_shadow`), sem mudança. **Test**: `npm run db:migrate:status:test` / `db:migrate:deploy:test` (perfil `migrate-test`), sem mudança. **Homologação**: `npm run homolog:migrate:status`, revisar, depois `CARDAPIO_MIGRATE_HOMOLOG_CONFIRMATION=APPLY_RUSTIKA_HOMOLOG_MIGRATIONS npm run homolog:migrate:deploy` 🔒 — o wrapper confere a integridade do diretório e a identidade do servidor antes de conectar.
-* Ordem: Dev → Test (ou CI efêmero) → comparar `schema:fingerprint` → Homologação. A suíte efêmera (passo 8) demonstra a aplicação de uma 8ª migration com a role definitiva.
-* A 8ª migration **não** precisa passar pelo replay: o replay só existe para reproduzir o histórico. Para recriar a homologação do zero, repete-se a seção 6 (o replay aplica as sete originais; as seguintes são aplicadas depois pelo `homolog:migrate:deploy`, já no banco final).
+* Ordem: Dev → Test (ou CI efêmero) → comparar `schema:fingerprint` → Homologação. A suíte efêmera demonstra a aplicação de uma 10ª migration sintética com a role definitiva.
+* Migrations futuras, neutras de ambiente, **não** passam pelo replay: para recriar a homologação do zero, o replay aplica o baseline fixo de nove; a 10ª e seguintes são aplicadas depois pelo `homolog:migrate:deploy`, já no banco final. O wrapper final aceita migrations futuras pendentes, mas bloqueia se o prefixo de replay até a 9ª não estiver íntegro.
 
 ## 9. Controle de drift
 * `npm run schema:fingerprint -- --profile migrate-dev|migrate-test|migrate-homolog --out arquivo.json`: leitura somente de catálogo (migrations com checksum, tabelas, colunas/tipos/defaults, constraints incl. FKs, índices, enums, sequences, owners, ACLs de tabela/coluna/schema/banco, privilégios padrão), roles trocadas por papéis lógicos (`runtime`, `migrator`, `placeholder`, `bootstrap`), `sha256` determinístico.
@@ -117,14 +121,14 @@ Preservados: login, hash scrypt, cookie `rustika_admin`, CSRF/Origin, rate limit
 `pg_dump -Fc` antes de migration/bootstrap, destino privado e cifrado, SHA-256 registrado; restauração só em banco novo e descartável (`docs/restore-backup.md`). Rollback de código = redeploy anterior (migrations aditivas, sem `down`).
 
 ## 12. Testes
-* Sem banco (CI padrão): perfis e identidade, política Prisma (replay/final), integridade e checksums das sete migrations, **segurança da renomeação** (análise estática das migrations), SQL estático (9 scripts), identidade do servidor, fingerprint/diff/aliases de roles, lint de migrations futuras, pré-voo, bootstrap, `/api/ready`.
-* Preparado, **não executado**: `npm run test:homolog:ephemeral` (`tests/homolog-ephemeral/provisioning.ephemeral.ts`) — fluxo 01→09 + equivalência de schema A×B + 8ª migration + drift; exige `RUSTIKA_HOMOLOG_EPHEMERAL_URL` e `RUSTIKA_HOMOLOG_EPHEMERAL_CONFIRM=RUN_ON_EPHEMERAL_POSTGRES`; aborta se houver qualquer banco/role `cardapio_*`/`rustika_*`.
+* Sem banco (CI padrão): perfis e identidade, política Prisma (replay/final), integridade e checksums das nove migrations, **segurança da renomeação** (análise estática das migrations), SQL estático (9 scripts), identidade do servidor, fingerprint/diff/aliases de roles, lint de migrations futuras, pré-voo, bootstrap, `/api/ready`.
+* Preparado, **não executado**: `npm run test:homolog:ephemeral` (`tests/homolog-ephemeral/provisioning.ephemeral.ts`) — fluxo 01→09 + equivalência de schema A×B + 10ª migration sintética + drift; exige `RUSTIKA_HOMOLOG_EPHEMERAL_URL` e `RUSTIKA_HOMOLOG_EPHEMERAL_CONFIRM=RUN_ON_EPHEMERAL_POSTGRES`; aborta se houver qualquer banco/role `cardapio_*`/`rustika_*`.
 
 ## 12.1 Ensaio efêmero integral — workflow manual `homolog-ephemeral`
 Arquivo: `.github/workflows/homolog-ephemeral.yml` (somente `workflow_dispatch`, input `run_homolog_ephemeral` = false por padrão, repositório privado, 25 min, sem secrets, sem artifacts, PostgreSQL **próprio**, não o do job `e2e`).
 `ops/homolog/ci/start-ephemeral-postgres.sh` gera CA sintética (e uma CA "errada" para o teste negativo), certificado do servidor com SAN = IP do runner, `pg_hba` só `hostssl` e publica a porta **apenas** no IP do runner (não-loopback, como exigem os perfis de homologação).
 `diagnostics.sh` (só em falha: 60 linhas de log mascaradas, sem dump) e `teardown.sh` (sempre: container, volume, certificados e senhas; falha se sobrar algo).
-A suíte (`tests/homolog-ephemeral/provisioning.ephemeral.ts`) valida a identidade do servidor **antes da primeira escrita** (`cluster_name` esperado, TLS real em `pg_stat_ssl`, PG ≥ 17, somente o banco `postgres`, nenhuma role do projeto), usa os **wrappers reais** (`prisma-run` para replay e final) e cobre: recusas sem confirmação / com marca errada, sete migrations originais, histórico exato em `_prisma_migrations`, ownership, matriz de privilégios por role antes×depois do rename (tabela e coluna), snapshots A×B com renomeações classificadas (`classifyRenames`), recusa do rename com sessão ativa e pela role legada, adulteração de checksum e dados inesperados reprovando, marca alterada e banco `cardapio_digital_dev` presente reprovando, bootstrap (recusa de role/banco/cluster errados, um único administrador, hash verificável, senha ausente das saídas, runtime recusado), login HTTP, 8ª migration sintética em **cópia temporária** do backend (desconhecida recusada → lista revisada simulada na cópia → aplicada uma vez → reexecução sem reaplicação → adulteração recusada → drift detectado) e cleanup verificado. Com `RUSTIKA_HOMOLOG_EPHEMERAL_REQUIRED=1` (CI), configuração ausente **falha**; nenhum teste é convertido em skip.
+A suíte (`tests/homolog-ephemeral/provisioning.ephemeral.ts`) valida a identidade do servidor **antes da primeira escrita** (`cluster_name` esperado, TLS real em `pg_stat_ssl`, PG ≥ 17, somente o banco `postgres`, nenhuma role do projeto), usa os **wrappers reais** (`prisma-run` para replay e final) e cobre: recusas sem confirmação / com marca errada, nove migrations do baseline, histórico exato em `_prisma_migrations`, grants de CRUD de produto, ownership, matriz de privilégios por role antes×depois do rename (tabela e coluna), CRUD Prisma de produto com dados exclusivamente fictícios e limpeza no final, snapshots A×B com renomeações classificadas (`classifyRenames`), recusa do rename com sessão ativa e pela role legada, adulteração de checksum e dados inesperados reprovando, marca alterada e banco `cardapio_digital_dev` presente reprovando, bootstrap (recusa de role/banco/cluster errados, um único administrador, hash verificável, senha ausente das saídas, runtime recusado), login HTTP, 10ª migration sintética em **cópia temporária** do backend (desconhecida recusada → lista revisada simulada na cópia → aplicada uma vez → reexecução sem reaplicação → adulteração recusada → drift detectado) e cleanup verificado. Com `RUSTIKA_HOMOLOG_EPHEMERAL_REQUIRED=1` (CI), configuração ausente **falha**; nenhum teste é convertido em skip.
 Primeira execução (após auditoria e autorização): Actions → `homolog-ephemeral` → marcar `run_homolog_ephemeral`. Nada além disso é necessário; não há secrets a configurar.
 
 ## 12.2 Identidade do cluster e TLS — o que a marca prova e o que não prova

@@ -21,11 +21,12 @@ import {
   type MigrateDevServerFacts,
 } from './prisma-run-policy';
 import {
+  verifyFinalHomologMigrationHistory,
   verifyAppliedMigrationPrefix,
   verifyMigrationDirectory,
   type AppliedMigration,
 } from './bootstrap/migrationIntegrity';
-import { EXPECTED_MIGRATIONS, PENDING_MIGRATIONS } from './bootstrap/expectedMigrations';
+import { EXPECTED_MIGRATIONS } from './bootstrap/expectedMigrations';
 import { PrismaClient } from '@prisma/client';
 import { evaluateServerIdentity, readServerFacts } from '../src/config/serverIdentity';
 import { evaluateNeonServerIdentity, readNeonServerFacts } from '../src/config/neonServerIdentity';
@@ -95,34 +96,34 @@ async function main(): Promise<number> {
     }
 
     const migrationsDirectory = path.join(backendRoot, 'prisma', 'migrations');
-    const diskProblems = verifyMigrationDirectory(migrationsDirectory, PENDING_MIGRATIONS);
+    const diskProblems = verifyMigrationDirectory(migrationsDirectory);
     if (diskProblems.length > 0) {
       return fail(`Integridade das migrations violada: ${diskProblems.join(' ')}`);
     }
 
-    const pendingMigration = PENDING_MIGRATIONS.find(
+    const identityMigration = EXPECTED_MIGRATIONS.find(
       (migration) => migration.name === PRODUCT_INSERT_IDENTITY_COLUMNS_MIGRATION_NAME,
     );
-    if (!pendingMigration || PENDING_MIGRATIONS.length !== 1) {
+    if (!identityMigration || EXPECTED_MIGRATIONS.at(-1)?.name !== identityMigration.name) {
       return fail(
-        `Inventário da migration pendente ${PRODUCT_INSERT_IDENTITY_COLUMNS_MIGRATION_NAME} é inválido; nada foi executado.`,
+        `Inventário da migration ${PRODUCT_INSERT_IDENTITY_COLUMNS_MIGRATION_NAME} é inválido; nada foi executado.`,
       );
     }
-    let pendingSql: string;
+    let identitySql: string;
     try {
-      pendingSql = fs.readFileSync(
-        path.join(migrationsDirectory, pendingMigration.name, 'migration.sql'),
+      identitySql = fs.readFileSync(
+        path.join(migrationsDirectory, identityMigration.name, 'migration.sql'),
         'utf8',
       );
     } catch {
-      return fail('Não foi possível reler a migration pendente após validar o inventário; nada foi executado.');
+      return fail('Não foi possível reler a migration de identidade após validar o inventário; nada foi executado.');
     }
-    const pendingProblems = evaluateProductInsertIdentityColumnsMigrationSql(pendingSql, {
-      migrationName: pendingMigration.name,
+    const identityProblems = evaluateProductInsertIdentityColumnsMigrationSql(identitySql, {
+      migrationName: identityMigration.name,
       database: database.database,
     });
-    if (pendingProblems.length > 0) {
-      return fail(`Conteúdo/GRANTs da migration pendente recusados: ${pendingProblems.join(' ')}`);
+    if (identityProblems.length > 0) {
+      return fail(`Conteúdo/GRANTs da migration de identidade recusados: ${identityProblems.join(' ')}`);
     }
 
     const probeUrl = new URL(database.databaseUrl);
@@ -185,7 +186,7 @@ async function main(): Promise<number> {
         await client.$disconnect().catch(() => undefined);
         return fail(`Identidade PostgreSQL do migrate-dev recusada: ${identityProblems.join(' ')}`);
       }
-      const historyProblems = verifyAppliedMigrationPrefix(preflight.migrations, EXPECTED_MIGRATIONS, pendingMigration);
+      const historyProblems = verifyAppliedMigrationPrefix(preflight.migrations);
       if (historyProblems.length > 0) {
         await client.$disconnect().catch(() => undefined);
         return fail(`Histórico das migrations anteriores recusado: ${historyProblems.join(' ')}`);
@@ -229,6 +230,22 @@ async function main(): Promise<number> {
           expectedUser: database.user,
         });
         if (identityProblems.length > 0) return fail(`Identidade do servidor não confere: ${identityProblems.join(' ')}`);
+        if (database.environment === 'homolog') {
+          const migrations = await client.$transaction(async (tx) => {
+            await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+            return tx.$queryRaw<AppliedMigration[]>`
+              SELECT migration_name AS name,
+                     checksum,
+                     finished_at IS NOT NULL AS finished,
+                     rolled_back_at IS NOT NULL AS "rolledBack"
+                FROM public._prisma_migrations
+               ORDER BY started_at, migration_name`;
+          });
+          const historyProblems = verifyFinalHomologMigrationHistory(migrations);
+          if (historyProblems.length > 0) {
+            return fail(`Banco final exige o replay completo das nove migrations antes do rename: ${historyProblems.join(' ')}`);
+          }
+        }
       } catch {
         return fail('Não foi possível verificar a identidade do servidor de homologação; nada foi executado.');
       } finally {

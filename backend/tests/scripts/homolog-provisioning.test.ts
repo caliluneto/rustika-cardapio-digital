@@ -88,6 +88,10 @@ describe('scripts SQL de provisionamento da homologação (validação estática
     const final = stripComments(read('09-verify-acl.sql'));
     expect(final).toMatch(/current_database\(\) <> 'cardapio_digital_homolog'/);
     expect(final).toMatch(/cardapio_digital_test', 'cardapio_digital_dev', 'cardapio_digital_shadow'/);
+    expect(final).toMatch(/count\(\*\).*<> 9/s);
+    for (const column of ['name', 'id', 'updated_at']) {
+      expect(final).toContain(`'public.products', '${column}', 'INSERT'`);
+    }
   });
 
   it('nenhum script aplica a identidade de Dev/Test/Shadow como banco definitivo', () => {
@@ -117,6 +121,10 @@ describe('proteção da renomeação', () => {
     for (const needle of ['datdba', 'relowner', 'nspowner', 'typowner', 'pg_auth_members', 'pg_db_role_setting', 'pg_policy', 'pg_event_trigger', 'pg_proc', 'has_table_privilege', 'has_column_privilege']) {
       expect(code, needle).toContain(needle);
     }
+    expect(code).toContain('20261114000000_product_insert_identity_columns');
+    expect(code).toContain('6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9');
+    expect(code).toContain("'public.products', 'id', 'INSERT'");
+    expect(code).toContain("'public.products', 'updated_at', 'INSERT'");
   });
 
   it('Neon: o 03 tolera somente a linha ADMIN-only automática do criador (PostgreSQL >= 16) e continua recusando SET/INHERIT', () => {
@@ -143,7 +151,7 @@ describe('proteção da renomeação', () => {
     expect(start).not.toMatch(/chmod\s+(777|666|755|644)\s+[^\n]*server\.key/);
   });
 
-  it('a cópia temporária da 8ª migration fica em <tmp>/<dir>/backend (a pasta de segredos precisa ficar fora do workspace)', () => {
+  it('a cópia temporária da migration futura fica em <tmp>/<dir>/backend (a pasta de segredos precisa ficar fora do workspace)', () => {
     const suite = fs.readFileSync(path.join(process.cwd(), 'tests', 'homolog-ephemeral', 'provisioning.ephemeral.ts'), 'utf8');
     expect(suite).toMatch(/const copy = path\.join\(copyRoot, 'backend'\)/);
   });

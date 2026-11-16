@@ -2,15 +2,14 @@
 
 Suíte que exercita **Express real, rotas reais, services reais e Prisma real** contra
 `cardapio_digital_test`. É opt-in e não foi executada no PostgreSQL Test local: depende das
-8 migrations aplicadas, da role de fixtures e de autorização expressa para escrever em Test.
+9 migrations aplicadas, da role de fixtures e de autorização expressa para escrever em Test.
 No CI, roda em PostgreSQL efêmero quando `run_integration=true`.
 
-O conjunto esperado tem **8 migrations**: a quinta endurece ACLs, a sexta concede
+O conjunto esperado tem **9 migrations**: a quinta endurece ACLs, a sexta concede
 `UPDATE (status, updated_at)` em `orders`, a sétima concede `UPDATE (availability_state, updated_at)`
-em `products` e a oitava concede os privilégios de coluna do CRUD de produtos (RF006).
-A nona migration de identidade existe no disco e é validada por checksum, mas permanece fora do
-baseline de integração (`PENDING_MIGRATIONS`) até ser promovida. A role de fixtures está provisionada e a
-restauração do backup tem plano executável.
+em `products`, a oitava concede os privilégios de coluna do CRUD de produtos (RF006) e a nona acrescenta
+`INSERT (id, updated_at)` exigido pelo Prisma. Todas pertencem ao baseline com checksum fixado. A role de
+fixtures está provisionada e a restauração do backup tem plano executável.
 
 ## Arquivos
 

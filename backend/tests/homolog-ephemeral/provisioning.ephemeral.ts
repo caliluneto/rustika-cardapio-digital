@@ -3,9 +3,9 @@
  * (CA sintética) e host NÃO-loopback, exercitando os mesmos gates dos wrappers reais (`prisma-run`, identidade do servidor,
  * núcleo do bootstrap). Pensado para o workflow manual `homolog-ephemeral` (.github/workflows/homolog-ephemeral.yml).
  *
- * Fluxo: identidade do servidor → 01 roles+marca → 02 banco de replay → wrapper `migrate-homolog-replay` (oito migrations ORIGINAIS)
+ * Fluxo: identidade do servidor → 01 roles+marca → 02 banco de replay → wrapper `migrate-homolog-replay` (nove migrations do baseline)
  * → histórico/ACL/ownership → 03 → 04 rename → equivalência (snapshots A×B, renomeações classificadas, matriz de privilégios,
- * `_prisma_migrations` idêntica) → wrapper final → recusas de identidade → bootstrap → login/ready → oitava migration sintética
+ * `_prisma_migrations` idêntica) → wrapper final → recusas de identidade → bootstrap → login/ready/CRUD fictício → décima migration sintética
  * (cópia temporária do backend; o repositório não é tocado) → drift → descarte total.
  *
  * Variáveis (todas sintéticas, definidas pelo workflow; nunca segredos reais):
@@ -232,8 +232,8 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(await canLogin('cardapio_homolog_bootstrap', pw.cardapio_homolog_bootstrap!, REPLAY_DB)).toBe(false);
   });
 
-  it('3) wrapper do replay: recusa sem confirmação e com marca de cluster errada; aplica as oito migrations ORIGINAIS com a confirmação certa', async () => {
-    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'oito migrations íntegras no disco').toEqual([]);
+  it('3) wrapper do replay: recusa sem confirmação e com marca de cluster errada; aplica as nove migrations com a confirmação certa', async () => {
+    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'nove migrations íntegras no disco').toEqual([]);
     const noConfirm = wrapper(secrets, 'migrate-homolog-replay', 'deploy');
     expect(noConfirm.status).not.toBe(0);
     const wrongDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-secrets-wrong-')); temps.push(wrongDir);
@@ -397,27 +397,45 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
   });
 
   it('11) runtime: /api/ready, login HTTP, senha errada e escritas indevidas negadas', async () => {
-    await withClient(FINAL.app, pw[FINAL.app]!, FINAL_DB, async (runtime) => {
-      const app = createApp({ prisma: runtime });
-      expect((await request(app).get('/api/ready')).status).toBe(200);
-      const login = (password: string) => request(app).post('/api/admin/auth/login').set('Origin', env.corsOrigin)
-        .set('X-Rustika-Request', '1').set('Content-Type', 'application/json').send({ email: IDENTITY.email, password });
-      const ok = await login(ADMIN_PASSWORD);
-      expect(ok.status).toBeLessThan(300);
-      expect(String(ok.headers['set-cookie'])).toContain('rustika_admin');
-      expect(JSON.stringify(ok.body)).not.toContain(ADMIN_PASSWORD);
-      expect((await login(`${ADMIN_PASSWORD}x`)).status).toBe(401);
-      await expect(runtime.$executeRawUnsafe("INSERT INTO admins (id, name, email, password_hash, updated_at) VALUES (gen_random_uuid(), 'x', 'x@y.zz', 'h', now())")).rejects.toThrow();
-      await expect(runtime.$executeRawUnsafe('CREATE TABLE public.intruso (id int)')).rejects.toThrow();
-      await expect(runtime.$executeRawUnsafe('CREATE ROLE intruso')).rejects.toThrow();
-      await expect(runtime.$queryRawUnsafe('SELECT * FROM public._prisma_migrations')).rejects.toThrow();
-    });
+    const category = await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, (migrator) => migrator.category.create({
+      data: { publicKey: 'ephemeral-crud', name: 'Categoria efêmera CRUD' },
+    }));
+    try {
+      await withClient(FINAL.app, pw[FINAL.app]!, FINAL_DB, async (runtime) => {
+        const app = createApp({ prisma: runtime });
+        expect((await request(app).get('/api/ready')).status).toBe(200);
+        const login = (password: string) => request(app).post('/api/admin/auth/login').set('Origin', env.corsOrigin)
+          .set('X-Rustika-Request', '1').set('Content-Type', 'application/json').send({ email: IDENTITY.email, password });
+        const ok = await login(ADMIN_PASSWORD);
+        expect(ok.status).toBeLessThan(300);
+        expect(String(ok.headers['set-cookie'])).toContain('rustika_admin');
+        expect(JSON.stringify(ok.body)).not.toContain(ADMIN_PASSWORD);
+        expect((await login(`${ADMIN_PASSWORD}x`)).status).toBe(401);
+
+        const created = await runtime.product.create({ data: {
+          publicKey: 'rustika-ephemeral-crud', sourceCode: 'EPHEMERAL-CRUD', sourceName: 'Produto efêmero',
+          sourceGroup: 'TEST_ONLY', name: 'Produto efêmero', price: '12.34', categoryId: category.id,
+          isActive: true, availabilityState: 'AVAILABLE',
+        } });
+        expect(created.id).toMatch(/^[0-9a-f-]{36}$/i);
+        expect(created.updatedAt).toBeInstanceOf(Date);
+        expect((await runtime.product.update({ where: { id: created.id }, data: { name: 'Produto efêmero atualizado' } })).name).toBe('Produto efêmero atualizado');
+        await expect(runtime.product.delete({ where: { id: created.id } })).resolves.toMatchObject({ id: created.id });
+
+        await expect(runtime.$executeRawUnsafe("INSERT INTO admins (id, name, email, password_hash, updated_at) VALUES (gen_random_uuid(), 'x', 'x@y.zz', 'h', now())")).rejects.toThrow();
+        await expect(runtime.$executeRawUnsafe('CREATE TABLE public.intruso (id int)')).rejects.toThrow();
+        await expect(runtime.$executeRawUnsafe('CREATE ROLE intruso')).rejects.toThrow();
+        await expect(runtime.$queryRawUnsafe('SELECT * FROM public._prisma_migrations')).rejects.toThrow();
+      });
+    } finally {
+      await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, (migrator) => migrator.category.delete({ where: { id: category.id } }));
+    }
   });
 
-  it('12) OITAVA migration sintética em CÓPIA temporária do backend: desconhecida é recusada, aprovada é aplicada uma vez, divergência é recusada, drift é detectado', async () => {
-    // A cópia fica em <tmp>/rustika-m8-XXXX/backend: o "workspace" que o carregador de segredos enxerga é <tmp>/rustika-m8-XXXX,
+  it('12) DÉCIMA migration sintética em CÓPIA temporária do backend: desconhecida é recusada, aprovada é aplicada uma vez, divergência é recusada, drift é detectado', async () => {
+    // A cópia fica em <tmp>/rustika-m10-XXXX/backend: o "workspace" que o carregador de segredos enxerga é <tmp>/rustika-m10-XXXX,
     // de modo que a pasta de segredos (irmã em <tmp>) continua FORA do workspace, como exige resolveSecretsDir.
-    const copyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-m8-')); temps.push(copyRoot);
+    const copyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-m10-')); temps.push(copyRoot);
     const copy = path.join(copyRoot, 'backend');
     fs.mkdirSync(copy);
     for (const entry of ['src', 'scripts', 'config', 'prisma']) fs.cpSync(path.join(BACKEND, entry), path.join(copy, entry), { recursive: true });
@@ -435,10 +453,10 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(unknown.status, 'migration fora da lista revisada é recusada').not.toBe(0);
     expect(unknown.output).toMatch(/desconhecida/);
     await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, async (prisma) => {
-      expect((await migrationRows(prisma)).length, 'a recusa não aplicou nada').toBe(8);
+      expect((await migrationRows(prisma)).length, 'a recusa não aplicou nada').toBe(9);
     });
 
-    // Atualização REVISADA da lista (simulada somente na cópia): o repositório real continua com oito migrations.
+    // Atualização REVISADA da lista (simulada somente na cópia): o repositório real continua com nove migrations.
     const listFile = path.join(copy, 'scripts', 'bootstrap', 'expectedMigrations.ts');
     const list = fs.readFileSync(listFile, 'utf8');
     fs.writeFileSync(listFile, list.replace(/\n\];\s*$/, `\n  { name: '${name}', checksum: '${checksum}' },\n];\n`));
@@ -446,9 +464,9 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(applied.status, applied.output).toBe(0);
     await withClient(FINAL.migrator, pw[FINAL.migrator]!, FINAL_DB, async (prisma) => {
       const rows = await migrationRows(prisma);
-      expect(rows).toHaveLength(9);
+      expect(rows).toHaveLength(10);
       expect(rows.find((row) => row.migration_name === name)).toMatchObject({ checksum, applied_steps_count: 1, rolled_back_at: null });
-      expect(rows.filter((row) => row.migration_name !== name), 'as oito originais permanecem idênticas').toEqual(rowsBefore);
+      expect(rows.filter((row) => row.migration_name !== name), 'as nove do baseline permanecem idênticas').toEqual(rowsBefore);
       const again = wrapper(secrets, 'migrate-homolog', 'deploy', FINAL_CONFIRM, copy);
       expect(again.status, again.output).toBe(0);
       expect(again.output).toMatch(/No pending migrations/);
@@ -465,6 +483,6 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     const diverged = wrapper(secrets, 'migrate-homolog', 'status', {}, copy);
     expect(diverged.status, 'checksum divergente no disco é recusado').not.toBe(0);
     expect(diverged.output).toMatch(/checksum divergente/);
-    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'o repositório real continua com as oito originais').toEqual([]);
+    expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'o repositório real continua com as nove do baseline').toEqual([]);
   });
 });

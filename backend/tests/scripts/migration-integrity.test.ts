@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { EXPECTED_MIGRATIONS, PENDING_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
-import { verifyAppliedMigrations, verifyMigrationDirectory } from '../../scripts/bootstrap/migrationIntegrity';
+import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
+import { verifyAppliedMigrations, verifyFinalHomologMigrationHistory, verifyMigrationDirectory } from '../../scripts/bootstrap/migrationIntegrity';
 import { EXPECTED_MIGRATIONS as INTEGRATION_EXPECTED } from '../integration-db/support/preflight';
 
 const real = path.join(process.cwd(), 'prisma', 'migrations');
@@ -21,16 +21,12 @@ function copyMigrations(): string {
 }
 const applied = () => EXPECTED_MIGRATIONS.map(({ name, checksum }) => ({ name, checksum, finished: true, rolledBack: false }));
 
-describe('integridade das oito migrations', () => {
-  it('a lista esperada tem oito entradas, é idêntica à da suíte de integração e coincide com o disco real', () => {
-    expect(EXPECTED_MIGRATIONS).toHaveLength(8);
+describe('integridade das nove migrations', () => {
+  it('a lista esperada tem nove entradas, é idêntica à da suíte de integração e coincide com o disco real', () => {
+    expect(EXPECTED_MIGRATIONS).toHaveLength(9);
     expect(EXPECTED_MIGRATIONS).toEqual([...INTEGRATION_EXPECTED]);
-    expect(PENDING_MIGRATIONS).toHaveLength(1);
-    expect(verifyMigrationDirectory(real, PENDING_MIGRATIONS)).toEqual([]);
+    expect(verifyMigrationDirectory(real)).toEqual([]);
     for (const { name, checksum } of EXPECTED_MIGRATIONS) {
-      expect(createHash('sha256').update(fs.readFileSync(path.join(real, name, 'migration.sql'))).digest('hex')).toBe(checksum);
-    }
-    for (const { name, checksum } of PENDING_MIGRATIONS) {
       expect(createHash('sha256').update(fs.readFileSync(path.join(real, name, 'migration.sql'))).digest('hex')).toBe(checksum);
     }
   });
@@ -53,7 +49,7 @@ describe('integridade das oito migrations', () => {
 
   it('valida o estado aplicado: conjunto exato, concluídas, sem reversão e com o checksum esperado', () => {
     expect(verifyAppliedMigrations(applied())).toEqual([]);
-    expect(verifyAppliedMigrations(applied().slice(0, 7)).join(' ')).toMatch(/7 linhas.*não aplicada/);
+    expect(verifyAppliedMigrations(applied().slice(0, 8)).join(' ')).toMatch(/8 linhas.*não aplicada/);
     expect(verifyAppliedMigrations([...applied(), { name: 'x_desconhecida', checksum: 'a', finished: true, rolledBack: false }]).join(' ')).toMatch(/desconhecida aplicada/);
     const bad = applied(); bad[2] = { ...bad[2]!, checksum: 'f'.repeat(64) };
     expect(verifyAppliedMigrations(bad)).toEqual([`checksum gravado diverge: ${EXPECTED_MIGRATIONS[2]!.name}.`]);
@@ -63,7 +59,15 @@ describe('integridade das oito migrations', () => {
     expect(verifyAppliedMigrations(rolled)[0]).toMatch(/falha ou revertida/);
   });
 
-  it('as guardas das migrations 3 a 8 continuam exigindo os nomes que fixam a identidade de homologação', () => {
+  it('só aceita o banco final depois do replay íntegro das nove migrations', () => {
+    expect(verifyFinalHomologMigrationHistory(applied())).toEqual([]);
+    expect(verifyFinalHomologMigrationHistory(applied().slice(0, 8)).join(' ')).toMatch(/baseline completo de replay/);
+    const wrong = applied(); wrong[8] = { ...wrong[8]!, checksum: '0'.repeat(64) };
+    expect(verifyFinalHomologMigrationHistory(wrong).join(' ')).toMatch(/checksum gravado diverge/);
+    expect(verifyFinalHomologMigrationHistory([...applied(), { name: 'desconhecida', checksum: 'x', finished: true, rolledBack: false }]).join(' ')).toMatch(/desconhecida/);
+  });
+
+  it('as guardas das migrations 3 a 9 continuam exigindo os nomes que fixam a identidade de replay', () => {
     for (const { name } of EXPECTED_MIGRATIONS.filter((_, index) => [2, 4, 5, 6].includes(index))) {
       const sql = fs.readFileSync(path.join(real, name, 'migration.sql'), 'utf8');
       expect(sql, name).toMatch(/cardapio_digital_test/);
