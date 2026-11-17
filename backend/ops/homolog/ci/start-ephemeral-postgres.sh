@@ -14,6 +14,7 @@ PG_PORT="${PG_PORT:-55432}"
 PG_IMAGE="${PG_IMAGE:-postgres:18}"
 ADMIN_USER="rustika_eph_admin"
 CLUSTER_NAME="rustika-homolog-ephemeral-${GITHUB_RUN_ID}"
+PROJECT_ID="rustika-eph-${GITHUB_RUN_ID: -10}"
 WORK="${RUNNER_TEMP}/homolog-ephemeral"
 
 if docker ps -a --format '{{.Names}}' | grep -qx "${PG_CONTAINER}"; then
@@ -76,7 +77,7 @@ docker run -d --name "${PG_CONTAINER}" \
   -v "${WORK}/tls:/tls:ro" -v "${WORK}/pg_hba.conf:/ci/pg_hba.conf:ro" \
   "${PG_IMAGE}" \
   -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key -c hba_file=/ci/pg_hba.conf \
-  -c listen_addresses='*' -c cluster_name="${CLUSTER_NAME}" -c max_connections=60 >/dev/null
+  -c listen_addresses='*' -c cluster_name="${CLUSTER_NAME}" -c neon.project_id="${PROJECT_ID}" -c max_connections=60 >/dev/null
 
 for _ in $(seq 1 60); do
   if docker exec "${PG_CONTAINER}" pg_isready -U "${ADMIN_USER}" -h /var/run/postgresql >/dev/null 2>&1; then break; fi
@@ -98,5 +99,6 @@ PGPASSWORD="${ADMIN_PASSWORD}" psql "host=${HOST_IP} port=${PG_PORT} user=${ADMI
   echo "RUSTIKA_HOMOLOG_EPHEMERAL_CA_FILE=${WORK}/tls/ca.crt"
   echo "RUSTIKA_HOMOLOG_EPHEMERAL_WRONG_CA_FILE=${WORK}/tls/wrong-ca.crt"
   echo "RUSTIKA_HOMOLOG_EPHEMERAL_CLUSTER_NAME=${CLUSTER_NAME}"
+  echo "RUSTIKA_HOMOLOG_EPHEMERAL_PROJECT_ID=${PROJECT_ID}"
 } >> "${GITHUB_ENV}"
 echo "PostgreSQL efemero pronto em ${HOST_IP}:${PG_PORT} (cluster_name=${CLUSTER_NAME}, TLS verificado)."

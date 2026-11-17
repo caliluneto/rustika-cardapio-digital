@@ -11,15 +11,12 @@ const stripComments = (sql: string) => sql.split('\n').filter((line) => !line.tr
 const withoutStrings = (sql: string) => sql.replace(/'[^']*'/g, "''");
 
 describe('scripts SQL de provisionamento da homologação (validação estática, nada é executado)', () => {
-  it('existem exatamente os nove scripts previstos (mais o subdiretório neon/, específico do provedor)', () => {
+  it('existem exatamente os nove scripts públicos e o contrato compartilhado; scripts Neon privados não são requisito', () => {
     const entries = fs.readdirSync(sqlDir, { withFileTypes: true });
     expect(entries.filter((e) => e.isFile()).map((e) => e.name).sort()).toEqual([...HOMOLOG_SQL_FILES].sort());
     expect(HOMOLOG_SQL_FILES).toHaveLength(9);
-    expect(entries.filter((e) => e.isDirectory()).map((e) => e.name)).toEqual(['neon']);
-    expect(fs.readdirSync(path.join(sqlDir, 'neon')).sort()).toEqual([
-      '01-grant-set-true-migrator.sql', '01b-elevate-inherit-for-rename.sql', '02-revoke-set-true-migrator.sql',
-      '03-verify-ownership.sql', 'README.md',
-    ]);
+    expect(entries.filter((e) => e.isDirectory() && e.name !== 'neon').map((e) => e.name)).toEqual(['contracts']);
+    expect(fs.readdirSync(path.join(sqlDir, 'contracts')).sort()).toEqual(['expected-migrations.sql']);
   });
 
   it('todos abortam no primeiro erro e são marcados como não executados', () => {
@@ -112,6 +109,8 @@ describe('proteção da renomeação', () => {
     expect(code).toMatch(/pg_stat_activity WHERE datname = 'cardapio_digital_test' AND pid <> pg_backend_pid\(\)/);
     expect(code).toMatch(/pg_prepared_xacts WHERE database = 'cardapio_digital_test'/);
     expect(code).toMatch(/pg_replication_slots WHERE database = 'cardapio_digital_test'/);
+    expect(code).toMatch(/datallowconn FROM pg_database WHERE datname = 'cardapio_digital_test'/);
+    expect(code).toMatch(/ALTER DATABASE cardapio_digital_homolog ALLOW_CONNECTIONS true/);
     expect(code.indexOf('current_database()')).toBeLessThan(code.indexOf('ALTER DATABASE'));
     expect(code.indexOf('pg_replication_slots')).toBeLessThan(code.indexOf('ALTER DATABASE'));
   });
@@ -121,8 +120,9 @@ describe('proteção da renomeação', () => {
     for (const needle of ['datdba', 'relowner', 'nspowner', 'typowner', 'pg_auth_members', 'pg_db_role_setting', 'pg_policy', 'pg_event_trigger', 'pg_proc', 'has_table_privilege', 'has_column_privilege']) {
       expect(code, needle).toContain(needle);
     }
-    expect(code).toContain('20261114000000_product_insert_identity_columns');
-    expect(code).toContain('6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9');
+    const contract = fs.readFileSync(path.join(sqlDir, 'contracts', 'expected-migrations.sql'), 'utf8');
+    expect(contract).toContain('20261114000000_product_insert_identity_columns');
+    expect(contract).toContain('6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9');
     expect(code).toContain("'public.products', 'id', 'INSERT'");
     expect(code).toContain("'public.products', 'updated_at', 'INSERT'");
   });

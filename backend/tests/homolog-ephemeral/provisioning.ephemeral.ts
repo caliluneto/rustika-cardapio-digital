@@ -47,9 +47,10 @@ const ADMIN_PASSWORD_PG = e.RUSTIKA_HOMOLOG_EPHEMERAL_ADMIN_PASSWORD ?? '';
 const CA_FILE = e.RUSTIKA_HOMOLOG_EPHEMERAL_CA_FILE ?? '';
 const WRONG_CA_FILE = e.RUSTIKA_HOMOLOG_EPHEMERAL_WRONG_CA_FILE ?? '';
 const CLUSTER_NAME = e.RUSTIKA_HOMOLOG_EPHEMERAL_CLUSTER_NAME ?? '';
+const PROJECT_ID = e.RUSTIKA_HOMOLOG_EPHEMERAL_PROJECT_ID ?? '';
 const REQUIRED = e.RUSTIKA_HOMOLOG_EPHEMERAL_REQUIRED === '1';
 const ENABLED = e.RUSTIKA_HOMOLOG_EPHEMERAL_CONFIRM === 'RUN_ON_EPHEMERAL_POSTGRES'
-  && [HOST, ADMIN_USER, ADMIN_PASSWORD_PG, CA_FILE, CLUSTER_NAME].every((value) => value !== '');
+  && [HOST, ADMIN_USER, ADMIN_PASSWORD_PG, CA_FILE, CLUSTER_NAME, PROJECT_ID].every((value) => value !== '');
 
 const BACKEND = process.cwd();
 const SQL = (file: string) => path.join(BACKEND, 'ops', 'homolog', 'sql', file);
@@ -58,11 +59,14 @@ const REPLAY_DB = 'cardapio_digital_test';
 const FINAL_DB = 'cardapio_digital_homolog';
 const LEGACY = { migrator: 'cardapio_migrator', app: 'cardapio_test_app', placeholder: 'cardapio_dev_app' } as const;
 const FINAL = { migrator: 'cardapio_homolog_migrator', app: 'cardapio_homolog_app', bootstrap: 'cardapio_homolog_bootstrap', placeholder: 'cardapio_homolog_placeholder' } as const;
-const ALL_ROLES = ['cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_migrator', 'cardapio_homolog_app', 'cardapio_homolog_placeholder', 'cardapio_homolog_bootstrap', 'rustika_homolog_marker'];
+const SYNTHETIC_CLOUD_ADMIN = 'rustika_eph_cloud_admin';
+const SYNTHETIC_OPERATOR = 'rustika_eph_operator';
+const ALL_ROLES = ['cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_migrator', 'cardapio_homolog_app', 'cardapio_homolog_placeholder', 'cardapio_homolog_bootstrap', 'rustika_homolog_marker', SYNTHETIC_CLOUD_ADMIN, SYNTHETIC_OPERATOR];
 const IDENTITY = { name: 'Admin Efêmero', email: 'admin.efemero@exemplo.invalid' };
 const ADMIN_PASSWORD = `Ef-${randomBytes(12).toString('hex')}-Zq9!`; // gerada em memória; nunca registrada
 const REPLAY_CONFIRM = { CARDAPIO_MIGRATE_HOMOLOG_REPLAY_CONFIRMATION: 'REPLAY_HISTORICAL_MIGRATIONS_RUSTIKA_HOMOLOG' };
 const FINAL_CONFIRM = { CARDAPIO_MIGRATE_HOMOLOG_CONFIRMATION: 'APPLY_RUSTIKA_HOMOLOG_MIGRATIONS' };
+const PRISMA_CLI = path.join(BACKEND, 'node_modules', 'prisma', 'build', 'index.js');
 
 const redact = (text: string) => text.replace(/postgres(ql)?:\/\/[^\s@]*@/g, 'postgresql://***@');
 const sha256 = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
@@ -104,9 +108,27 @@ function writeSecrets(dir: string, clusterId: string, passwords: Record<string, 
   ];
   for (const [profile, user, database] of profiles) {
     const password = profile === 'migrate-homolog-replay' ? passwords[LEGACY.migrator]! : passwords[user]!;
-    const content = `DATABASE_URL="${prismaUrl(user, password, database)}"\nEXPECTED_DATABASE_HOST="${HOST}"\nEXPECTED_CLUSTER_ID="${clusterId}"\n`;
+    const neon = profile === 'migrate-homolog-replay' ? `EXPECTED_PROJECT_ID="${PROJECT_ID}"\n` : '';
+    const content = `DATABASE_URL="${prismaUrl(user, password, database)}"\nEXPECTED_DATABASE_HOST="${HOST}"\nEXPECTED_CLUSTER_ID="${clusterId}"\n${neon}`;
     fs.writeFileSync(path.join(dir, `${profile}.env`), content, { mode: 0o600 });
   }
+}
+function deployMigrationPrefix(count: number, password: string): { status: number | null; output: string } {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `rustika-prefix-${count}-`));
+  const prisma = path.join(root, 'prisma');
+  fs.mkdirSync(path.join(prisma, 'migrations'), { recursive: true });
+  fs.copyFileSync(path.join(BACKEND, 'prisma', 'schema.prisma'), path.join(prisma, 'schema.prisma'));
+  fs.copyFileSync(path.join(BACKEND, 'prisma', 'migrations', 'migration_lock.toml'), path.join(prisma, 'migrations', 'migration_lock.toml'));
+  for (const { name } of EXPECTED_MIGRATIONS.slice(0, count)) {
+    fs.cpSync(path.join(BACKEND, 'prisma', 'migrations', name), path.join(prisma, 'migrations', name), { recursive: true });
+  }
+  const result = spawnSync(process.execPath, [PRISMA_CLI, 'migrate', 'deploy', '--schema', path.join(prisma, 'schema.prisma')], {
+    cwd: root,
+    env: { ...process.env, DATABASE_URL: prismaUrl(LEGACY.migrator, password, REPLAY_DB) },
+    encoding: 'utf8', timeout: 240_000,
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+  return { status: result.status, output: redact(`${result.stdout}\n${result.stderr}`) };
 }
 function wrapper(secretsDir: string, profile: string, subcommand: 'status' | 'deploy', extra: Record<string, string> = {}, cwd = BACKEND): { status: number | null; output: string } {
   const childEnv: NodeJS.ProcessEnv = { ...process.env, CARDAPIO_SECRETS_DIR: secretsDir, ...extra };
@@ -146,7 +168,7 @@ describe('configuração do ensaio efêmero', () => {
   it('no CI (REQUIRED=1) a configuração completa é obrigatória: nada é pulado em silêncio', () => {
     if (REQUIRED) {
       expect(e.RUSTIKA_HOMOLOG_EPHEMERAL_CONFIRM, 'confirmação explícita').toBe('RUN_ON_EPHEMERAL_POSTGRES');
-      for (const [name, value] of Object.entries({ HOST, ADMIN_USER, ADMIN_PASSWORD_PG, CA_FILE, WRONG_CA_FILE, CLUSTER_NAME })) expect(value, `variável ${name}`).not.toBe('');
+      for (const [name, value] of Object.entries({ HOST, ADMIN_USER, ADMIN_PASSWORD_PG, CA_FILE, WRONG_CA_FILE, CLUSTER_NAME, PROJECT_ID })) expect(value, `variável ${name}`).not.toBe('');
     }
     expect(true).toBe(true);
   });
@@ -225,6 +247,50 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     writeSecrets(secrets, clusterId, pw);
   });
 
+  it('1b) PostgreSQL 18 preserva ADMIN-only e a recuperação remove SET/INHERIT temporários', async () => {
+    await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_CLOUD_ADMIN} NOLOGIN`);
+    await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_OPERATOR} NOLOGIN`);
+    await admin.$executeRawUnsafe(
+      `GRANT cardapio_migrator TO ${SYNTHETIC_CLOUD_ADMIN} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE`,
+    );
+    await admin.$executeRawUnsafe(
+      `GRANT cardapio_migrator TO ${SYNTHETIC_OPERATOR} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`,
+    );
+    const rows = async () => admin.$queryRawUnsafe<Array<{
+      member: string; grantor: string; admin: boolean; set: boolean; inherit: boolean;
+    }>>(`SELECT member.rolname AS member, grantor.rolname AS grantor,
+               m.admin_option AS admin, m.set_option AS set, m.inherit_option AS inherit
+          FROM pg_auth_members m
+          JOIN pg_roles member ON member.oid = m.member
+          JOIN pg_roles grantor ON grantor.oid = m.grantor
+         WHERE m.roleid = 'cardapio_migrator'::regrole
+           AND member.rolname IN ('${SYNTHETIC_OPERATOR}', 'cardapio_test_app')
+         ORDER BY grantor.rolname`);
+
+    for (const inherit of [false, true]) {
+      await admin.$executeRawUnsafe(
+        `GRANT cardapio_migrator TO ${SYNTHETIC_OPERATOR} WITH ADMIN FALSE, SET TRUE, INHERIT ${inherit ? 'TRUE' : 'FALSE'}`,
+      );
+      expect(await rows()).toEqual(expect.arrayContaining([
+        expect.objectContaining({ member: SYNTHETIC_OPERATOR, grantor: ADMIN_USER, admin: false, set: true, inherit }),
+        expect.objectContaining({ member: SYNTHETIC_OPERATOR, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false }),
+      ]));
+      await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_OPERATOR} GRANTED BY ${ADMIN_USER}`);
+      expect(await rows()).toEqual([
+        { member: SYNTHETIC_OPERATOR, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false },
+      ]);
+    }
+
+    await admin.$executeRawUnsafe('GRANT cardapio_migrator TO cardapio_test_app WITH SET TRUE, INHERIT FALSE');
+    expect((await rows()).some(({ member, set }) => member === 'cardapio_test_app' && set), 'membership runtime inesperada detectável').toBe(true);
+    await admin.$executeRawUnsafe('REVOKE cardapio_migrator FROM cardapio_test_app');
+    expect((await rows()).some(({ set, inherit }) => set || inherit), 'nenhum SET/INHERIT residual').toBe(false);
+    await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_OPERATOR} GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`);
+    await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_CLOUD_ADMIN}`);
+    await admin.$executeRawUnsafe(`DROP ROLE ${SYNTHETIC_OPERATOR}`);
+    await admin.$executeRawUnsafe(`DROP ROLE ${SYNTHETIC_CLOUD_ADMIN}`);
+  });
+
   it('2) banco de replay vazio; recusa sobrescrever; bootstrap sem login fora da janela', async () => {
     const adminUrl = psqlUrl(ADMIN_USER, ADMIN_PASSWORD_PG, 'postgres');
     expect(psql(adminUrl, '02-create-replay-database.sql').status).toBe(0);
@@ -232,21 +298,43 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect(await canLogin('cardapio_homolog_bootstrap', pw.cardapio_homolog_bootstrap!, REPLAY_DB)).toBe(false);
   });
 
-  it('3) wrapper do replay: recusa sem confirmação e com marca de cluster errada; aplica as nove migrations com a confirmação certa', async () => {
+  it('3) interlock B real: 6/9 e 8/9 bloqueiam, 7/9 avança autorizado e 9/9 não reinvoca Prisma', async () => {
     expect(verifyMigrationDirectory(path.join(BACKEND, 'prisma', 'migrations')), 'nove migrations íntegras no disco').toEqual([]);
     const noConfirm = wrapper(secrets, 'migrate-homolog-replay', 'deploy');
     expect(noConfirm.status).not.toBe(0);
+
+    const prefix8 = deployMigrationPrefix(8, pw.cardapio_migrator!);
+    expect(prefix8.status, prefix8.output).toBe(0);
+    const incident8 = wrapper(secrets, 'migrate-homolog-replay', 'deploy', REPLAY_CONFIRM);
+    expect(incident8.status).not.toBe(0);
+    expect(incident8.output).toMatch(/8\/9.*incidente|estado 8\/9 é incidente/i);
+    await admin.$executeRawUnsafe(`DROP DATABASE ${REPLAY_DB}`);
+    expect(psql(psqlUrl(ADMIN_USER, ADMIN_PASSWORD_PG, 'postgres'), '02-create-replay-database.sql').status).toBe(0);
+
+    const prefix6 = deployMigrationPrefix(6, pw.cardapio_migrator!);
+    expect(prefix6.status, prefix6.output).toBe(0);
+    const blocked6 = wrapper(secrets, 'migrate-homolog-replay', 'deploy', REPLAY_CONFIRM);
+    expect(blocked6.status).not.toBe(0);
+    expect(blocked6.output).toMatch(/estado 6\/9 não é autorizado/i);
+    const prefix7 = deployMigrationPrefix(7, pw.cardapio_migrator!);
+    expect(prefix7.status, prefix7.output).toBe(0);
+
     const wrongDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-secrets-wrong-')); temps.push(wrongDir);
     writeSecrets(wrongDir, '00000000-0000-4000-8000-000000000000', pw);
     const wrong = wrapper(wrongDir, 'migrate-homolog-replay', 'deploy', REPLAY_CONFIRM);
     expect(wrong.status).not.toBe(0);
-    expect(wrong.output).toMatch(/Identidade do servidor/);
+    expect(wrong.output).toMatch(/Preflight remoto|identidade/i);
     await withClient(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB, async (prisma) => {
-      const tables = await prisma.$queryRawUnsafe<Array<{ n: bigint }>>("SELECT count(*) AS n FROM information_schema.tables WHERE table_schema = 'public'");
-      expect(Number(tables[0]!.n), 'as recusas não podem ter escrito nada').toBe(0);
+      expect(await migrationRows(prisma), 'as recusas preservam exatamente 7/9').toHaveLength(7);
     });
     const ok = wrapper(secrets, 'migrate-homolog-replay', 'deploy', REPLAY_CONFIRM);
     expect(ok.status, ok.output).toBe(0);
+    await withClient(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB, async (prisma) => {
+      expect(await migrationRows(prisma), '7/9 autorizado avança para 9/9').toHaveLength(9);
+    });
+    const complete = wrapper(secrets, 'migrate-homolog-replay', 'deploy', REPLAY_CONFIRM);
+    expect(complete.status, complete.output).toBe(0);
+    expect(complete.output).toMatch(/9\/9; Prisma não foi executado/);
     const status = wrapper(secrets, 'migrate-homolog-replay', 'status');
     expect(status.status, status.output).toBe(0);
   });
@@ -281,7 +369,15 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
       await replayAdmin.$executeRawUnsafe('DELETE FROM admins');
       await replayAdmin.$executeRawUnsafe("UPDATE _prisma_migrations SET checksum = repeat('0', 64) WHERE migration_name = $1", EXPECTED_MIGRATIONS[2]!.name);
       expect(verifyAppliedMigrations(asApplied(await migrationRows(replayAdmin))).join(' ')).toMatch(/checksum/i);
+      const badChecksum = wrapper(secrets, 'migrate-homolog-replay', 'status');
+      expect(badChecksum.status).not.toBe(0);
+      expect(badChecksum.output).toMatch(/checksum divergente/i);
       await replayAdmin.$executeRawUnsafe('UPDATE _prisma_migrations SET checksum = $1 WHERE migration_name = $2', EXPECTED_MIGRATIONS[2]!.checksum, EXPECTED_MIGRATIONS[2]!.name);
+      await replayAdmin.$executeRawUnsafe("UPDATE _prisma_migrations SET migration_name = '20269999999999_intrusa' WHERE migration_name = $1", EXPECTED_MIGRATIONS[2]!.name);
+      const unknown = wrapper(secrets, 'migrate-homolog-replay', 'status');
+      expect(unknown.status).not.toBe(0);
+      expect(unknown.output).toMatch(/migration desconhecida/i);
+      await replayAdmin.$executeRawUnsafe("UPDATE _prisma_migrations SET migration_name = $1 WHERE migration_name = '20269999999999_intrusa'", EXPECTED_MIGRATIONS[2]!.name);
       expect(await migrationRows(replayAdmin)).toEqual(rowsBefore); // restaurado exatamente
     } finally { await replayAdmin.$disconnect(); }
     expect(psql(psqlUrl(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB), '03-verify-replay.sql').status).toBe(0);
@@ -295,6 +391,42 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     } finally { await blocker.$disconnect(); }
     expect(psql(psqlUrl(LEGACY.migrator, pw.cardapio_migrator!, 'postgres'), '04-finalize-rename.sql').status, 'a role legada não pode executar o rename').not.toBe(0);
     expect((await admin.$queryRawUnsafe<Array<{ n: bigint }>>(`SELECT count(*) AS n FROM pg_database WHERE datname = '${REPLAY_DB}'`))[0]!.n, 'nada mudou nas recusas').toBe(1n);
+
+    // Falha após o freeze: duas sessões preexistentes impedem a transição; o estado congelado
+    // permanece detectável e só é revertido por ação administrativa explícita neste ensaio.
+    const expectedVerifier = client(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB);
+    const unexpectedConnection = client(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB);
+    await expectedVerifier.$queryRawUnsafe('SELECT 1');
+    await unexpectedConnection.$queryRawUnsafe('SELECT 1');
+    await admin.$executeRawUnsafe(`ALTER DATABASE ${REPLAY_DB} ALLOW_CONNECTIONS false`);
+    expect(await canLogin(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB), 'freeze impede novas conexões').toBe(false);
+    const blockedAfterFreeze = psql(psqlUrl(ADMIN_USER, ADMIN_PASSWORD_PG, 'postgres'), '04-finalize-rename.sql');
+    expect(blockedAfterFreeze.status, 'conexão inesperada bloqueia transição').not.toBe(0);
+    const blockedState = await admin.$queryRawUnsafe<Array<{ allowed: boolean; connections: bigint }>>(
+      `SELECT datallowconn AS allowed,
+              (SELECT count(*) FROM pg_stat_activity WHERE datname = $1) AS connections
+         FROM pg_database WHERE datname = $1`, REPLAY_DB);
+    expect(blockedState[0]).toEqual({ allowed: false, connections: 2n });
+    await expectedVerifier.$disconnect();
+    await unexpectedConnection.$disconnect();
+    await admin.$executeRawUnsafe(`ALTER DATABASE ${REPLAY_DB} ALLOW_CONNECTIONS true`);
+    expect(await canLogin(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB), 'recuperação autorizada reabre o transitório').toBe(true);
+
+    // Interlock TOCTOU: conecta o verificador antes do freeze, confirma 9/9 depois de
+    // datallowconn=false, encerra a última sessão e só então permite o SQL 04.
+    const gateVerifier = client(LEGACY.migrator, pw.cardapio_migrator!, REPLAY_DB);
+    await gateVerifier.$queryRawUnsafe('SELECT 1');
+    await admin.$executeRawUnsafe(`ALTER DATABASE ${REPLAY_DB} ALLOW_CONNECTIONS false`);
+    try {
+      expect(verifyAppliedMigrations(asApplied(await migrationRows(gateVerifier))), 'gate 9/9 após freeze').toEqual([]);
+    } finally {
+      await gateVerifier.$disconnect();
+    }
+    const frozen = await admin.$queryRawUnsafe<Array<{ allowed: boolean; connections: bigint }>>(
+      `SELECT datallowconn AS allowed,
+              (SELECT count(*) FROM pg_stat_activity WHERE datname = $1) AS connections
+         FROM pg_database WHERE datname = $1`, REPLAY_DB);
+    expect(frozen[0]).toEqual({ allowed: false, connections: 0n });
     const done = psql(psqlUrl(ADMIN_USER, ADMIN_PASSWORD_PG, 'postgres'), '04-finalize-rename.sql');
     expect(done.status, done.output).toBe(0);
     const names = await admin.$queryRawUnsafe<Array<{ datname: string }>>("SELECT datname FROM pg_database WHERE datname LIKE 'cardapio\\_%'");

@@ -29,7 +29,7 @@ import {
 import { EXPECTED_MIGRATIONS } from './bootstrap/expectedMigrations';
 import { PrismaClient } from '@prisma/client';
 import { evaluateServerIdentity, readServerFacts } from '../src/config/serverIdentity';
-import { evaluateNeonServerIdentity, readNeonServerFacts } from '../src/config/neonServerIdentity';
+import { runNeonReplayPreflight } from './homolog/neonReplayPreflight';
 
 function fail(message: string): number {
   console.error(`[prisma-run] ${redactSecrets(message)}`);
@@ -206,20 +206,27 @@ async function main(): Promise<number> {
     }
 
     // Identidade do SERVIDOR (somente leitura): hostname não basta. Cluster marcado, TLS efetivo, sem bancos Dev/Shadow.
-    // O replay da homologação usa evaluateNeonServerIdentity; os perfis dedicados usam evaluateServerIdentity.
+    // O replay Neon valida identidade + histórico na mesma sessão; os perfis dedicados usam evaluateServerIdentity.
     if (database.profile === 'migrate-homolog-replay' && database.projectId) {
       try {
-        const facts = await readNeonServerFacts(database.databaseUrl, database.host ?? '');
-        const identityProblems = evaluateNeonServerIdentity(facts, {
-          phase: 'replay',
+        const preflight = await runNeonReplayPreflight({
+          connectionString: database.databaseUrl,
+          host: database.host ?? '',
+          intent: parsed.value.migrationSubcommand,
           expectedProjectId: database.projectId,
           expectedClusterId: database.clusterId ?? '',
           expectedUser: database.user,
           expectedDatabase: database.database,
         });
-        if (identityProblems.length > 0) return fail(`Identidade do servidor não confere: ${identityProblems.join(' ')}`);
+        if (!preflight.ok) {
+          return fail(`Preflight remoto do replay recusado: ${preflight.problems.join(' ')}`);
+        }
+        if (preflight.action === 'already-complete') {
+          console.log('[prisma-run] Replay já está íntegro em 9/9; Prisma não foi executado.');
+          return 0;
+        }
       } catch {
-        return fail('Não foi possível verificar a identidade do servidor de homologação; nada foi executado.');
+        return fail('Não foi possível comprovar identidade, TLS direto e histórico remoto em transação somente leitura; nada foi executado.');
       }
     } else {
       const client = new PrismaClient({ datasources: { db: { url: database.databaseUrl } } });

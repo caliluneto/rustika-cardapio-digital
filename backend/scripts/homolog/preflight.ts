@@ -9,6 +9,7 @@ export const HOMOLOG_SQL_FILES = [
   '01-cluster-roles.sql', '02-create-replay-database.sql', '03-verify-replay.sql', '04-finalize-rename.sql', '05-post-migration-grants.sql',
   '06-bootstrap-window-open.sql', '07-bootstrap-window-close.sql', '08-bootstrap-revoke.sql', '09-verify-acl.sql',
 ] as const;
+export const HOMOLOG_SQL_SUPPORT_FILES = ['contracts/expected-migrations.sql'] as const;
 export const MIN_HOMOLOG_PASSWORD_LENGTH = 24;
 
 export interface PreflightFinding { level: 'FAIL' | 'OK'; code: string; message: string }
@@ -61,7 +62,8 @@ export function runHomologPreflight(input: PreflightInputs): PreflightFinding[] 
   if (migrationProblems.length > 0) add('FAIL', 'MIGRATIONS', migrationProblems.join(' '));
   else add('OK', 'MIGRATIONS', 'As nove migrations do baseline existem e os checksums coincidem.');
 
-  const missing = HOMOLOG_SQL_FILES.filter((file) => !fs.existsSync(path.join(input.sqlDir, file)));
+  const missing = [...HOMOLOG_SQL_FILES, ...HOMOLOG_SQL_SUPPORT_FILES]
+    .filter((file) => !fs.existsSync(path.join(input.sqlDir, file)));
   if (missing.length > 0) add('FAIL', 'SQL_FILES', `Scripts SQL ausentes: ${missing.join(', ')}.`);
   else add('OK', 'SQL_FILES', 'Scripts de provisionamento presentes.');
   return findings;

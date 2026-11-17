@@ -11,8 +11,21 @@ import { fileURLToPath } from 'node:url';
 import { classifyServerSideSsl, decideProbeConnection, evaluateIdentity, inspectExternalTls, WRONG_HOST } from './neon-probe-checks.mjs';
 
 const EXPECT = { database: 'neondb', user: 'neondb_owner', versionPrefix: '18.' };
-const opensslPath = process.env.OPENSSL_BIN || 'C:\\Program Files\\Git\\usr\\bin\\openssl.exe';
-const openssl = (args, cwd) => { const r = spawnSync(opensslPath, args, { cwd, encoding: 'utf8' }); if (r.error && r.error.code === 'ENOENT') return; assert.equal(r.status, 0, r.stderr); };
+const configuredOpenSsl = process.env.OPENSSL_BIN?.trim();
+const opensslPath = configuredOpenSsl || 'openssl';
+const opensslVersion = spawnSync(opensslPath, ['version'], { encoding: 'utf8', shell: false, windowsHide: true });
+if (opensslVersion.error) {
+  const source = configuredOpenSsl ? 'OPENSSL_BIN' : 'PATH';
+  throw new Error(`OpenSSL indisponivel via ${source}: ${opensslVersion.error.message}`);
+}
+if (opensslVersion.status !== 0 || !/\b(?:OpenSSL|LibreSSL)\b/i.test(`${opensslVersion.stdout}\n${opensslVersion.stderr}`)) {
+  throw new Error(`Executavel configurado como OpenSSL e invalido (status ${opensslVersion.status ?? 'desconhecido'}).`);
+}
+const openssl = (args, cwd) => {
+  const r = spawnSync(opensslPath, args, { cwd, encoding: 'utf8', shell: false, windowsHide: true });
+  if (r.error) throw new Error(`Falha ao executar OpenSSL: ${r.error.message}`);
+  assert.equal(r.status, 0, r.stderr);
+};
 let dir;
 const servers = [];
 
