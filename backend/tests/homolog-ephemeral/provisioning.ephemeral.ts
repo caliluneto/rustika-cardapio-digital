@@ -60,7 +60,8 @@ const FINAL_DB = 'cardapio_digital_homolog';
 const LEGACY = { migrator: 'cardapio_migrator', app: 'cardapio_test_app', placeholder: 'cardapio_dev_app' } as const;
 const FINAL = { migrator: 'cardapio_homolog_migrator', app: 'cardapio_homolog_app', bootstrap: 'cardapio_homolog_bootstrap', placeholder: 'cardapio_homolog_placeholder' } as const;
 const SYNTHETIC_CLOUD_ADMIN = 'rustika_eph_cloud_admin';
-const ALL_ROLES = ['cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_migrator', 'cardapio_homolog_app', 'cardapio_homolog_placeholder', 'cardapio_homolog_bootstrap', 'rustika_homolog_marker', SYNTHETIC_CLOUD_ADMIN];
+const SYNTHETIC_OPERATOR = 'rustika_eph_operator';
+const ALL_ROLES = ['cardapio_migrator', 'cardapio_test_app', 'cardapio_dev_app', 'cardapio_homolog_migrator', 'cardapio_homolog_app', 'cardapio_homolog_placeholder', 'cardapio_homolog_bootstrap', 'rustika_homolog_marker', SYNTHETIC_CLOUD_ADMIN, SYNTHETIC_OPERATOR];
 const IDENTITY = { name: 'Admin Efêmero', email: 'admin.efemero@exemplo.invalid' };
 const ADMIN_PASSWORD = `Ef-${randomBytes(12).toString('hex')}-Zq9!`; // gerada em memória; nunca registrada
 const REPLAY_CONFIRM = { CARDAPIO_MIGRATE_HOMOLOG_REPLAY_CONFIRMATION: 'REPLAY_HISTORICAL_MIGRATIONS_RUSTIKA_HOMOLOG' };
@@ -248,11 +249,12 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
 
   it('1b) PostgreSQL 18 preserva ADMIN-only e a recuperação remove SET/INHERIT temporários', async () => {
     await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_CLOUD_ADMIN} NOLOGIN`);
+    await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_OPERATOR} NOLOGIN`);
     await admin.$executeRawUnsafe(
       `GRANT cardapio_migrator TO ${SYNTHETIC_CLOUD_ADMIN} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE`,
     );
     await admin.$executeRawUnsafe(
-      `GRANT cardapio_migrator TO ${ADMIN_USER} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`,
+      `GRANT cardapio_migrator TO ${SYNTHETIC_OPERATOR} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`,
     );
     const rows = async () => admin.$queryRawUnsafe<Array<{
       member: string; grantor: string; admin: boolean; set: boolean; inherit: boolean;
@@ -262,20 +264,20 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
           JOIN pg_roles member ON member.oid = m.member
           JOIN pg_roles grantor ON grantor.oid = m.grantor
          WHERE m.roleid = 'cardapio_migrator'::regrole
-           AND member.rolname IN ('${ADMIN_USER}', 'cardapio_test_app')
+           AND member.rolname IN ('${SYNTHETIC_OPERATOR}', 'cardapio_test_app')
          ORDER BY grantor.rolname`);
 
     for (const inherit of [false, true]) {
       await admin.$executeRawUnsafe(
-        `GRANT cardapio_migrator TO ${ADMIN_USER} WITH ADMIN FALSE, SET TRUE, INHERIT ${inherit ? 'TRUE' : 'FALSE'}`,
+        `GRANT cardapio_migrator TO ${SYNTHETIC_OPERATOR} WITH ADMIN FALSE, SET TRUE, INHERIT ${inherit ? 'TRUE' : 'FALSE'}`,
       );
       expect(await rows()).toEqual(expect.arrayContaining([
-        expect.objectContaining({ member: ADMIN_USER, grantor: ADMIN_USER, admin: false, set: true, inherit }),
-        expect.objectContaining({ member: ADMIN_USER, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false }),
+        expect.objectContaining({ member: SYNTHETIC_OPERATOR, grantor: ADMIN_USER, admin: false, set: true, inherit }),
+        expect.objectContaining({ member: SYNTHETIC_OPERATOR, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false }),
       ]));
-      await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${ADMIN_USER} GRANTED BY ${ADMIN_USER}`);
+      await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_OPERATOR} GRANTED BY ${ADMIN_USER}`);
       expect(await rows()).toEqual([
-        { member: ADMIN_USER, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false },
+        { member: SYNTHETIC_OPERATOR, grantor: SYNTHETIC_CLOUD_ADMIN, admin: true, set: false, inherit: false },
       ]);
     }
 
@@ -283,6 +285,10 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
     expect((await rows()).some(({ member, set }) => member === 'cardapio_test_app' && set), 'membership runtime inesperada detectável').toBe(true);
     await admin.$executeRawUnsafe('REVOKE cardapio_migrator FROM cardapio_test_app');
     expect((await rows()).some(({ set, inherit }) => set || inherit), 'nenhum SET/INHERIT residual').toBe(false);
+    await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_OPERATOR} GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`);
+    await admin.$executeRawUnsafe(`REVOKE cardapio_migrator FROM ${SYNTHETIC_CLOUD_ADMIN}`);
+    await admin.$executeRawUnsafe(`DROP ROLE ${SYNTHETIC_OPERATOR}`);
+    await admin.$executeRawUnsafe(`DROP ROLE ${SYNTHETIC_CLOUD_ADMIN}`);
   });
 
   it('2) banco de replay vazio; recusa sobrescrever; bootstrap sem login fora da janela', async () => {
