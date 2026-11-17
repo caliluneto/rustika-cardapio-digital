@@ -15,6 +15,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_replication_slots WHERE database = 'cardapio_digital_test') THEN RAISE EXCEPTION 'ABORT: ha slots de replicacao no banco de replay'; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rustika_homolog_marker') THEN RAISE EXCEPTION 'ABORT: cluster sem marca de homologacao'; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'cardapio_digital_test') THEN RAISE EXCEPTION 'ABORT: banco de replay inexistente'; END IF;
+  -- Interlock TOCTOU: o orquestrador deve ter congelado e COMMITADO datallowconn=false,
+  -- reexecutado o gate 03 pela sessao verificadora preexistente e encerrado essa sessao.
+  -- O freeze e o rename sao duas transacoes administrativas distintas; nao ha alegacao de atomicidade entre bancos.
+  IF (SELECT datallowconn FROM pg_database WHERE datname = 'cardapio_digital_test') THEN
+    RAISE EXCEPTION 'ABORT: banco de replay ainda aceita conexoes; execute o freeze operacional e revalide o gate 03';
+  END IF;
   IF EXISTS (SELECT 1 FROM pg_database WHERE datname IN ('cardapio_digital_homolog', 'cardapio_digital_dev', 'cardapio_digital_shadow')) THEN
     RAISE EXCEPTION 'ABORT: ja existe banco definitivo, dev ou shadow';
   END IF;
@@ -30,6 +36,7 @@ ALTER DATABASE cardapio_digital_test RENAME TO cardapio_digital_homolog;
 ALTER ROLE cardapio_test_app RENAME TO cardapio_homolog_app;
 ALTER ROLE cardapio_migrator RENAME TO cardapio_homolog_migrator;
 ALTER ROLE cardapio_dev_app RENAME TO cardapio_homolog_placeholder;
+ALTER DATABASE cardapio_digital_homolog ALLOW_CONNECTIONS true;
 COMMIT;
 \echo 'Renomeacao concluida. Redefina as senhas: \password cardapio_homolog_migrator ; \password cardapio_homolog_app'
 \echo 'Depois valide com 09-verify-acl.sql e passe a usar os perfis app-homolog / migrate-homolog / bootstrap-homolog.'

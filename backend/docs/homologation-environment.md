@@ -79,17 +79,17 @@ Pré-condições: cluster PostgreSQL ≥ 17 **dedicado e vazio**, TLS, administr
 4. `npm run homolog:replay:status`, depois `CARDAPIO_MIGRATE_HOMOLOG_REPLAY_CONFIRMATION=REPLAY_HISTORICAL_MIGRATIONS_RUSTIKA_HOMOLOG npm run homolog:replay:deploy`.
 5. `03-verify-replay.sql` (somente leitura, como `cardapio_migrator`): exige exatamente as nove migrations, checksums aprovados e grants de CRUD, inclusive INSERT em `products.id` e `products.updated_at`.
 6. Opcional recomendado: `npm run schema:fingerprint -- --profile … --out replay.json` (snapshot A).
-7. Encerrar conexões ao banco de replay e executar `04-finalize-rename.sql` (admin, banco `postgres`): transacional; recusa se o banco definitivo/dev/shadow existir, se as roles definitivas existirem ou se houver conexões ativas. Redefina as senhas (`\password cardapio_homolog_migrator`, `cardapio_homolog_app`).
+7. Pelo interlock operacional, manter a sessão verificadora aberta, congelar o banco transitório com `ALLOW_CONNECTIONS false` em uma transação administrativa separada, reexecutar o gate equivalente ao `03` nessa sessão preexistente, encerrá-la e confirmar zero conexões. Só então executar `04-finalize-rename.sql` (admin, banco `postgres`): ele recusa `datallowconn=true`, destino/dev/shadow, roles finais e qualquer conexão; ao concluir, reativa conexões no nome final. Redefina as senhas (`\password cardapio_homolog_migrator`, `cardapio_homolog_app`).
 8. `npm run homolog:migrate:status` (perfil final; exige a identidade FINAL e recusa histórico que não tenha chegado à 9ª migration antes do rename) e snapshot B; `npm run schema:compare -- replay.json final.json` deve retornar 0 (equivalência).
 9. `05-post-migration-grants.sql` (migrator), `06-bootstrap-window-open.sql` (admin), bootstrap (seção 7), `07-bootstrap-window-close.sql`, `08-bootstrap-revoke.sql` (migrator), `09-verify-acl.sql` (somente leitura).
 10. `GET /api/ready` = 200; login do administrador por HTTPS.
 
-**Checklist obrigatório antes do rename:** identidade transitória aprovada; diretório sem migration desconhecida; nove checksums do disco aprovados; `_prisma_migrations` com exatamente nove linhas concluídas e não revertidas; `03-verify-replay.sql` aprovado; grants de `products` limitados por coluna, com `id`/`updated_at` em INSERT e sem INSERT/UPDATE de tabela; nenhum dado real; zero conexão ativa. Qualquer divergência interrompe o procedimento.
+**Checklist obrigatório antes do rename:** identidade Neon/projeto/cluster transitória aprovada; diretório sem migration desconhecida; nove checksums do disco aprovados; `_prisma_migrations` com exatamente nove linhas concluídas e não revertidas; `03-verify-replay.sql` aprovado; grants de `products` limitados por coluna, com `id`/`updated_at` em INSERT e sem INSERT/UPDATE de tabela; nenhum dado real; banco congelado (`datallowconn=false`) e zero conexão ativa. Qualquer divergência interrompe o procedimento.
 
 **Checklist após o rename:** identidade final aprovada; nenhuma role/banco legado; histórico ainda idêntico; snapshots A×B equivalentes; `09-verify-acl.sql` aprovado; runtime sem atributos administrativos, sem acesso a `_prisma_migrations` e sem INSERT em `admins`. Não iniciar bootstrap ou aplicação se qualquer item falhar.
 
 **Falhas e recuperação.** Scripts 01–03/05–09 são transacionais ou abortam antes de alterar; nenhum contém `DROP`. Falha no replay: o Prisma registra a migration como falha — **não use `migrate resolve`**;
-o cluster é dedicado e descartável: o administrador cria outro cluster/banco vazio (remoção manual, autorizada, fora destes scripts). Falha no rename: a transação reverte; corrigir a precondição (ex.: conexões) e repetir.
+o cluster é dedicado e descartável: o administrador cria outro cluster/banco vazio (remoção manual, autorizada, fora destes scripts). O freeze e o rename não são atômicos entre conexões/bancos: falha depois do freeze mantém o transitório sem novas conexões para investigação; não reative nem compense automaticamente. Falha dentro da transação do rename reverte os renames, mas não o freeze já confirmado.
 Rename concluído mas verificação falhou: o ambiente ainda não tem dados; descartar e recriar. Falha no bootstrap: nada é confirmado (Serializable); feche a janela (`07`) e reexecute.
 
 ## 7. Bootstrap do primeiro administrador 🔒
@@ -117,8 +117,12 @@ role sem atributos elevados e sem UPDATE/DELETE/TRUNCATE em `admins`, PostgreSQL
 Preservados: login, hash scrypt, cookie `rustika_admin`, CSRF/Origin, rate limit. Sessões e limitadores em memória: **uma única instância** em homologação.
 `GET /api/health` não consulta o banco; `GET /api/ready` faz `SELECT 1` + sonda de schema (timeout 2 s, cache 5 s, 200/503 genérico). Em `NODE_ENV=production` o `server.ts` valida `CORS_ORIGIN` e a **identidade do servidor** antes de `listen`.
 
-## 11. Backup, restauração e rollback 🔒
-`pg_dump -Fc` antes de migration/bootstrap, destino privado e cifrado, SHA-256 registrado; restauração só em banco novo e descartável (`docs/restore-backup.md`). Rollback de código = redeploy anterior (migrations aditivas, sem `down`).
+## 11. Ponto de recuperação obrigatório para E2 🔒
+As migrations reais continuam **bloqueadas** até existir um ponto de recuperação criado e restaurado com sucesso. Opções aceitáveis, em ordem de preferência: (1) branch/snapshot Neon imediatamente anterior à migration, retido e identificado fora do repositório; ou (2) `pg_dump -Fc` privado, cifrado em repouso, com SHA-256 e manifesto de versões. Não criar branch, snapshot ou dump real sem autorização específica.
+
+O gate de E2 exige: identidade de projeto/branch/endpoint confirmada; horário e estado 7/9 registrados; ausência de dados comerciais/pessoais no material de teste; hash conferido após transferência; credenciais fora do artefato; e restauração em branch/banco **descartável**, nunca sobre a origem. A restauração deve comprovar abertura do dump, contagem/estrutura, checksums 7/9, owners/ACLs e uma comparação por `schema:fingerprint`; só então o ponto é “validado”. Criar snapshot sem ensaio de restore é apenas “criado”, não “comprovado”.
+
+Critérios de parada: falha de hash, restore, identidade, histórico, ACL, espaço/retenção ou RPO/RTO não aceitos; presença de dados inesperados; ou impossibilidade de apagar com segurança o destino descartável. Riscos restantes: snapshot logicamente consistente mas no projeto errado, retenção insuficiente, dump sem objetos globais/roles e credencial indisponível no incidente. Rollback de código continua sendo redeploy anterior; migrations não possuem `down`. Ver também `docs/restore-backup.md`.
 
 ## 12. Testes
 * Sem banco (CI padrão): perfis e identidade, política Prisma (replay/final), integridade e checksums das nove migrations, **segurança da renomeação** (análise estática das migrations), SQL estático (9 scripts), identidade do servidor, fingerprint/diff/aliases de roles, lint de migrations futuras, pré-voo, bootstrap, `/api/ready`.

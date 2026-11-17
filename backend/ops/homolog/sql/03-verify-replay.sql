@@ -2,26 +2,23 @@
 -- Confirma que as nove migrations do baseline foram aplicadas pelo Prisma (nao marcadas) e que o estado de ACL e o esperado, ANTES de renomear.
 \set ON_ERROR_STOP on
 BEGIN READ ONLY;
+\ir contracts/expected-migrations.sql
 DO $verify$
 BEGIN
   IF current_database() <> 'cardapio_digital_test' OR current_user <> 'cardapio_migrator' THEN RAISE EXCEPTION 'ABORT: banco ou role inesperados'; END IF;
   IF (SELECT count(*) FROM public._prisma_migrations) <> 9 OR EXISTS (
-    WITH expected(migration_name, checksum) AS (VALUES
-      ('20261023000000_initial_schema', '1a9cd08b9d49fa9f70eabcceaa4a696f5aee07555f6a88562ec789340f0d3983'),
-      ('20261027000000_rf004_comandas_catalogo_pedidos', '05f583e854a87b77612c2f7d10a0a178ef45ea099d3237808b5bf0bd7c698122'),
-      ('20261031000000_rf004_fix_permissions', '960766a8fb1576e6094622f112e1a3a9cd7455f56907a3405a8fbb183959e10b'),
-      ('20261102000000_update_products_source_identity_constraint', '885b8de5dcc0cf5e7618d574ba5c013ae8b60c9b983260706c5819422564454f'),
-      ('20261104000000_runtime_least_privilege', '24471ed369980bc861d885dc68d9edd3747de73457be620d166eae8b1ec47d6e'),
-      ('20261105000000_order_status_update_privilege', '3d6a7a6d0ce3f595501dc6343c19858beb2b9fecd1ebe1fd1fbecf5603031d84'),
-      ('20261106000000_product_availability_update_privilege', '3665ed812c4033527d17c6de3a7c66a623d659d676c719fc1b6f6477f7e69308'),
-      ('20261110000000_rf006_product_crud_privilege', 'b3feb0dfca618498219161ec91f11b4edff9700de5386e452edf67eadf41561e'),
-      ('20261114000000_product_insert_identity_columns', '6a533537645a8b2f3c14af2c863697cbe9bfdec034319971b50020fe134318c9')
+    WITH expected AS (
+      SELECT * FROM jsonb_to_recordset(current_setting('rustika.expected_migrations')::jsonb)
+        AS x(ord integer, migration_name text, checksum text)
+    ), actual AS (
+      SELECT m.*, row_number() OVER (ORDER BY started_at, migration_name)::integer AS ord
+        FROM public._prisma_migrations m
     )
     SELECT 1
-      FROM expected e
-      FULL OUTER JOIN public._prisma_migrations m USING (migration_name)
-     WHERE e.migration_name IS NULL OR m.migration_name IS NULL OR m.checksum <> e.checksum
-        OR m.finished_at IS NULL OR m.rolled_back_at IS NOT NULL
+      FROM expected e FULL OUTER JOIN actual m USING (migration_name)
+     WHERE e.migration_name IS NULL OR m.migration_name IS NULL OR m.checksum <> e.checksum OR m.ord <> e.ord
+        OR m.started_at IS NULL OR m.finished_at IS NULL OR m.finished_at < m.started_at
+        OR m.rolled_back_at IS NOT NULL OR m.applied_steps_count <> 1 OR m.logs IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'REPLAY: o historico deve conter exatamente as nove migrations, concluidas, sem reversao e com checksums aprovados';
   END IF;
@@ -37,6 +34,17 @@ BEGIN
      OR has_table_privilege('cardapio_test_app', 'public.products', 'UPDATE')
      OR has_table_privilege('cardapio_test_app', 'public._prisma_migrations', 'SELECT') THEN
     RAISE EXCEPTION 'REPLAY: ACL do runtime diferente da esperada';
+  END IF;
+  IF has_schema_privilege('cardapio_test_app', 'public', 'CREATE')
+     OR has_any_column_privilege('cardapio_test_app', 'public.products', 'INSERT WITH GRANT OPTION')
+     OR has_any_column_privilege('cardapio_test_app', 'public.products', 'UPDATE WITH GRANT OPTION')
+     OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = 'public.products'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+                  AND has_column_privilege('cardapio_test_app', a.attrelid, a.attnum, 'INSERT')
+                  AND a.attname NOT IN ('public_key','source_code','source_name','source_group','name','description','ingredients','price','image_url','image_alt','category_id','is_active','availability_state','id','updated_at'))
+     OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = 'public.products'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+                  AND has_column_privilege('cardapio_test_app', a.attrelid, a.attnum, 'UPDATE')
+                  AND a.attname NOT IN ('name','description','ingredients','price','image_url','image_alt','availability_state','updated_at')) THEN
+    RAISE EXCEPTION 'REPLAY: ACL de colunas contem privilegio excessivo ou GRANT OPTION';
   END IF;
   IF (SELECT count(*) FROM public.admins) <> 0 THEN RAISE EXCEPTION 'REPLAY: o banco deveria estar vazio'; END IF;
   -- Ownership e ausencia de objetos que embutam nomes de roles/banco (a renomeacao NAO reescreve SQL armazenado).
