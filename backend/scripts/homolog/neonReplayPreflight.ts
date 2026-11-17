@@ -88,17 +88,27 @@ export interface NeonReplayPreflightOptions extends NeonIdentityExpectation {
   intent: ReplayPreflightIntent;
 }
 
+export function prepareReplayPgConnection(connectionString: string): { connectionString: string; ca?: string } {
+  const url = new URL(connectionString);
+  const caFile = url.searchParams.get('sslcert');
+  const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined;
+  // `sslcert` é o arquivo de CA no contrato Prisma deste projeto, mas o driver `pg`
+  // o interpreta como certificado de cliente. Removemos somente os parâmetros TLS
+  // da URL e os reaplicamos abaixo como configuração TLS explícita e estrita.
+  for (const key of ['sslmode', 'sslaccept', 'sslcert']) url.searchParams.delete(key);
+  return { connectionString: url.toString(), ...(ca ? { ca } : {}) };
+}
+
 /** Identidade e histórico são lidos na mesma sessão, dentro de uma transação somente leitura. */
 export async function runNeonReplayPreflight(
   options: NeonReplayPreflightOptions,
 ): Promise<ReplayHistoryDecision> {
-  const caFile = new URL(options.connectionString).searchParams.get('sslcert');
-  const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined;
+  const prepared = prepareReplayPgConnection(options.connectionString);
   const client = new Client({
-    connectionString: options.connectionString,
+    connectionString: prepared.connectionString,
     connectionTimeoutMillis: 15_000,
     statement_timeout: 15_000,
-    ssl: { rejectUnauthorized: true, servername: options.host, minVersion: 'TLSv1.2', ...(ca ? { ca } : {}) },
+    ssl: { rejectUnauthorized: true, servername: options.host, minVersion: 'TLSv1.2', ...(prepared.ca ? { ca: prepared.ca } : {}) },
   }) as InspectableClient;
   await client.connect();
   try {

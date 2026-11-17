@@ -1,7 +1,11 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXPECTED_MIGRATIONS } from '../../scripts/bootstrap/expectedMigrations';
 import {
   evaluateNeonReplayHistory,
+  prepareReplayPgConnection,
   type ReplayMigrationRow,
 } from '../../scripts/homolog/neonReplayPreflight';
 
@@ -18,6 +22,24 @@ const rows = (count: number): ReplayMigrationRow[] => EXPECTED_MIGRATIONS.slice(
 );
 
 describe('preflight remoto do replay Neon', () => {
+  it('converte o sslcert Prisma em CA explícita sem deixar o pg reinterpretar os parâmetros TLS', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rustika-replay-ca-'));
+    try {
+      const cert = path.join(dir, 'ca.crt');
+      fs.writeFileSync(cert, 'CA SINTÉTICA');
+      const url = new URL('postgresql://user:pass@db.example.invalid/database');
+      url.search = `schema=public&sslmode=require&sslaccept=strict&sslcert=${encodeURIComponent(cert)}&channel_binding=require`;
+      const prepared = prepareReplayPgConnection(url.toString());
+      const parsed = new URL(prepared.connectionString);
+      expect(prepared.ca).toBe('CA SINTÉTICA');
+      expect(parsed.searchParams.get('schema')).toBe('public');
+      expect(parsed.searchParams.get('channel_binding')).toBe('require');
+      for (const key of ['sslmode', 'sslaccept', 'sslcert']) expect(parsed.searchParams.has(key)).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('autoriza somente 7/9 íntegro para deploy e não invoca Prisma em 9/9', () => {
     expect(evaluateNeonReplayHistory(rows(7), 'deploy')).toEqual({
       ok: true, action: 'invoke-prisma', appliedCount: 7,

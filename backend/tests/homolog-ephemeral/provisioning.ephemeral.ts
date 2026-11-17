@@ -247,7 +247,10 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
   });
 
   it('1b) PostgreSQL 18 preserva ADMIN-only e a recuperação remove SET/INHERIT temporários', async () => {
-    await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_CLOUD_ADMIN} NOLOGIN SUPERUSER`);
+    await admin.$executeRawUnsafe(`CREATE ROLE ${SYNTHETIC_CLOUD_ADMIN} NOLOGIN`);
+    await admin.$executeRawUnsafe(
+      `GRANT cardapio_migrator TO ${SYNTHETIC_CLOUD_ADMIN} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE`,
+    );
     await admin.$executeRawUnsafe(
       `GRANT cardapio_migrator TO ${ADMIN_USER} WITH ADMIN TRUE, SET FALSE, INHERIT FALSE GRANTED BY ${SYNTHETIC_CLOUD_ADMIN}`,
     );
@@ -259,6 +262,7 @@ describe.skipIf(!ENABLED)('homologação cardapio_digital_homolog em PostgreSQL 
           JOIN pg_roles member ON member.oid = m.member
           JOIN pg_roles grantor ON grantor.oid = m.grantor
          WHERE m.roleid = 'cardapio_migrator'::regrole
+           AND member.rolname IN ('${ADMIN_USER}', 'cardapio_test_app')
          ORDER BY grantor.rolname`);
 
     for (const inherit of [false, true]) {
