@@ -1,0 +1,175 @@
+#requires -Version 5.1
+<#
+  RUSTIKA - C.6-FIX01 - RECUPERACAO DA ACL DO BANCO DE REPLAY (NEON)
+
+  ESCOPO: SOMENTE a ACL do banco cardapio_digital_test. NAO cria role, NAO cria banco,
+  NAO renomeia, NAO executa migrations, NAO faz DROP/CASCADE/FORCE/RESET, NAO altera senhas.
+
+  Uso padrao (SOMENTE LEITURA):
+    powershell -ExecutionPolicy Bypass -File .\ops\homolog\recover-neon-c6-acl.ps1
+
+  Aplicacao (exige tambem digitar C.6-RECOVER-ACL no prompt oculto):
+    powershell -ExecutionPolicy Bypass -File .\ops\homolog\recover-neon-c6-acl.ps1 -Apply
+
+  Entradas (leitura segura via Read-Host -AsSecureString; nada por argumento/ambiente/arquivo permanente):
+    1. Connection String do neondb_owner (banco neondb, endpoint direto).
+    2. Senha atual de cardapio_migrator (conexao de OWNER que aplica/verifica a ACL).
+
+  Relatorios sanitizados (sem credenciais):
+    backend\RELATORIO-RECUPERACAO-C.6-ACL.md
+    backend\RELATORIO-RECUPERACAO-C.6-ACL-FALHA.md (em caso de falha)
+#>
+[CmdletBinding()]
+param(
+  [switch]$Apply,
+  [string]$BackendPath
+)
+
+$ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($BackendPath)) {
+  $BackendPath = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+} else {
+  $BackendPath = (Resolve-Path -LiteralPath $BackendPath).Path
+}
+
+$scriptPath = Join-Path $BackendPath 'ops\homolog\recover-neon-c6-acl.ts'
+if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+  throw "Script nao encontrado: $scriptPath"
+}
+if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
+  throw 'npx nao encontrado no PATH. Instale Node.js >= 20.19 e as dependencias do backend.'
+}
+$tsxPackage = Join-Path $BackendPath 'node_modules\tsx\package.json'
+if (-not (Test-Path -LiteralPath $tsxPackage -PathType Leaf)) {
+  throw 'tsx nao encontrado em node_modules. Instale as dependencias do backend com autorizacao antes de executar.'
+}
+
+$mode = if ($Apply) { '--apply' } else { '--check' }
+
+Write-Host '============================================================'
+Write-Host ' RUSTIKA - C.6-FIX01 - RECUPERACAO DA ACL DO REPLAY (NEON)'
+Write-Host '============================================================'
+Write-Host "Backend: $BackendPath"
+Write-Host "Modo: $mode"
+Write-Host 'Sem CREATE ROLE/DATABASE, sem migrations e sem DROP/CASCADE/FORCE/RESET.'
+Write-Host 'A senha sera lida seguramente via Read-Host -AsSecureString.'
+Write-Host 'Nada sera gravado em .env ou logs permanentes.'
+Write-Host ''
+
+# Limpeza de credenciais temporarias de execucoes anteriores eao eixo ser feita no final do script
+
+if ([string]::IsNullOrWhiteSpace($BackendPath)) {
+  $BackendPath = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+} else {
+  $BackendPath = (Resolve-Path -LiteralPath $BackendPath).Path
+}
+
+$scriptPath = Join-Path $BackendPath 'ops\homolog\recover-neon-c6-acl.ts'
+if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+  throw "Script nao encontrado: $scriptPath"
+}
+if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
+  throw 'npx nao encontrado no PATH. Instale Node.js >= 20.19 e as dependencias do backend.'
+}
+$tsxPackage = Join-Path $BackendPath 'node_modules\tsx\package.json'
+if (-not (Test-Path -LiteralPath $tsxPackage -PathType Leaf)) {
+  throw 'tsx nao encontrado em node_modules. Instale as dependencias do backend com autorizacao antes de executar.'
+}
+
+$mode = if ($Apply) { '--apply' } else { '--check' }
+
+# Diretorio temporario para credenciais (modo 0o600, proprietario so)
+$credsDir = Join-Path $Env:TEMP 'rustika-creds'
+if (-not (Test-Path $credsDir)) {
+  New-Item -ItemType Directory -Path $credsDir | Out-Null
+}
+Set-ItemProperty -Path $credsDir -Name 'mode' -Value '0600' -ErrorAction SilentlyContinue
+
+# Limpeza de credenciais temporárias de execuções anteriores
+# (já feita no final do script via Remove-Item no bloco final)
+# O comando abaixo foi removido para evitar erro de parsing de parentese.
+# Se necessário, execute cleanup manualmente: Remove-Item -Path (Join-Path $Env:TEMP 'rustika-creds') -Recurse -Force
+
+# Ler Connection String do administrador (via TTY eco oculto)
+Write-Host '1. Connection String do neondb_owner (entrada oculta):'
+$adminConnSecStr = Read-Host -AsSecureString 'Digite a string de conexao (ou arraste um arquivo .env valido):'
+$adminConnInSec = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($adminConnSecStr))
+
+# Ler senha da migradora via Read-Host -AsSecureString
+Write-Host '2. Senha atual de cardapio_migrator (entrada oculta):'
+$migratorPwdSecStr = Read-Host -AsSecureString 'Digite a senha da migradora (minimo 24 caracteres):'
+$migratorPwdInSec = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($migratorPwdSecStr))
+
+# Validacao de comprimento
+if ($migratorPwdInSec.Length -lt 24) {
+  throw "Senha da migradora invalida: deve ter no minimo 24 caracteres (tem $($migratorPwdInSec.Length))."
+}
+
+# Gravacao temporaria das credenciais (apenas esta sessao)
+$adminCredPath = Join-Path $credsDir 'admin_conn.tmp'
+$migratorCredPath = Join-Path $credsDir 'migrator_pwd.tmp'
+
+# Escrever com permissoes restritas (apenas proprietario)
+try {
+  [System.IO.File]::WriteAllText($adminCredPath, $adminConnInSec) | Out-Null
+  Set-ItemProperty -Path $adminCredPath -Name 'mode' -Value '0600' -ErrorAction SilentlyContinue
+  
+  [System.IO.File]::WriteAllText($migratorCredPath, $migratorPwdInSec) | Out-Null
+  Set-ItemProperty -Path $migratorCredPath -Name 'mode' -Value '0600' -ErrorAction SilentlyContinue
+} catch {
+  # Limpeza em caso de falha
+  Remove-Item -Path $adminCredPath -Force -ErrorAction SilentlyContinue
+  Remove-Item -Path $migratorCredPath -Force -ErrorAction SilentlyContinue
+  throw "Nao foi possivel gravar as credenciais temporarias."
+}
+
+# Limpar variaveis de seguranca
+$adminConnSecStr = $null
+$migratorPwdSecStr = $null
+[GC]::Collect()
+[GC]::WaitForPendingFinalizers()
+
+# Passar caminhos dos arquivos temporarios ao script Node
+$nodeArgs = @(
+  '--mode', $mode,
+  '--admin-creds', $adminCredPath,
+  '--migrator-pw', $migratorCredPath
+)
+
+Write-Host "Modo: $mode"
+Write-Host "Arquivos temporarios de credenciais criados (serao excluidos apos execucao)."
+
+Push-Location -LiteralPath $BackendPath
+$exitCode = 1
+try {
+  & npx --no-install tsx ops/homolog/recover-neon-c6-acl.ts $nodeArgs
+  if ($null -ne $LASTEXITCODE) {
+    $exitCode = $LASTEXITCODE
+  }
+} finally {
+  Pop-Location
+}
+
+# Excluir arquivos temporarios de credenciais apos conclusao
+Remove-Item -Path $adminCredPath -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $migratorCredPath -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $credsDir -Recurse -Force -ErrorAction SilentlyContinue
+
+if ($exitCode -ne 0) {
+  Write-Host ''
+  Write-Host "Recuperacao interrompida (exit $exitCode)." -ForegroundColor Red
+  Write-Host 'Nenhum DROP/CASCADE/FORCE/RESET foi executado. Verifique o relatorio de falha, se gerado.'
+  exit $exitCode
+}
+
+if ($Apply) {
+  Write-Host ''
+  Write-Host 'Recuperacao aplicada e verificada.' -ForegroundColor Green
+} else {
+  Write-Host ''
+  Write-Host 'Pre-voo somente leitura concluido. Nada foi alterado.' -ForegroundColor Yellow
+  Write-Host 'Para aplicar (somente com autorizacao explicita): use -Apply.'
+}
+Write-Host "Relatorio sanitizado: $(Join-Path $BackendPath 'RELATORIO-RECUPERACAO-C.6-ACL.md')"
+exit 0

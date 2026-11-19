@@ -1,0 +1,17 @@
+backend/src/app.ts
+backend/src/server.ts
+backend/src/config/env.ts
+backend/src/config/secrets.ts
+backend/src/config/webConfig.ts
+backend/src/security/homologGate.ts
+backend/src/web/staticFrontend.ts
+backend/tests/web-hosting.test.ts
+backend/tests/web-gate-proxy.test.ts
+backend/tests/config/web-config.test.ts
+backend/tests/config/secrets-env-source.test.ts
+backend/tests/config/env-secrets-source.test.ts
+frontend/src/services/catalogAdapter.ts
+frontend/tests/catalog-image-url.test.mjs
+frontend/package.json
+RELATORIO-ENTREGA-3D.5.3-B.md
+RELATORIO-ENTREGA-3D.5.3-B.1.md

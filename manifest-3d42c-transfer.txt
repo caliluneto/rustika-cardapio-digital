@@ -1,0 +1,6 @@
+frontend/package.json
+frontend/src/pages/AdminLogin.tsx
+frontend/tests/admin-access.test.mjs
+frontend/tests/e2e.spec.ts
+frontend/tests/helpers/adminAccess.ts
+frontend/tests/helpers/adminState.ts
