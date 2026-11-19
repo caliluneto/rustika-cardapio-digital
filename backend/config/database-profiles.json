@@ -11,6 +11,13 @@
     "user": "cardapio_test_app",
     "requiresShadow": false
   },
+  "app-homolog-neon": {
+    "purpose": "runtime",
+    "environment": "homolog-neon",
+    "database": "cardapio_digital_homolog",
+    "user": "cardapio_homolog_app",
+    "requiresShadow": false
+  },
   "migrate-dev": {
     "purpose": "migration",
     "database": "cardapio_digital_dev",
