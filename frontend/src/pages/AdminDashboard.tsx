@@ -1,22 +1,41 @@
 import { useState } from 'react';
 import { api, ApiError } from '../services/api';
+import type { ApiClient } from '../services/api';
 import type { AdminSession } from './AdminLogin';
+import AdminOrders from './AdminOrders';
+import AdminProducts from './AdminProducts';
+import AdminCategories from './AdminCategories';
 
 interface InvitationPayload { comanda: { number: string }; inviteToken: string; expiresAt: string }
+
+/** Só considera o logout concluído quando o servidor confirma a revogação e limpa o cookie. */
+export async function endAdminSession(client: Pick<ApiClient, 'post'>): Promise<boolean> {
+  try {
+    await client.post('/admin/auth/logout', {});
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default function AdminDashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => void }) {
   const [comandaNumber, setComandaNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [invitation, setInvitation] = useState<InvitationPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [catalogRevision, setCatalogRevision] = useState(0);
 
   const handleLogout = async () => {
-    try {
-      await api.post('/admin/auth/logout', {});
-    } catch {
-      // O logout local acontece mesmo se a API estiver indisponível; o token expira em 1 hora.
-    } finally {
+    if (loggingOut) return;
+    setLoggingOut(true); // desmonta o painel de pedidos: o polling para ANTES do POST de logout
+    setLogoutError(null);
+    if (await endAdminSession(api)) {
       onLogout();
+    } else {
+      setLogoutError('Não foi possível encerrar a sessão no servidor. Verifique a conexão e tente novamente.');
+      setLoggingOut(false);
     }
   };
 
@@ -45,11 +64,17 @@ export default function AdminDashboard({ admin, onLogout }: { admin: AdminSessio
         <h2>Painel Administrativo</h2>
         <div className="admin-info">
           <span>Olá, {admin.admin.name}</span>
-          <button onClick={handleLogout} className="cart-secondary-button">Sair</button>
+          <button onClick={handleLogout} disabled={loggingOut} className="cart-secondary-button">{loggingOut ? 'Saindo…' : 'Sair'}</button>
         </div>
       </header>
 
+      {logoutError && <p className="admin-error" role="alert">{logoutError}</p>}
+
       <main className="admin-main">
+        {!loggingOut && <AdminOrders onUnauthorized={onLogout} />}
+        {!loggingOut && <AdminCategories onUnauthorized={onLogout} onChanged={() => setCatalogRevision((revision) => revision + 1)} />}
+        {!loggingOut && <AdminProducts key={catalogRevision} onUnauthorized={onLogout} />}
+
         <section className="admin-section">
           <h3>Emitir Convite de Comanda</h3>
           <form onSubmit={handleIssueInvite} className="admin-form">
@@ -70,12 +95,12 @@ export default function AdminDashboard({ admin, onLogout }: { admin: AdminSessio
             </button>
           </form>
 
-          {error && <div className="admin-error" role="alert" style={{ marginTop: '1rem' }}>{error}</div>}
+          {error && <div className="admin-error admin-invite-feedback" role="alert">{error}</div>}
 
           {invitation && (
-            <div className="admin-success" role="status" style={{ marginTop: '1rem', padding: '1rem', background: '#e6f4ea', borderRadius: '4px' }}>
+            <div className="admin-success admin-invite-card" role="status">
               <h4>Convite emitido</h4>
-              <p>Convite: <strong style={{ wordBreak: 'break-all' }}>{invitation.inviteToken}</strong></p>
+              <p>Convite: <strong className="admin-invite-token">{invitation.inviteToken}</strong></p>
               <p><small>Uso único, comanda {invitation.comanda.number}, válido até {new Date(invitation.expiresAt).toLocaleTimeString('pt-BR')}.</small></p>
             </div>
           )}

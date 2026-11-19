@@ -19,8 +19,8 @@ export default function AppWrapper() {
 
   if (showAdmin) {
     return (
-      <div className="admin-app" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-        <a href="#" style={{ display: 'inline-block', marginBottom: '1rem', color: '#0066cc', textDecoration: 'none' }}>
+      <div className="admin-app admin-shell">
+        <a href="#" className="admin-back-link">
           &larr; Voltar para o Cardápio
         </a>
         {adminData ? (
@@ -34,8 +34,8 @@ export default function AppWrapper() {
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 100 }}>
-        <a href="#admin" style={{ background: 'rgba(0,0,0,0.5)', color: 'white', textDecoration: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
+      <div className="admin-shortcut-wrap">
+        <a href="#admin" className="admin-shortcut">
           Admin
         </a>
       </div>

@@ -47,6 +47,7 @@ export function createOrderRouter(prisma: PrismaClient | undefined, allowedOrigi
   const perIp = createFixedWindowLimiter({ ...limits.perIp, now, capacity });
   const failures = createFixedWindowLimiter({ ...limits.invalidSessionPerIp, now, capacity });
   const perSession = createFixedWindowLimiter({ ...limits.perSession, now, capacity });
+  const trackingPerIp = createFixedWindowLimiter({ max: 120, windowMs: 60_000, now, capacity });
   // A limiter with max=1 used as a bounded, expiring set of session hashes proven valid.
   const trusted = createFixedWindowLimiter({ max: 1, windowMs: limits.trustedSessionMs, now, capacity });
 
@@ -92,6 +93,20 @@ export function createOrderRouter(prisma: PrismaClient | undefined, allowedOrigi
         else if (isAppError(error, 404, 'PRODUCT_NOT_FOUND') || isAppError(error, 409) || isAppError(error, 422)) markTrusted();
         next(error);
       });
+  });
+
+  router.get('/:orderId', (request, response, next) => {
+    response.set('Cache-Control', 'no-store');
+    try {
+      const ceiling = trackingPerIp.hit(clientAddress(request));
+      if (ceiling.limited) throw tooManyRequests(response, ceiling.retryAfterSeconds);
+      if (Object.keys(request.query).length) throw new AppError(400, 'INVALID_INPUT', 'A consulta do pedido não aceita parâmetros.');
+      if (!service) throw new AppError(503, 'ORDERS_UNAVAILABLE', 'Serviço de pedidos temporariamente indisponível.');
+      const credential = readSessionCookie(request.get('Cookie'));
+      service.getOrder(request.params.orderId, credential)
+        .then((order) => response.json({ success: true, data: order }))
+        .catch(next);
+    } catch (error) { next(error); }
   });
   return router;
 }

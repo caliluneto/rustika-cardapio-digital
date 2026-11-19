@@ -12,12 +12,14 @@ export default function AdminLogin({ onLogin }: { onLogin: (session: AdminSessio
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 'checking' enquanto a sessão existente é verificada; 'anonymous' quando não há sessão (formulário estável).
+  const [sessionState, setSessionState] = useState<'checking' | 'anonymous'>('checking');
 
   useEffect(() => {
     const controller = new AbortController();
     api.getWithAuth<AdminSession>('/admin/auth/session', controller.signal)
       .then(onLogin)
-      .catch(() => { /* sem sessão administrativa ativa */ });
+      .catch(() => { if (!controller.signal.aborted) setSessionState('anonymous'); /* sem sessão administrativa ativa */ });
     return () => controller.abort();
   }, [onLogin]);
 
@@ -38,7 +40,7 @@ export default function AdminLogin({ onLogin }: { onLogin: (session: AdminSessio
   };
 
   return (
-    <div className="admin-login-container">
+    <div className="admin-login-container" data-session-state={sessionState}>
       <h2>Acesso Administrativo</h2>
       {error && <div className="admin-error" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} className="admin-login-form">

@@ -60,3 +60,28 @@ export function mapProduct(record: ProductRecord): Product {
     ...(record.imageAlt !== null ? { imageAlt: record.imageAlt } : {}),
   };
 }
+
+/**
+ * Visão administrativa de produto (3D.4.2). O identificador exposto é a chave pública (`rustika-<código>`);
+ * não há UUID interno, descrição de origem, ingredientes, imagem nem o campo legado `isAvailable`.
+ */
+export const adminProductSelect = {
+  publicKey: true, sourceCode: true, name: true, price: true, availabilityState: true, updatedAt: true,
+  description: true, ingredients: true, imageUrl: true, imageAlt: true,
+  isActive: true, sourceName: true, sourceGroup: true,
+  category: { select: { publicKey: true, name: true, displayOrder: true, isActive: true } },
+} satisfies Prisma.ProductSelect;
+export type AdminProductRecord = Prisma.ProductGetPayload<{ select: typeof adminProductSelect }>;
+
+export function mapAdminProduct(record: AdminProductRecord) {
+  return {
+    id: record.publicKey as string, sourceCode: record.sourceCode as string, name: record.name,
+    categoryId: record.category.publicKey as string, categoryName: record.category.name,
+    priceInCents: priceToCents(record.price), availabilityState: record.availabilityState,
+    updatedAt: record.updatedAt.toISOString(),
+    ...(record.description === null ? {} : { description: record.description }),
+    ...(record.ingredients === null ? {} : { ingredients: record.ingredients }),
+    ...(record.imageUrl === null ? {} : { imageUrl: record.imageUrl }),
+    ...(record.imageAlt === null ? {} : { imageAlt: record.imageAlt }),
+  };
+}

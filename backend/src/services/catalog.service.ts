@@ -17,18 +17,21 @@ export interface ProductPage {
 
 const publicCategory = { isActive: true, publicKey: { not: null } } satisfies Prisma.CategoryWhereInput;
 
+/** Predicado ÚNICO de produto público/administrável (3D.4.2): o painel só gerencia o que o catálogo pode publicar. */
+export function publicProductWhere(filters: Pick<ProductFilters, 'categoryId' | 'availability'> = {}): Prisma.ProductWhereInput {
+  return {
+    isActive: true, publicKey: { not: null },
+    sourceCode: { not: null }, sourceName: { not: null }, sourceGroup: { not: null },
+    category: { is: {
+      ...publicCategory,
+      ...(filters.categoryId ? { publicKey: filters.categoryId } : {}),
+    } },
+    ...(filters.availability ? { availabilityState: filters.availability } : {}),
+  };
+}
+
 export function createCatalogService(prisma: CatalogPrisma) {
-  function productWhere(filters: Pick<ProductFilters, 'categoryId' | 'availability'>): Prisma.ProductWhereInput {
-    return {
-      isActive: true, publicKey: { not: null },
-      sourceCode: { not: null }, sourceName: { not: null }, sourceGroup: { not: null },
-      category: { is: {
-        ...publicCategory,
-        ...(filters.categoryId ? { publicKey: filters.categoryId } : {}),
-      } },
-      ...(filters.availability ? { availabilityState: filters.availability } : {}),
-    };
-  }
+  const productWhere = publicProductWhere;
 
   return {
     async listCategories(): Promise<Category[]> {

@@ -13,5 +13,8 @@ export function assertWriteRequest(request: Request, allowedOrigin: string): voi
   if (request.get('Origin') !== allowedOrigin || request.get(WRITE_HEADER) !== WRITE_HEADER_VALUE) {
     throw new AppError(403, 'ORIGIN_NOT_ALLOWED', 'Origem ou proteção da requisição inválida.');
   }
-  if (!request.is('application/json')) throw new AppError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Envie application/json.');
+  // DELETE normalmente não tem corpo; apenas POST/PATCH/PUT exigem Content-Type JSON
+  if (['POST', 'PATCH', 'PUT'].includes(request.method ?? '') && !request.is('application/json')) {
+    throw new AppError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Envie application/json.');
+  }
 }

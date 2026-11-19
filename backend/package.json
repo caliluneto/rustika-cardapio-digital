@@ -17,13 +17,27 @@
     "e2e:teardown": "tsx tests/integration-db/e2e/run-teardown.ts",
     "e2e:cleanup-legacy": "tsx tests/integration-db/e2e/cleanup-legacy.ts",
     "e2e:inspect": "tsx scripts/inspect-e2e-state.ts",
+    "e2e:validate-state": "tsx scripts/validate-e2e-state.ts",
     "secrets:audit": "tsx scripts/audit-secrets.ts",
     "db:validate": "tsx scripts/prisma-run.ts migrate-dev validate",
     "db:generate": "tsx scripts/prisma-run.ts migrate-dev generate",
     "db:validate:app": "tsx scripts/prisma-run.ts app-dev validate",
     "db:generate:app": "tsx scripts/prisma-run.ts app-dev generate",
     "db:migrate:status:test": "tsx scripts/prisma-run.ts migrate-test migrate status",
-    "db:migrate:deploy:test": "tsx scripts/prisma-run.ts migrate-test migrate deploy"
+    "db:migrate:deploy:test": "tsx scripts/prisma-run.ts migrate-test migrate deploy",
+    "homolog:preflight": "tsx scripts/homolog-preflight.ts",
+    "homolog:replay:status": "tsx scripts/prisma-run.ts migrate-homolog-replay migrate status",
+    "homolog:replay:deploy": "tsx scripts/prisma-run.ts migrate-homolog-replay migrate deploy",
+    "schema:fingerprint": "tsx scripts/schema-fingerprint.ts",
+    "schema:compare": "tsx scripts/schema-compare.ts",
+    "e4-alt:fingerprint:candidate": "tsx scripts/e4-alt-fingerprint-candidate.ts",
+    "e4-alt:fingerprint:approve": "tsx scripts/e4-alt-fingerprint-approve.ts",
+    "homolog:migrate:status": "tsx scripts/prisma-run.ts migrate-homolog migrate status",
+    "homolog:migrate:deploy": "tsx scripts/prisma-run.ts migrate-homolog migrate deploy",
+    "homolog:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
+    "homolog:catalog:dry-run": "tsx scripts/import-catalog-homolog.ts --profile migrate-homolog --authorize-read-only",
+    "homolog:catalog:import": "tsx scripts/import-catalog-homolog.ts --profile migrate-homolog --execute",
+    "test:homolog:ephemeral": "vitest run --config vitest.homolog-ephemeral.config.mts"
   },
   "engines": {
     "node": ">=20.19"

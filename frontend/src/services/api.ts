@@ -7,12 +7,13 @@ import {
   productId as validateProductId,
 } from './catalogAdapter';
 
-const DEFAULT_API_URL = 'http://localhost:4000/api';
+const LOCAL_API_URL = 'http://localhost:4000/api';
+const SAME_ORIGIN_API_URL = '/api';
 
 /** Literal `import.meta.env` is required for Vite to inject VITE_* (see orderSubmission.ts, 3D.3.21-A). */
-export function configuredApiUrl(env: { VITE_API_URL?: string } | undefined = import.meta.env): string {
+export function configuredApiUrl(env: { VITE_API_URL?: string; DEV?: boolean } | undefined = import.meta.env): string {
   const configured = env?.VITE_API_URL?.trim();
-  return configured || DEFAULT_API_URL;
+  return configured || (env?.DEV ? LOCAL_API_URL : SAME_ORIGIN_API_URL);
 }
 
 export const API_BASE_URL = configuredApiUrl().replace(/\/+$/, '');
@@ -44,11 +45,15 @@ export interface OrderRequest {
 }
 
 export interface OrderConfirmation {
+  id: string;
   orderNumber: number;
-  status: string;
+  status: 'RECEIVED' | 'IN_PREPARATION' | 'READY' | 'DELIVERED' | 'CANCELLED';
   comandaNumber: string;
-  customerName: string;
+  customerName: string | null;
   totalInCents: number;
+  createdAt: string;
+  updatedAt: string;
+  history: { fromStatus: string | null; toStatus: string; createdAt: string }[];
   [key: string]: unknown;
 }
 
@@ -280,7 +285,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
    * Cookie-authenticated call. Credentials always travel as HttpOnly cookies set by the backend;
    * nothing is read from or written to localStorage. Network failures become ApiError('NETWORK').
    */
-  async function authenticated<T>(method: 'GET' | 'POST', path: string, init: RequestInit, signal?: AbortSignal): Promise<T> {
+  async function authenticated<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, init: RequestInit, signal?: AbortSignal): Promise<T> {
     let response: ResponseLike;
     try {
       response = await request(method, path, { ...init, credentials: 'include' }, signal);
@@ -314,6 +319,18 @@ export function createApiClient(options: ApiClientOptions = {}) {
     return authenticated<T>('POST', path, { ...init, headers, body: JSON.stringify(body) }, signal);
   }
 
+  /** PATCH carries the same write contract as POST (exact Origin, JSON, X-Rustika-Request). */
+  async function patch<T = unknown>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', [WRITE_HEADER]: '1' };
+    return authenticated<T>('PATCH', path, { headers, body: JSON.stringify(body) }, signal);
+  }
+
+  /** DELETE carry the same write contract as POST (exact Origin, JSON, X-Rustika-Request). */
+  async function httpDelete<T = unknown>(path: string, signal?: AbortSignal): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', [WRITE_HEADER]: '1' };
+    return authenticated<T>('DELETE', path, { headers }, signal);
+  }
+
   async function getWithAuth<T = unknown>(path: string, signal?: AbortSignal): Promise<T> {
     return authenticated<T>('GET', path, { headers: { Accept: 'application/json' } }, signal);
   }
@@ -324,7 +341,12 @@ export function createApiClient(options: ApiClientOptions = {}) {
     return post<OrderConfirmation>('/orders', body, signal, { headers: { 'Idempotency-Key': idempotencyKey } });
   }
 
-  return { getCategories, getAllProducts, getProduct, getCatalog, post, getWithAuth, createOrder };
+  async function getOrderStatus(orderId: string, signal?: AbortSignal): Promise<unknown> {
+    if (!UUID_V4.test(orderId)) throw new ApiError(0, 'INVALID_ORDER_ID', 'Identificador de pedido inválido.', null);
+    return getWithAuth<unknown>(`/orders/${encodeURIComponent(orderId)}`, signal);
+  }
+
+  return { getCategories, getAllProducts, getProduct, getCatalog, post, patch, httpDelete, getWithAuth, createOrder, getOrderStatus };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

@@ -1,0 +1,55 @@
+# Blueprint declarativo de homologação — RÚSTIKA (Render Free + Neon Free)
+# Custos: R$ 0/mês (plan: free, sem discos pagos, sem workers extras, sem autoDeploy involuntário).
+# NUNCA incluir credenciais, tokens, UUIDs reais ou o valor literal de RUSTIKA_HOMOLOG_NEON_PROXY_TLS_ACK neste arquivo.
+# NUNCA adicionar migrations, bootstrap ou comandos destrutivos em buildCommand ou startCommand.
+
+services:
+  - type: web
+    name: rustika-cardapio-homolog
+    runtime: node
+    plan: free
+    region: oregon
+    autoDeploy: false
+    healthCheckPath: /api/health
+    buildCommand: cd frontend && npm ci --include=dev && npm run build && cd ../backend && npm ci --include=dev && npx prisma generate && npm run build
+    startCommand: cd backend && node dist/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DB_PROFILE
+        value: app-homolog-neon
+      - key: CARDAPIO_SECRETS_SOURCE
+        value: env
+      - key: SERVE_FRONTEND
+        value: "on"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: HOMOLOG_GATE
+        value: "on"
+      - key: VITE_CATALOG_MODE
+        value: api
+      - key: VITE_ORDER_SUBMISSION
+        value: enabled
+      # Origem exata HTTPS do serviço no Render (sem barra final, ex.: https://rustika-cardapio-homolog.onrender.com)
+      - key: CORS_ORIGIN
+        sync: false
+      # Credenciais do portão HTTP Basic de homologação (usuário 3..64 chars; senha >= 24 chars sem conter o usuário)
+      - key: HOMOLOG_GATE_USER
+        sync: false
+      - key: HOMOLOG_GATE_PASSWORD
+        sync: false
+      # Reconhecimento humano explícito exigido após ler backend/docs/neon-homolog.md (valor em src/config/neonServerIdentity.ts)
+      - key: RUSTIKA_HOMOLOG_NEON_PROXY_TLS_ACK
+        sync: false
+      # Segredos de runtime da role restrita cardapio_homolog_app no endpoint DIRETO do Neon (sem -pooler)
+      - key: RUSTIKA_HOMOLOG_DATABASE_URL
+        sync: false
+      - key: RUSTIKA_HOMOLOG_EXPECTED_DATABASE_HOST
+        sync: false
+      - key: RUSTIKA_HOMOLOG_EXPECTED_CLUSTER_ID
+        sync: false
+      - key: RUSTIKA_HOMOLOG_EXPECTED_PROJECT_ID
+        sync: false
+

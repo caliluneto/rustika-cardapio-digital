@@ -4,6 +4,10 @@ import type { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { createAdminAuth, accessBody } from '../services/adminAuth.service';
 import { createComandaAccess } from '../services/comandaAccess.service';
+import { createOrderOperations } from '../services/orderOperations.service';
+import { createProductAvailability } from '../services/productAvailability.service';
+import { createProductCrud } from '../services/productCrud.service';
+import { createCategoryCrud } from '../services/categoryCrud.service';
 import { ADMIN_COOKIE, readOpaqueCookie } from '../security/adminSessions';
 import { accessLimit } from '../security/accessLimits';
 import { assertWriteRequest } from '../security/writeGuard';
@@ -19,14 +23,17 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   const now = options.now ?? (() => new Date());
   const auth = prisma ? createAdminAuth(prisma, now) : undefined;
   const access = prisma && auth ? createComandaAccess(prisma, auth, now) : undefined;
+  const orders = prisma && auth ? createOrderOperations(prisma, auth) : undefined;
+  const products = prisma && auth ? createProductAvailability(prisma, auth) : undefined;
   function services() {
-    if (!auth || !access) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
-    return { auth, access };
+    if (!auth || !access || !orders || !products) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de acesso temporariamente indisponível.');
+    return { auth, access, orders, products };
   }
   const adminRouter = Router(); const sessionRouter = Router();
   const noStore: RequestHandler = (req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    if (Object.keys(req.query).length) return next(new AppError(400, 'INVALID_INPUT', 'Não envie tokens ou parâmetros na URL.'));
+    const paginatedOrders = req.method === 'GET' && req.path === '/orders';
+    if (!paginatedOrders && Object.keys(req.query).length) return next(new AppError(400, 'INVALID_INPUT', 'Não envie tokens ou parâmetros na URL.'));
     next();
   };
   const writeGuard: RequestHandler = (req, _res, next) => {
@@ -53,6 +60,20 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   adminRouter.post('/comanda-invitations', writeGuard, accessLimit(60, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     res.status(201).json({ success: true, data: await services().access.issue(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
+  // 3D.4.1: operação de pedidos. GET sem parâmetros (o `noStore` do roteador já recusa query string).
+  adminRouter.get('/orders', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().orders.list(req.query, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.patch('/orders/:orderId/status', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().orders.updateStatus(req.params.orderId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  // 3D.4.2: disponibilidade de produtos. GET sem parâmetros (filtros no cliente); PATCH com CAS por expectedState.
+  adminRouter.get('/products', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().products.list(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.patch('/products/:productId/availability', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
+    res.json({ success: true, data: await services().products.updateAvailability(req.params.productId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
   sessionRouter.post('/', writeGuard, accessLimit(30, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     const result = await services().access.redeem(req.body);
     res.cookie(SESSION_COOKIE, result.token, { ...clientCookie, maxAge: Math.max(0, result.expiresAt.getTime() - now().getTime()) });
@@ -61,5 +82,46 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   sessionRouter.get('/current', asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().access.current(readOpaqueCookie(req.get('Cookie'), SESSION_COOKIE)) });
   }));
+
+  // RF006: CRUD administrativo de produtos
+  const productCrud = prisma && auth ? createProductCrud(prisma, auth) : undefined;
+  const categoryCrud = prisma && auth ? createCategoryCrud(prisma, auth) : undefined;
+  adminRouter.get('/categories', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
+    if (!categoryCrud) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de categorias indisponível.');
+    res.json({ success: true, data: await categoryCrud.list(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.post('/categories', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res) => {
+    if (!categoryCrud) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de categorias indisponível.');
+    res.status(201).json({ success: true, data: await categoryCrud.create(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.patch('/categories/:categoryId', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res) => {
+    if (!categoryCrud) throw new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de categorias indisponível.');
+    if (!req.params.categoryId) throw new AppError(400, 'INVALID_CATEGORY_ID', 'Categoria inválida.');
+    res.json({ success: true, data: await categoryCrud.update(req.params.categoryId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
+  }));
+  adminRouter.post('/products', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const result = await productCrud.create(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    res.status(201).json({ success: true, data: result });
+  }));
+  adminRouter.patch('/products/:productId', writeGuard, accessLimit(30, 60000, now), json, asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const productId = req.params.productId;
+    if (!productId) return next(new AppError(400, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.'));
+    const result = await productCrud.update(productId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    res.json({ success: true, data: result });
+  }));
+  adminRouter.delete('/products/:productId', writeGuard, accessLimit(30, 60000, now), asyncRoute(async (req, res, next) => {
+    if (!productCrud) return next(new AppError(503, 'ACCESS_UNAVAILABLE', 'Serviço de produto temporariamente indisponível.'));
+    const productId = req.params.productId;
+    if (!productId) return next(new AppError(400, 'INVALID_PRODUCT_ID', 'Identificador de produto inválido.'));
+    const result = await productCrud.delete(productId, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE));
+    if (result.reason === 'PRODUCT_REFERENCED') {
+      res.status(409).json({ success: false, error: { code: 'PRODUCT_REFERENCED', message: result.message } });
+      return;
+    }
+    res.json({ success: true, data: result });
+  }));
+
   return { adminRouter, sessionRouter };
 }

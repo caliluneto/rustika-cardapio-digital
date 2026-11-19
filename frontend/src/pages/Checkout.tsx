@@ -11,10 +11,11 @@ interface CheckoutProps {
   trigger: HTMLButtonElement | null;
   onBack: () => void;
   onDone: () => void;
+  onConfirmed?: (order: OrderConfirmation) => void;
 }
 
 /** Etapa final: dados do cliente e envio com Idempotency-Key. Exige sessão de comanda validada. */
-export default function Checkout({ trigger, onBack, onDone }: CheckoutProps) {
+export default function Checkout({ trigger, onBack, onDone, onConfirmed }: CheckoutProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { state, dispatch, comandaSession, setComandaSession, totalInCents } = useCart();
   // Shared attempt store: reopening this dialog keeps the pending Idempotency-Key.
@@ -44,6 +45,7 @@ export default function Checkout({ trigger, onBack, onDone }: CheckoutProps) {
     try {
       const result = await submitter.retryPending();
       setConfirmation(result);
+      onConfirmed?.(result);
       setKeptCart(true); // the confirmed order is the previous attempt; the edited cart is kept
     } catch (err: unknown) {
       handleFailure(err);
@@ -73,6 +75,7 @@ export default function Checkout({ trigger, onBack, onDone }: CheckoutProps) {
       const body = buildOrderRequest(state, { customerName, tableOrReference, notes });
       const result = await submitter.submit(body);
       setConfirmation(result);
+      onConfirmed?.(result);
       dispatch({ type: 'CLEAR_CART' }); // only after a confirmed order; failures keep the cart
     } catch (err: unknown) {
       handleFailure(err);

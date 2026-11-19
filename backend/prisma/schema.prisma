@@ -56,7 +56,7 @@ model Category {
   description  String?
   displayOrder Int      @default(0) @map("display_order")
   isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   products Product[]
@@ -80,9 +80,12 @@ model Product {
   ingredients String?
   price       Decimal  @db.Decimal(10, 2)
   imageUrl    String?  @map("image_url")
-  isAvailable Boolean  @default(true) @map("is_available")
+  // RF006: is_available (legado) e created_at são gerados pelo banco. Com @default(true)/now() o client
+  // enviava as duas colunas no INSERT, mas a role de runtime só tem INSERT nas colunas comerciais; o
+  // POST /api/admin/products falhava com 42501. O default do banco já garante true/CURRENT_TIMESTAMP.
+  isAvailable Boolean  @default(dbgenerated("true")) @map("is_available")
   isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)

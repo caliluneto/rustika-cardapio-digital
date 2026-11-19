@@ -14,6 +14,14 @@ export const orderProductSelect = {
 } satisfies Prisma.ProductSelect;
 
 const money = (cents: number) => new Prisma.Decimal(cents).div(100);
+const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseOrderLookupId(raw: unknown): string {
+  if (typeof raw !== 'string' || !ORDER_ID.test(raw)) {
+    throw new AppError(400, 'INVALID_ORDER_ID', 'Identificador de pedido inválido.');
+  }
+  return raw.toLowerCase();
+}
 
 function retryable(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
@@ -94,6 +102,22 @@ export function createOrderService(prisma: Pick<PrismaClient, '$transaction'>, n
           throw error;
         }
       }
+    },
+
+    /** Consulta autenticada: o UUID sozinho não autoriza acesso; pedido e sessão precisam pertencer à mesma comanda. */
+    async getOrder(rawOrderId: unknown, credential: string) {
+      const orderId = parseOrderLookupId(rawOrderId);
+      const tokenHash = sha256(validateSessionToken(credential));
+      return prisma.$transaction(async (tx) => {
+        const session = await tx.comandaSession.findUnique({ where: { credentialHash: tokenHash }, select: sessionSelect });
+        assertActiveSession(session, now());
+        const order = await tx.order.findUnique({ where: { id: orderId }, select: orderSelect });
+        if (!order || order.sessionId !== session.id || order.comandaId !== session.comandaId) {
+          throw new AppError(404, 'ORDER_NOT_FOUND', 'Pedido não encontrado.');
+        }
+        assertActiveSession(session, now());
+        return mapOrder(order);
+      });
     },
   };
 }

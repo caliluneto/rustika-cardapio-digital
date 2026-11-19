@@ -36,6 +36,14 @@ export function canTransitionOrder(from: OrderStatus, to: OrderStatus): boolean 
   return orderTransitions[from].includes(to);
 }
 
+/** Todos os estados do pedido, derivados da mesma tabela de transições (fonte única, sem segunda máquina). */
+export const ORDER_STATUSES = Object.keys(orderTransitions) as readonly OrderStatus[];
+
+/** Próximos estados permitidos a partir de `from` (usado pelo painel administrativo). */
+export function nextOrderStatuses(from: OrderStatus): readonly OrderStatus[] {
+  return orderTransitions[from];
+}
+
 export type OrderRuleErrorCode = 'INVALID_ITEMS' | 'INVALID_PRICE' | 'LIMIT_EXCEEDED' | 'PRICE_CHANGED';
 
 export class OrderRuleError extends Error {
