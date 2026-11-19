@@ -8,6 +8,30 @@ import { readWebConfig } from './config/webConfig';
 import { evaluateServerIdentity, readServerFacts } from './config/serverIdentity';
 import { NEON_HOMOLOG_PROFILE, assertNeonProxyTlsAck, evaluateNeonServerIdentity, readNeonServerFacts } from './config/neonServerIdentity';
 
+/** Extrai informações de diagnóstico sanitizadas de um erro do Neon, sem vazar segredos. */
+function sanitizeNeonError(error: unknown): { stage: string; errorClass: string; errorCode: string | null; message: string } {
+  const errorClass = error instanceof Error ? error.constructor.name : typeof error;
+  const errorCode = error instanceof Error && typeof (error as unknown as { code?: unknown }).code === 'string'
+    ? String((error as unknown as { code?: unknown }).code)
+    : null;
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  // Sanitiza: remove URLs de conexão (que contêm senhas), caminhos de arquivos de segredo
+  const sanitizedMessage = rawMessage
+    .replace(/postgresql:\/\/[^@]+@/gi, 'postgresql://***@')
+    .replace(/DATABASE_URL[^\s]*/gi, 'DATABASE_URL=***')
+    .replace(/C:\\[^\\]*(?:\\.[^\\]*)*\\rustika[^\\]*\\?/gi, '<caminho-local>')
+    .replace(/[A-Za-z]:\\[^\\]*(?:\\.[^\\]*)*\\?/gi, '<caminho-local>')
+    .replace(/\n/g, ' ')
+    .slice(0, 300);
+  // Determina a etapa com base na mensagem ou no código do erro
+  let stage = 'desconhecida';
+  if (rawMessage.includes('RUSTIKA_HOMOLOG_NEON_PROXY_TLS_ACK') || rawMessage.includes('proxy TLS')) stage = 'reconhecimento-TLS';
+  else if (rawMessage.includes('certificado') || rawMessage.includes('hostname') || rawMessage.includes('TLS') || rawMessage.includes('ssl')) stage = 'sonda-TLS';
+  else if (rawMessage.includes('pg_stat_ssl') || rawMessage.includes('projeto') || rawMessage.includes('branch') || rawMessage.includes('marca') || rawMessage.includes('identidade')) stage = 'identidade-do-banco';
+  else if (rawMessage.includes('conexão') || rawMessage.includes('connect') || rawMessage.includes('timeout') || rawMessage.includes('ECONNREFUSED') || rawMessage.includes('ENOTFOUND')) stage = 'conexao-PostgreSQL';
+  return { stage, errorClass, errorCode, message: sanitizedMessage };
+}
+
 if (env.nodeEnv === 'production') assertHomologRuntimeConfig(env);
 
 // 3D.5.3-B: hospedagem em um único serviço. Falha fechada se a configuração for inválida (mensagens sem valores).
@@ -72,8 +96,13 @@ if (env.nodeEnv === 'production' && env.databaseProfile === NEON_HOMOLOG_PROFILE
       console.warn('[api] Perfil app-homolog-neon: pg_stat_ssl pode mostrar ssl=false (TLS termina no proxy do provedor); TLS externo foi comprovado de forma independente, com os mesmos parâmetros usados pelo Prisma.');
       startListening();
     })
-    .catch(() => {
-      console.error('[api] Não foi possível verificar a identidade do servidor de banco (Neon); encerrando.');
+    .catch((error) => {
+      const diag = sanitizeNeonError(error);
+      console.error(
+        `[api] Falha na verificação de identidade do servidor de banco (Neon); encerrando. ` +
+        `etapa=${diag.stage} classe=${diag.errorClass} ` +
+        `codigo=${diag.errorCode ?? 'nenhum'} mensagem=${diag.message}`,
+      );
       process.exit(1);
     });
 } else if (env.nodeEnv === 'production') {
