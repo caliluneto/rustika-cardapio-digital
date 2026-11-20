@@ -1,305 +1,142 @@
-# Cardápio Digital
+# RÚSTIKA — Cardápio Digital
 
-Projeto acadêmico da Prática Extensionista VII da UNAERP.
+Aplicação web desenvolvida para o **Rústika Estúdio Bar**, em Ribeirão Preto (SP), como projeto da disciplina Prática Extensionista VII do curso de Engenharia da Computação da UNAERP.
 
-Aplicação web distribuída com frontend em React + Vite + TypeScript e backend em
-Node.js + Express + TypeScript. As entregas concluídas correspondem às **Fases
-1A, 1A.1, 1B.1, 1B.2C e 1B.3G**: comunicação frontend/backend, correção de
-dependências, preparação do Prisma, configuração segura de conexão com o
-PostgreSQL local e preparação controlada da primeira migration.
+O sistema reúne um cardápio digital organizado por categorias, carrinho de compras, envio e acompanhamento de pedidos e um painel administrativo para gestão dos produtos e do atendimento.
 
-## Escopo atual
+**Aplicação de demonstração:** https://rustika-homolog.onrender.com
 
-- Frontend com página inicial provisória e indicador de conexão com a API.
-- Backend com `GET /api/health`, CORS restrito, rota 404 e tratamento de erros.
-- Testes automatizados mínimos do backend.
-- Prisma configurado com as seis entidades do domínio e client reutilizável.
-- Credenciais de banco fora do OneDrive, com carregamento e validação por perfil.
-- Wrapper do Prisma CLI com `validate`, `generate` e, restrito ao perfil
-  `migrate-test`, `migrate status` e `migrate deploy`.
-- Migration inicial preparada em
-  `backend/prisma/migrations/20261023000000_initial_schema`, ainda não aplicada.
-- Typecheck e build de ambos os projetos.
+> O ambiente publicado é de homologação e utiliza o plano gratuito do Render. O primeiro acesso após um período de inatividade pode demorar enquanto o serviço é iniciado. A disponibilidade e a aceitação de pedidos dependem da configuração dos produtos e das comandas.
 
-Ainda não fazem parte: migrations executadas, aplicação completa de permissões
-no PostgreSQL, seeds, autenticação, CRUD de produtos, carrinho, pedidos,
-Socket.IO, upload de imagens e hospedagem. A remoção de `TRUNCATE` da default
-ACL de teste foi aplicada na Fase 1B.3E.
+## Funcionalidades
 
-## Estrutura
+### Para clientes
+- Consulta ao cardápio por categoria, com preços e detalhes dos produtos.
+- Seleção de itens, ajuste de quantidades e revisão do carrinho.
+- Envio de pedidos vinculados a uma sessão de comanda autorizada.
+- Acompanhamento do estado do pedido, do recebimento à entrega.
+
+### Para a administração
+- Login protegido, manutenção de sessão e logout.
+- Cadastro, edição e exclusão de produtos, respeitando vínculos com pedidos existentes.
+- Controle de disponibilidade de itens.
+- Gestão de categorias.
+- Consulta e filtragem de pedidos, atualização de status e histórico das alterações.
+- Atualização periódica da lista de pedidos.
+
+## Tecnologias
+
+| Camada | Tecnologias |
+| --- | --- |
+| Interface | React, TypeScript e Vite |
+| API | Node.js, Express e TypeScript |
+| Persistência | PostgreSQL e Prisma |
+| Comunicação | HTTP e API REST |
+| Hospedagem de homologação | Render (aplicação) e Neon (PostgreSQL) |
+
+O frontend utiliza a API do backend para consultar o catálogo e executar as operações. Em homologação, ambos são servidos pela mesma origem HTTP.
+
+## Estrutura do repositório
 
 ```text
-Cardapio_Digital/
+.
+├── frontend/                 # Interface do cliente e painel administrativo
 ├── backend/
-│   ├── config/
-│   │   ├── database-profiles.json
-│   │   └── database.env.example
-│   ├── docs/sql/
-│   │   └── inspect-permissions.sql
-│   ├── prisma/schema.prisma
-│   ├── scripts/
-│   │   ├── prisma-run.ts
-│   │   └── validate-databases.ts
-│   ├── src/
-│   │   ├── config/env.ts
-│   │   ├── config/secrets.ts
-│   │   ├── lib/prisma.ts
-│   │   ├── middleware/errorHandler.ts
-│   │   ├── middleware/notFound.ts
-│   │   ├── routes/health.routes.ts
-│   │   ├── app.ts
-│   │   └── server.ts
-│   ├── tests/
-│   │   ├── config/secrets.test.ts
-│   │   └── health.test.ts
-│   ├── .env.example
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── tsconfig.build.json
-├── frontend/
-│   ├── src/
-│   │   ├── services/api.ts
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   ├── index.css
-│   │   └── vite-env.d.ts
-│   ├── .env.example
-│   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-├── .gitignore
-└── README.md
+│   ├── src/                  # API, serviços, regras de negócio e segurança
+│   ├── prisma/               # Schema e migrations de desenvolvimento
+│   ├── prisma-homolog/       # Migrations específicas da homologação
+│   ├── config/               # Configurações e exemplos, sem credenciais reais
+│   ├── docs/                 # Documentação técnica da API e da infraestrutura
+│   ├── scripts/              # Ferramentas de validação e operação
+│   └── tests/                # Testes automatizados
+├── docs/entrega-academica/   # Relatório, matriz de requisitos e material de apresentação
+└── render.yaml               # Configuração declarativa de implantação
 ```
-
-## Pré-requisitos
-
-- Node.js 20.19 ou superior (validado com Node.js 24.20.0).
-- npm 10 ou superior (validado com npm 12.2.0).
-
-## Instalação
-
-No PowerShell, a partir da raiz do projeto:
-
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital"
-
-Set-Location backend
-npm install
-Copy-Item .env.example .env
-
-Set-Location ..\frontend
-npm install
-Copy-Item .env.example .env
-
-Set-Location ..
-```
-
-Os arquivos `.env` são locais e não devem ser versionados.
 
 ## Execução local
 
-Abra dois terminais na raiz do projeto.
+**Requisitos:** Node.js 22, npm e acesso a uma instância PostgreSQL de desenvolvimento previamente configurada.
 
-Terminal 1 — backend (porta 4000):
+```bash
+git clone https://github.com/caliluneto/rustika-cardapio-digital.git
+cd rustika-cardapio-digital
 
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend"
+cd backend
+npm ci
+npx prisma generate
+
+cd ../frontend
+npm ci
+```
+
+Configure o backend conforme os exemplos de `backend/config/` e `backend/.env.example`, usando apenas um **banco de desenvolvimento** e os perfis permitidos. Credenciais devem permanecer fora do Git; não utilize o banco de homologação para testes locais.
+
+Execute a API e a interface em terminais separados:
+
+```bash
+# Terminal 1: na pasta backend
+npm run dev
+
+# Terminal 2: na pasta frontend
 npm run dev
 ```
 
-Terminal 2 — frontend (porta 5173):
+Por padrão, a interface utiliza `http://localhost:5173` e a API `http://localhost:4000/api`. Para a integração local, configure `VITE_API_URL=http://localhost:4000/api` e `VITE_CATALOG_MODE=api` no ambiente do frontend, conforme os exemplos do projeto.
 
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\frontend"
-npm run dev
-```
+**Observação:** a instalação das dependências não cria bancos, usuários nem administra migrations automaticamente. Consulte [Guia de execução](docs/entrega-academica/GUIA-EXECUCAO.md) e [Homologação](backend/docs/homologation-environment.md) para os pré-requisitos de cada ambiente.
 
-Acesse `http://localhost:5173`. A página consulta `GET /api/health` e exibe
-**API disponível** ou **API indisponível**.
+## Testes e validação
 
-Para interromper cada servidor, pressione `Ctrl+C` no terminal correspondente.
+```bash
+# Backend
+cd backend
+npm run typecheck
+npm run build
+npm run test:ci
 
-## Variáveis de ambiente
-
-### Backend (`backend/.env`)
-
-| Variável | Padrão | Descrição |
-| --- | --- | --- |
-| `NODE_ENV` | `development` | Ambiente de execução |
-| `PORT` | `4000` | Porta HTTP da API |
-| `CORS_ORIGIN` | `http://localhost:5173` | Origem exata autorizada no CORS |
-| `DB_PROFILE` | `app-dev` em desenvolvimento; `app-test` em testes | Com `NODE_ENV=test`, apenas `app-test` é aceito; valor vazio explícito é rejeitado |
-| `CARDAPIO_SECRETS_DIR` | `%LOCALAPPDATA%\CardapioDigital\secrets` | Pasta local protegida fora do OneDrive |
-
-`backend/.env` não contém credenciais. As URLs ficam na pasta local protegida,
-em um arquivo por perfil (`app-dev.env`, `app-test.env`, `migrate-dev.env` e
-`migrate-test.env`). Perfis `migrate-*` são rejeitados pelo backend em execução.
-
-Testes de integração devem executar com `NODE_ENV=test` e `DB_PROFILE=app-test`.
-Um perfil divergente interrompe a inicialização antes de construir o Prisma ou
-abrir conexão. `createApp()` aceita opcionalmente `{ prisma }` para injeção em
-testes; o cliente de produção é criado na inicialização de `server.ts`. Os testes
-unitários de `env`, Prisma e health usam doubles e não acessam PostgreSQL.
-
-### Pasta local de segredos
-
-Crie a pasta fora do OneDrive e restrinja a ACL ao usuário atual, SYSTEM e
-Administradores:
-
-```powershell
-$secretsDir = Join-Path $env:LOCALAPPDATA 'CardapioDigital\secrets'
-New-Item -ItemType Directory -Path $secretsDir -Force
-icacls $secretsDir /inheritance:r /grant:r `
-  "$($env:USERDOMAIN)\$($env:USERNAME):(OI)(CI)F" `
-  "*S-1-5-18:(OI)(CI)F" `
-  "*S-1-5-32-544:(OI)(CI)F"
-```
-
-Preencha os quatro arquivos manualmente. Não peça nem cole senhas no chat, não
-salve credenciais no workspace e não copie a pasta para o OneDrive. O modelo
-está em `backend/config/database.env.example`.
-
-### Frontend (`frontend/.env`)
-
-| Variável | Padrão | Descrição |
-| --- | --- | --- |
-| `VITE_API_URL` | `http://localhost:4000/api` | URL base da API |
-
-## Prisma (Fases 1B.1 e 1B.2C)
-
-O schema está em `backend/prisma/schema.prisma` e o client reutilizável em
-`backend/src/lib/prisma.ts`. O datasource usa `DATABASE_URL` e
-`shadowDatabaseUrl` usa `SHADOW_DATABASE_URL`, sempre fornecidas pelo arquivo do
-perfil carregado pelo wrapper.
-
-O wrapper `backend/scripts/prisma-run.ts` lê o arquivo de segredo do perfil,
-valida usuário, banco, host, porta e senha e injeta as variáveis no processo
-filho do Prisma. Ele permite `validate` e `generate` e, exclusivamente com o
-perfil `migrate-test`, `migrate status` e `migrate deploy`. `migrate dev`,
-`reset`, `resolve`, `db push` e seed são bloqueados.
-
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend"
-npm run db:validate
-npm run db:generate
-npm run db:migrate:status:test
-```
-
-O `migrate deploy` só é liberado com o banco `cardapio_digital_test`, finalidade
-`migration` e confirmação explícita no ambiente da execução:
-
-```powershell
-$env:CARDAPIO_MIGRATE_DEPLOY_CONFIRMATION = "APPLY_CARDAPIO_DIGITAL_TEST"
-npm run db:migrate:deploy:test
-```
-
-O perfil `migrate-dev` exige `SHADOW_DATABASE_URL` apontando exclusivamente para
-`cardapio_digital_shadow`. O banco principal e o shadow nunca podem ser iguais.
-O perfil `migrate-test` também exige shadow, mas `migrate deploy` não o utiliza.
-
-A migration inicial está em
-`backend/prisma/migrations/20261023000000_initial_schema/migration.sql`. Ela
-ainda não foi aplicada. O procedimento de backup, recuperação, suspensão de
-`CONNECT` e proteção de `_prisma_migrations` está em
-`backend/docs/security/initial-migration-acl-hardening.md`.
-
-## Endpoint disponível
-
-### `GET /api/health`
-
-Resposta de sucesso (HTTP 200):
-
-```json
-{
-  "success": true,
-  "data": {
-    "status": "ok",
-    "service": "cardapio-digital-api",
-    "timestamp": "2026-01-01T00:00:00.000Z",
-    "uptime": 12.345
-  }
-}
-```
-
-Resposta de rota inexistente (HTTP 404):
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Rota não encontrada: GET /api/rota-inexistente"
-  }
-}
-```
-
-## Scripts
-
-### Backend
-
-| Comando | Descrição |
-| --- | --- |
-| `npm run dev` | Inicia a API com recarga automática |
-| `npm run build` | Compila TypeScript para `dist/` |
-| `npm start` | Executa a API compilada |
-| `npm run typecheck` | Verifica os tipos sem gerar arquivos |
-| `npm test` | Executa os testes com Vitest |
-| `npm run test:watch` | Executa os testes em modo observação |
-| `npm run db:validate` | Valida o schema usando o perfil `migrate-dev` |
-| `npm run db:generate` | Gera o Prisma Client usando o perfil `migrate-dev` |
-| `npm run db:validate:app` | Valida o schema usando o perfil `app-dev` |
-| `npm run db:generate:app` | Gera o client usando o perfil `app-dev` |
-| `npm run db:migrate:status:test` | Consulta o status no banco de teste com `migrate-test` |
-| `npm run db:migrate:deploy:test` | Aplica migrations no teste; exige confirmação explícita |
-
-O script `scripts/validate-databases.ts` executa verificações somente leitura de
-conectividade, isolamento e privilégios depois que as credenciais reais forem
-preenchidas manualmente:
-
-```powershell
-npx tsx scripts/validate-databases.ts
-```
-
-### Frontend
-
-| Comando | Descrição |
-| --- | --- |
-| `npm run dev` | Inicia o servidor de desenvolvimento Vite |
-| `npm run build` | Verifica os tipos e gera o build de produção |
-| `npm run preview` | Pré-visualiza o build de produção |
-| `npm run typecheck` | Verifica os tipos sem gerar arquivos |
-
-## Validação
-
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend"
-npm run db:validate
-npm run db:generate
+# Frontend (em outro terminal)
+cd frontend
 npm run typecheck
 npm test
 npm run build
-npm audit
-
-Set-Location ..\frontend
-npm run typecheck
-npm run build
 ```
 
-A inspeção de permissões do PostgreSQL é somente leitura nesta fase:
+Testes de integração com PostgreSQL exigem um ambiente isolado e configurado especificamente para essa finalidade; não os execute no Neon de homologação.
 
-```powershell
-Set-Location -LiteralPath "C:\Users\u1n3c\OneDrive\Documentos\Cardapio_Digital\backend"
-psql -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_dev  -f docs/sql/inspect-dev.sql
-psql -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_test -f docs/sql/inspect-test.sql
-psql -h 127.0.0.1 -p 5432 -U cardapio_migrator -d cardapio_digital_shadow -f docs/sql/inspect-shadow.sql
-```
+## API
 
-Nenhum `GRANT`, `REVOKE`, `ALTER ... OWNER`, migration, `db push`, reset ou seed
-deve ser executado sem inspeção prévia e autorização específica.
+Entre as rotas disponíveis estão:
 
-Com os dois servidores em execução, também é possível validar a API diretamente:
+| Método | Rota | Finalidade |
+| --- | --- | --- |
+| GET | `/api/health` | Saúde do processo |
+| GET | `/api/ready` | Prontidão da aplicação e do banco |
+| GET | `/api/categories` | Categorias do catálogo |
+| GET | `/api/products` | Produtos do catálogo |
+| GET | `/api/products/:productId` | Detalhes de um produto |
+| POST | `/api/orders` | Registro de pedido autenticado por comanda |
+| GET | `/api/orders/:orderId` | Acompanhamento do próprio pedido |
+| POST | `/api/admin/auth/login` | Login administrativo |
+| GET | `/api/admin/orders` | Listagem administrativa de pedidos |
 
-```powershell
-Invoke-RestMethod -Uri "http://localhost:4000/api/health" -Method Get
-```
+A especificação OpenAPI está disponível em `/api/openapi.json` e o visualizador de rotas em `/api/docs` **no ambiente de desenvolvimento**. Essas rotas não são disponibilizadas pelo servidor no modo `production`. Consulte [Documentação da API](backend/docs/openapi.md) para mais detalhes.
+
+## Origem do catálogo
+
+Os produtos foram organizados a partir de materiais fornecidos pelo Rústika Estúdio Bar. O cardápio de referência orientou a identificação e a categorização dos itens; a versão eletrônica do estabelecimento foi consultada como referência de preços. Produtos inativos, insumos e itens ainda não classificados não devem ser publicados automaticamente no catálogo.
+
+Informações não fornecidas pelo estabelecimento, como ingredientes, descrições e fotografias, não devem ser presumidas.
+
+## Segurança e ambientes
+
+A autenticação administrativa é independente do acesso ao catálogo público. A aplicação emprega sessões protegidas, validações de entrada, controles anti-CSRF, limites de requisição e perfis de banco com privilégios específicos.
+
+O arquivo `render.yaml` descreve a hospedagem de homologação. As credenciais, os parâmetros de identidade do Neon e as demais variáveis sensíveis devem ser configurados diretamente no provedor, nunca versionados.
+
+Antes de tornar o repositório público ou utilizar dados reais de clientes, revise a política de segredos, dependências e demais requisitos aplicáveis.
+
+## Projeto acadêmico
+
+Este sistema foi desenvolvido no âmbito da **Prática Extensionista VII — Engenharia da Computação / UNAERP**. O material acadêmico de apoio está em [`docs/entrega-academica/`](docs/entrega-academica/), incluindo o relatório, a matriz de requisitos e as orientações para a apresentação.
+
+O código e a documentação representam o trabalho realizado no projeto; os registros de testes e de evolução técnica são mantidos para consulta e rastreabilidade.
