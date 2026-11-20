@@ -1,4 +1,0 @@
-frontend/package.json
-frontend/tests/e2e.spec.ts
-frontend/tests/e2e-second-order.test.mjs
-frontend/tests/helpers/cartPreconditions.ts
