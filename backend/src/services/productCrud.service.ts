@@ -224,7 +224,7 @@ function toProductCrudDto(product: ProductCrudResult): ProductCrudDto {
 }
 
 /**
- * 3D.5.3-B: CRUD administrativo completo de produtos.
+ *  CRUD administrativo completo de produtos.
  *
  * Identidade do produto:
  *   - id (UUID interno): chave primária, nunca exposta no DTO público.

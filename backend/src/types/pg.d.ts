@@ -1,4 +1,4 @@
-// 3D.5.3-C.5: a biblioteca `pg` (dependência já usada pelo Prisma internamente) não publica tipos próprios e o projeto
+// a biblioteca `pg` (dependência já usada pelo Prisma internamente) não publica tipos próprios e o projeto
 // não tem @types/pg instalado. Declaração mínima, só com o que `neonServerIdentity.ts` usa (uma conexão independente
 // para inspecionar o socket TLS real, que o motor do Prisma não expõe). Não afeta o Prisma, que não importa 'pg' em código de app.
 declare module 'pg' {
