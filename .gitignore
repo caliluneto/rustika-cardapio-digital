@@ -56,7 +56,7 @@ secrets/
 private-keys/
 
 # ---------------------------------------------------------------------------
-# 3D.3.25-A: preparação para GitHub (regras ADICIONAIS; nenhuma regra anterior foi removida)
+# Regras de publicação e isolamento de arquivos locais
 # ---------------------------------------------------------------------------
 
 # Playwright / relatórios de teste (podem conter snapshots de página com dados da execução)
@@ -105,6 +105,6 @@ backend/gen_hash.ts
 # Script legado da rotação de senhas cancelada (3D.3.22-C); quebra o tsc e não participa do fluxo
 backend/tests/scripts/verify-fixtures-rotation.ts
 
-# 3D.3.25-B: diagnósticos locais soltos na raiz (inventários e saídas de verificação)
+# Diagnósticos locais, inventários e saídas de verificação
 /check_out.txt
 /inventory_*.txt

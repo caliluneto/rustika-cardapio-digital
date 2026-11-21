@@ -1,8 +1,8 @@
-# RÚSTIKA — CI (3D.3.25-A). PREPARADO, NÃO EXECUTADO. Revisar antes do primeiro push.
+# Integração contínua — verificações do backend, frontend e testes isolados.
 #
 # - Jobs `backend` e `frontend`: sem banco, sem segredos; rodam em pull_request e sob demanda.
 # - Job `e2e`: Playwright contra um PostgreSQL 18 EFÊMERO criado no runner. Só roda manualmente
-#   (workflow_dispatch com run_e2e=true). Nunca em push nem em pull_request.
+#   (workflow_dispatch com run_e2e=true). Não é executado automaticamente em push ou pull request.
 # - Nenhum secret do repositório é usado. As senhas são geradas na execução, mascaradas e descartadas.
 # - Actions fixadas por SHA de COMMIT (verificado com git ls-remote em github.com/actions/*, 05/11/2026).
 #   Atualizar com cuidado: ver a seção de manutenção em backend/docs/github-actions-e2e.md.

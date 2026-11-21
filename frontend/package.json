@@ -2,7 +2,7 @@
   "name": "cardapio-digital-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "Frontend do Cardápio Digital (Fase 1A)",
+  "description": "Interface da aplicação RÚSTIKA — Cardápio Digital",
   "type": "module",
   "scripts": {
     "dev": "vite",
