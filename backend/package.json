@@ -2,7 +2,7 @@
   "name": "cardapio-digital-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "API da aplicação RÚSTIKA — Cardápio Digital",
+  "description": "API do Cardápio Digital (Fase 1A)",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

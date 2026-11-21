@@ -4,14 +4,14 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 
 export type ProfilePurpose = 'runtime' | 'migration' | 'bootstrap';
-/** 'homolog-neon' é o ambiente de homologação hospedado no Neon Free (ver docs/neon-homolog.md); banco e role
+/** 3D.5.3-C.5: 'homolog-neon' é o ambiente de homologação hospedado no Neon Free (ver docs/neon-homolog.md); banco e role
  * definitivos são os MESMOS de 'homolog' (o objetivo da C.5 é que o estado final seja idêntico, provedor à parte). */
 export type HomologEnvironment = 'homolog' | 'homolog-replay' | 'homolog-neon';
 export type RequestedPurpose = ProfilePurpose | 'any';
 
 export interface ProfileDefinition {
   purpose: ProfilePurpose;
-  /** ausente nos perfis locais (dev/test). 'homolog' = banco definitivo; 'homolog-replay' = replay transitório das migrations históricas. */
+  /** 3D.5.2: ausente nos perfis locais (dev/test). 'homolog' = banco definitivo; 'homolog-replay' = replay transitório das migrations históricas. */
   environment?: HomologEnvironment;
   database: string;
   user: string;
@@ -30,7 +30,7 @@ export interface DatabaseSecrets {
   environment?: HomologEnvironment;
   host?: string;
   clusterId?: string;
-  /** só presente quando environment === 'homolog-neon'. */
+  /** 3D.5.3-C.5: só presente quando environment === 'homolog-neon'. */
   projectId?: string;
   describe: () => string;
 }
@@ -42,12 +42,12 @@ export interface LoadDatabaseProfileOptions {
   env?: NodeJS.ProcessEnv;
 }
 
-/** variáveis (prefixadas, sem colisão com DATABASE_URL genérica) usadas só com CARDAPIO_SECRETS_SOURCE=env. */
+/** 3D.5.3-B: variáveis (prefixadas, sem colisão com DATABASE_URL genérica) usadas só com CARDAPIO_SECRETS_SOURCE=env. */
 export const ENV_SECRET_VARIABLES = {
   DATABASE_URL: 'RUSTIKA_HOMOLOG_DATABASE_URL',
   EXPECTED_DATABASE_HOST: 'RUSTIKA_HOMOLOG_EXPECTED_DATABASE_HOST',
   EXPECTED_CLUSTER_ID: 'RUSTIKA_HOMOLOG_EXPECTED_CLUSTER_ID',
-  /** só lido/exigido para o perfil app-homolog-neon (environment homolog-neon). */
+  /** 3D.5.3-C.5: só lido/exigido para o perfil app-homolog-neon (environment homolog-neon). */
   EXPECTED_PROJECT_ID: 'RUSTIKA_HOMOLOG_EXPECTED_PROJECT_ID',
 } as const;
 export const ENV_SECRETS_ORIGIN = '(variáveis de ambiente)';
@@ -62,11 +62,11 @@ export class SecretsConfigError extends Error {
 const ALLOWED_KEYS = new Set(['DATABASE_URL', 'SHADOW_DATABASE_URL']);
 const HOMOLOG_EXTRA_KEYS = new Set(['EXPECTED_DATABASE_HOST', 'EXPECTED_CLUSTER_ID', 'EXPECTED_PROJECT_ID']);
 const CLUSTER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-/** formato observado dos project id do Neon (ex.: aged-scene-47291697). Documentado, não garantido pelo provedor. */
+/** 3D.5.3-C.5: formato observado dos project id do Neon (ex.: aged-scene-47291697). Documentado, não garantido pelo provedor. */
 const NEON_PROJECT_ID_PATTERN = /^[a-z]+-[a-z]+-[0-9]{6,10}$/;
 
 /**
- *  identidade do ambiente de homologação.
+ * 3D.5.2-A: identidade do ambiente de homologação.
  * O banco DEFINITIVO chama-se `cardapio_digital_homolog`; os nomes de Dev/Test/Shadow nunca o identificam.
  * As migrations históricas (imutáveis) só executam em um banco chamado `cardapio_digital_test|dev` com as roles legadas;
  * por isso existe uma fase TRANSITÓRIA de replay (perfil `migrate-homolog-replay`, banco `cardapio_digital_test`, apenas no
@@ -90,7 +90,7 @@ const HOMOLOG_PROFILE_IDENTITY: Record<string, { environment: HomologEnvironment
   'migrate-homolog': { environment: 'homolog', purpose: 'migration', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.migrator },
   'bootstrap-homolog': { environment: 'homolog', purpose: 'bootstrap', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.bootstrap },
   'migrate-homolog-replay': { environment: 'homolog-replay', purpose: 'migration', database: HOMOLOG_REPLAY_DATABASE, user: REPLAY_ROLES.migrator },
-  // mesmo banco/role definitivos de 'app-homolog' — só o provedor (Neon) e a verificação de identidade mudam.
+  // 3D.5.3-C.5: mesmo banco/role definitivos de 'app-homolog' — só o provedor (Neon) e a verificação de identidade mudam.
   'app-homolog-neon': { environment: 'homolog-neon', purpose: 'runtime', database: HOMOLOG_DEFINITIVE_DATABASE, user: HOMOLOG_ROLES.runtime },
 };
 const HOMOLOG_QUERY_KEYS = new Set(['sslmode', 'sslaccept', 'sslcert', 'schema', 'connect_timeout', 'connection_limit', 'pool_timeout', 'channel_binding']);
@@ -419,7 +419,7 @@ function parseHomologUrl(raw: string, profileName: string, key: string, expected
   if (host !== expectedHost.trim().toLowerCase()) {
     throw new SecretsConfigError(`${label} não corresponde a EXPECTED_DATABASE_HOST.`);
   }
-  // só para o perfil Neon — migrations e identidade do servidor exigem o endpoint DIRETO (o pooler mascara pg_backend_pid/SET).
+  // 3D.5.3-C.5: só para o perfil Neon — migrations e identidade do servidor exigem o endpoint DIRETO (o pooler mascara pg_backend_pid/SET).
   if (requireDirectEndpoint && host.split('.')[0]?.includes('-pooler')) {
     throw new SecretsConfigError(`${label} usa um endpoint com pooler (-pooler): use o endpoint direto do Neon.`);
   }
@@ -498,7 +498,7 @@ export function loadDatabaseProfile(
 
   const homolog = profile.environment !== undefined;
 
-  // origem dos segredos. Padrão `file` (inalterado). `env` é um opt-in EXPLÍCITO, restrito ao perfil de aplicação
+  // 3D.5.3-B: origem dos segredos. Padrão `file` (inalterado). `env` é um opt-in EXPLÍCITO, restrito ao perfil de aplicação
   // (runtime) da homologação, para provedores sem arquivos com modo 0600 garantido. Todas as demais validações (host remoto,
   // TLS, banco/usuário exatos, EXPECTED_DATABASE_HOST, UUID do cluster, ausência de SHADOW) continuam valendo.
   const runtimeEnv = options.env ?? process.env;
