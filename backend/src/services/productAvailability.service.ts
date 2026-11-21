@@ -8,7 +8,7 @@ import type { createAdminAuth } from './adminAuth.service';
 import { accessBody } from './adminAuth.service';
 
 /**
- *  disponibilidade de produtos decidida pelo estabelecimento.
+ * Disponibilidade de produtos decidida pelo estabelecimento.
  *
  * Fonte da verdade: `Product.availabilityState` (UNKNOWN | AVAILABLE | UNAVAILABLE). O pedido exige AVAILABLE e o
  * catálogo público já mapeia UNKNOWN→null, AVAILABLE→true, UNAVAILABLE→false. A coluna legada `isAvailable`

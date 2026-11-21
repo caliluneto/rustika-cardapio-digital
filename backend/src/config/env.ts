@@ -13,11 +13,11 @@ function readPort(value: string | undefined, fallback: number): number {
   return port;
 }
 
-// trimmed. A Windows `set NODE_ENV=test && cmd` leaves "test " (trailing space), which
+// Normalização do ambiente. No Windows, `set NODE_ENV=test && cmd` leaves "test " (trailing space), which
 // silently disabled the NODE_ENV=test => DB_PROFILE=app-test guard below.
 const nodeEnv = (process.env.NODE_ENV ?? 'development').trim();
 
-// perfis de homologação aceitos em produção. 'app-homolog-neon' é opt-in e tem a MESMA identidade final
+// Perfis de homologação aceitos em produção. 'app-homolog-neon' é opt-in e tem a MESMA identidade final
 // (banco/role) de 'app-homolog' — só o provedor e a verificação de identidade do servidor mudam (ver neonServerIdentity.ts).
 export const PRODUCTION_HOMOLOG_PROFILES: ReadonlySet<string> = new Set(['app-homolog', 'app-homolog-neon']);
 

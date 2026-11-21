@@ -8,7 +8,7 @@ import type { createAdminAuth } from './adminAuth.service';
 import { accessBody } from './adminAuth.service';
 
 /**
- *  operação de pedidos pelo estabelecimento.
+ * Operação de pedidos pelo estabelecimento.
  *
  * Estados e transições vêm exclusivamente de `domain/rules.ts` (`canTransitionOrder`):
  *   RECEIVED -> IN_PREPARATION | CANCELLED;  IN_PREPARATION -> READY | CANCELLED;  READY -> DELIVERED;

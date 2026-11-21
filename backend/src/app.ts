@@ -19,7 +19,7 @@ export interface AppDependencies {
   prisma?: PrismaClient;
   authClock?: () => Date;
   orderLimits?: OrderRouterOptions['limits'];
-  /** hospedagem em um único serviço (frontend estático, proxy confiável, portão). Sem isso: somente API. */
+  /** Hospedagem em um único serviço (frontend estático, proxy confiável, portão). Sem isso: somente API. */
   web?: Partial<WebConfig>;
 }
 
