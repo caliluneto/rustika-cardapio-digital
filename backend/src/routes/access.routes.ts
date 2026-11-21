@@ -60,14 +60,14 @@ export function createAccessRouters(prisma: PrismaClient | undefined, options: A
   adminRouter.post('/comanda-invitations', writeGuard, accessLimit(60, 5 * 60000, now), json, asyncRoute(async (req, res) => {
     res.status(201).json({ success: true, data: await services().access.issue(req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
-  // 3D.4.1: operação de pedidos. GET sem parâmetros (o `noStore` do roteador já recusa query string).
+  // operação de pedidos. GET sem parâmetros (o `noStore` do roteador já recusa query string).
   adminRouter.get('/orders', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().orders.list(req.query, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
   adminRouter.patch('/orders/:orderId/status', writeGuard, accessLimit(60, 60000, now), json, asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().orders.updateStatus(req.params.orderId, req.body, readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
-  // 3D.4.2: disponibilidade de produtos. GET sem parâmetros (filtros no cliente); PATCH com CAS por expectedState.
+  // disponibilidade de produtos. GET sem parâmetros (filtros no cliente); PATCH com CAS por expectedState.
   adminRouter.get('/products', accessLimit(120, 60000, now), asyncRoute(async (req, res) => {
     res.json({ success: true, data: await services().products.list(readOpaqueCookie(req.get('Cookie'), ADMIN_COOKIE)) });
   }));
