@@ -6,6 +6,8 @@ O sistema reúne um cardápio digital organizado por categorias, carrinho de com
 
 **Aplicação de demonstração:** https://rustika-homolog.onrender.com
 
+**Vídeo de demonstração (4min08s):** [Assistir à apresentação da RÚSTIKA](https://github.com/caliluneto/rustika-cardapio-digital/releases/tag/v1.0.0)
+
 > O ambiente publicado é de homologação e utiliza o plano gratuito do Render. O primeiro acesso após um período de inatividade pode demorar enquanto o serviço é iniciado. A disponibilidade e a aceitação de pedidos dependem da configuração dos produtos e das comandas.
 
 ## Funcionalidades
