@@ -108,3 +108,10 @@ backend/tests/scripts/verify-fixtures-rotation.ts
 # Diagnósticos locais, inventários e saídas de verificação
 /check_out.txt
 /inventory_*.txt
+
+# Saídas temporárias de execução e diagnóstico
+/backend/temp.diff
+/backend/test-out.txt
+/backend/test-output*.txt
+/backend/type.txt
+/backend/typecheck-out*.txt
