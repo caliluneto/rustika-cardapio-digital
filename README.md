@@ -134,9 +134,3 @@ A autenticação administrativa é independente do acesso ao catálogo público.
 O arquivo `render.yaml` descreve a hospedagem de homologação. As credenciais, os parâmetros de identidade do Neon e as demais variáveis sensíveis devem ser configurados diretamente no provedor, nunca versionados.
 
 Antes de tornar o repositório público ou utilizar dados reais de clientes, revise a política de segredos, dependências e demais requisitos aplicáveis.
-
-## Projeto acadêmico
-
-Este sistema foi desenvolvido no âmbito da **Prática Extensionista VII — Engenharia da Computação / UNAERP**. O material acadêmico de apoio está em [`docs/entrega-academica/`](docs/entrega-academica/), incluindo o relatório, a matriz de requisitos e as orientações para a apresentação.
-
-O código e a documentação representam o trabalho realizado no projeto; os registros de testes e de evolução técnica são mantidos para consulta e rastreabilidade.
